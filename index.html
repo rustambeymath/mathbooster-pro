@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- Адаптация под мобильные устройства и iPhone (челка) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MathBooster PRO</title>
+    
+    <!-- PWA Настройки -->
+    <link id="manifest-link" rel="manifest" href="">
+    <meta name="theme-color" content="#6C63FF" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1E1E2E" media="(prefers-color-scheme: dark)">
+    
+    <!-- iOS Specifics -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MathBooster">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- Иконки -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
+    
+    <!-- Библиотека графиков -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- YANDEX METRIKA -->
+    <script type="text/javascript" >
+       
+       (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+       m[i].l=1*new Date();
+       for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+       k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+       (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+       ym(105919372, "init", { // <-- ВСТАВЬ СВОЙ ID СЧЕТЧИКА
+            clickmap:true,
+            trackLinks:true,
+            accurateTrackBounce:true,
+            webvisor:true
+       });
+       
+    </script>
+
+    <!-- FIREBASE (База Данных) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 🔥 ВСТАВЬ СЮДА КОНФИГ ИЗ FIREBASE CONSOLE 🔥
+        const firebaseConfig = {
+  	  apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
+  	  authDomain: "mathbooster-pro.firebaseapp.com",
+  	  projectId: "mathbooster-pro",
+  	  storageBucket: "mathbooster-pro.firebasestorage.app",
+  	  messagingSenderId: "990295839020",
+  	  appId: "1:990295839020:web:ba5bb8cfa471c2c4a89c89",
+  	  measurementId: "G-8N8MYJPCHR"
+	};
+
+        try {
+            if (firebaseConfig.apiKey) {
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+                // Делаем доступным глобально
+                window.DB_Online = { db, doc, setDoc, getDoc, collection, getDocs, query, orderBy, limit };
+                console.log("✅ Firebase подключен успешно");
+            } else {
+                console.log("⚠️ Firebase конфиг отсутствует. Работает оффлайн режим.");
+            }
+        } catch(e) { 
+            console.error("Ошибка подключения Firebase:", e); 
+        }
+    </script>
+    
+    <style>
+        /* === БАЗОВЫЕ ПЕРЕМЕННЫЕ === */
+        :root {
+            --primary: #6C63FF;
+            --bg: #F4F7FE;
+            --surface: #FFFFFF;
+            --text: #2B3674;
+            --text-light: #707EAE;
+            --shadow: 0 10px 30px rgba(112, 144, 176, 0.12);
+            --radius: 24px;
+            --accent: #FF7675;
+            --gold: #FFD700;
+            --success: #00d26a;
+            
+            /* Safe Areas for iPhone X+ */
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* === ТЕМЫ ОФОРМЛЕНИЯ === */
+        body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; }
+        body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
+        body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
+        body.theme-forest { --primary: #556B2F; --bg: #F5F5DC; --surface: #FFFFF0; --text: #3E2723; --text-light: #6D4C41; --shadow: 0 10px 30px rgba(85, 107, 47, 0.15); }
+        body.dark-mode { --bg: #1E1E2E; --surface: #27293D; --text: #EAEAEA; --text-light: #A0A0B0; --primary: #7F8C8D; }
+        body.dark-mode.theme-standard { --primary: #7B73FF; }
+        body.dark-mode.theme-math { --primary: #00E0D0; } 
+        body.dark-mode.theme-pantone { --primary: #FFAB91; }
+        body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
+        
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-tap-highlight-color: transparent; 
+            outline: none; 
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            transition: 0.3s; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            user-select: none;
+            -webkit-user-select: none;
+            /* Отступы для навигации и челки */
+            padding-top: calc(var(--safe-top) + 10px);
+            padding-bottom: calc(90px + var(--safe-bottom)); 
+        }
+
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 0 20px; 
+            transition: 0.5s; 
+        }
+
+        /* === LOGO === */
+        .app-logo {
+            width: 80px; 
+            height: 80px; 
+            object-fit: contain; 
+            margin-bottom: 10px;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1));
+        }
+
+        /* === ZEN MODE === */
+        body.zen-active { 
+            overflow: hidden; 
+            padding: 0; 
+        }
+        body.zen-active .nav, 
+        body.zen-active .header-card, 
+        body.zen-active .section:not(#dashboard) { 
+            display: none !important; 
+        }
+        body.zen-active .container { 
+            padding: 0; 
+            max-width: 100%; 
+            height: 100vh; 
+        }
+        body.zen-active #dashboard .grid { 
+            display: flex; 
+            height: 100vh; 
+            width: 100%; 
+        }
+        body.zen-active #dashboard .card:not(.zen-target) { 
+            display: none !important; 
+        }
+        body.zen-active .zen-target { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 0; 
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            background: var(--bg);
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+        }
+        body.zen-active #timer { 
+            font-size: 18vw; 
+            text-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+        }
+        body.zen-active .zen-controls { 
+            position: fixed; 
+            bottom: calc(40px + var(--safe-bottom)); 
+            display: flex; 
+            gap: 20px; 
+            width: 80%; 
+            justify-content: center; 
+        }
+        
+        /* === UI ELEMENTS === */
+        #auth-screen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: var(--bg); 
+            z-index: 5000; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+            transition: 0.4s; 
+            overflow-y: auto; 
+            padding-top: var(--safe-top); 
+        }
+        #auth-screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        
+        .auth-card { background: var(--surface); padding: 40px; border-radius: 30px; box-shadow: var(--shadow); width: 100%; max-width: 400px; text-align: center; margin: auto; }
+        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+        .avatar-option { font-size: 30px; padding: 10px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; background: var(--bg); transition: 0.2s; }
+        .avatar-option.selected { border-color: var(--primary); background: rgba(0,0,0,0.05); }
+        
+        .user-list-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--bg); border-radius: 15px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; text-align: left; }
+        .user-list-item:hover { transform: translateX(5px); border: 1px solid var(--primary); }
+        .user-avatar { font-size: 24px; width: 40px; height: 40px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+        .header-card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .profile-mini { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .profile-img { width: 50px; height: 50px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 4px solid transparent; transition: 0.3s; }
+        
+        /* LEAGUES */
+        .league-bronze { border-color: #CD7F32; }
+        .league-silver { border-color: #C0C0C0; }
+        .league-gold { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .league-diamond { border-color: #b9f2ff; box-shadow: 0 0 15px rgba(185, 242, 255, 0.6); }
+        .league-legend { border-color: #ff4d4d; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
+
+        .currency-block { display:flex; gap:15px; align-items:center; }
+        .currency-item { display:flex; align-items:center; gap:5px; font-weight:bold; font-size:14px; background:var(--bg); padding:5px 12px; border-radius:12px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .stat-pill { background: var(--bg); padding: 10px; border-radius: 15px; text-align: center; }
+        .stat-val { font-weight: 800; font-size: 16px; color: var(--primary); }
+        .stat-label { font-size: 10px; color: var(--text-light); text-transform: uppercase; font-weight: bold; }
+
+        /* FIXED BOTTOM NAV FOR MOBILE */
+        .nav { 
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            background: var(--surface); z-index: 1000;
+            display: flex; gap: 8px; overflow-x: auto; 
+            padding: 10px 10px calc(10px + var(--safe-bottom)) 10px; 
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            scrollbar-width: none; 
+        }
+        .nav::-webkit-scrollbar { display: none; }
+        .nav-btn { background: var(--bg); border: none; padding: 12px 20px; border-radius: 18px; color: var(--text-light); font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; font-size: 15px; }
+        .nav-btn.active { background: var(--primary); color: white; transform: scale(1.05); box-shadow: 0 5px 15px rgba(108, 99, 255, 0.3); }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); transition: 0.2s; }
+        .btn { padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; font-size: 16px; display:flex; justify-content:center; align-items:center; gap:5px; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--text-light); color: var(--text-light); }
+        .input-field { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--bg); background: var(--bg); color: var(--text); font-size: 16px; margin-bottom: 15px; outline: none; -webkit-appearance: none; }
+        .timer-display { font-size: 72px; font-weight: 800; color: var(--text); text-align: center; margin: 15px 0; font-variant-numeric: tabular-nums; transition: 0.3s; }
+        
+        .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
+        .shop-item { padding: 15px; border-radius: 15px; background: var(--bg); cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; position:relative; overflow:hidden;}
+        .shop-item:active { transform: scale(0.95); }
+        .shop-item.active { border-color: var(--primary); background: rgba(0,0,0,0.03); box-shadow: var(--shadow); }
+        .shop-price-tag { font-size:12px; font-weight:bold; margin-top:5px; color:var(--text-light); }
+        .shop-price-tag.affordable { color: var(--primary); }
+
+        .section { display: none; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 6000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; }
+        .modal.show { display: flex; animation: popIn 0.3s; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-content { background: var(--surface); padding: 30px; border-radius: 25px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); max-height: 80vh; overflow-y: auto; }
+        
+        #toast-container { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; width: max-content; }
+        .toast { background: var(--surface); color: var(--text); padding: 12px 25px; border-radius: 50px; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-top: 10px; opacity: 0; transform: translateY(20px); transition: 0.4s; border: 2px solid var(--primary); text-align: center; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        .stat-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .stat-detail-card { background: var(--bg); padding: 12px; border-radius: 15px; text-align: center; }
+        .stat-detail-title { font-size: 10px; color: var(--text-light); font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-detail-value { font-size: 18px; font-weight: 800; color: var(--primary); }
+        .stat-detail-sub { font-size: 10px; color: var(--text-light); margin-top: 2px; }
+
+        .trainer-box { text-align: center; padding: 20px; }
+        .trainer-problem { font-size: 42px; font-weight: 800; color: var(--primary); margin: 20px 0; font-family: monospace; white-space: nowrap; }
+        .trainer-stats { display: flex; justify-content: space-around; margin-bottom: 20px; font-size: 18px; font-weight: bold; color: var(--text-light); }
+        .trainer-input { font-size: 32px; text-align: center; font-weight: bold; letter-spacing: 2px; background: var(--surface); border-color: var(--text-light); }
+
+        .daily-grid { display: flex; justify-content: center; gap: 8px; margin: 20px 0; }
+        .daily-day { width: 45px; height: 65px; border-radius: 12px; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; opacity: 0.5; transition: 0.3s; }
+        .daily-day.active { opacity: 1; border: 2px solid var(--primary); background: var(--surface); transform: scale(1.15); box-shadow: var(--shadow); }
+        .daily-day.claimed { opacity: 1; background: var(--primary); color: white; }
+        .daily-coin { font-size: 18px; margin-bottom: 4px; }
+
+        .subject-manage-grid { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 20px; }
+        .subject-manage-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 12px 15px; border-radius: 15px; }
+        .subject-manage-info { display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .btn-delete { width: 32px; height: 32px; border-radius: 50%; border: none; background: #FF7675; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.2s; }
+        .btn-delete:hover { transform: scale(1.1); }
+        
+        .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
+        .preset-btn { padding: 12px; border: 2px solid var(--bg); background: var(--surface); border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; color: var(--text); }
+        .preset-btn:hover { border-color: var(--primary); background: rgba(108, 99, 255, 0.05); }
+
+        /* CALCULATOR */
+        .calc-box { width: 95%; max-width: 320px; }
+        .calc-display { background: var(--bg); padding: 20px; font-size: 32px; text-align: right; border-radius: 15px; margin-bottom: 15px; font-family: monospace; font-weight: bold; color: var(--text); overflow: hidden; white-space: nowrap; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .calc-btn { padding: 15px; font-size: 22px; border-radius: 12px; border: none; background: var(--bg); color: var(--text); cursor: pointer; transition: 0.1s; font-weight: bold; touch-action: manipulation; }
+        .calc-btn:active { transform: scale(0.9); background: rgba(0,0,0,0.1); }
+        .calc-btn.op { color: var(--primary); background: rgba(108, 99, 255, 0.1); }
+        .calc-btn.eq { background: var(--primary); color: white; grid-column: span 2; }
+        .calc-btn.clr { color: #FF7675; }
+
+        /* WHITEBOARD */
+        .canvas-box { background: white; border-radius: 15px; cursor: crosshair; touch-action: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); width: 100%; border: 2px solid var(--bg); }
+        .whiteboard-controls { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* SESSION LOG */
+        .session-log { max-height: 250px; overflow-y: auto; }
+        .session-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 13px; }
+        .session-row:last-child { border-bottom: none; }
+        .session-info { display: flex; flex-direction: column; }
+        .session-date { font-size: 10px; color: var(--text-light); }
+        .session-coins { color: var(--gold); font-weight: bold; background: rgba(255, 215, 0, 0.1); padding: 2px 8px; border-radius: 8px; }
+
+        /* FX */
+        .float-text { position: fixed; pointer-events: none; animation: floatUp 1s forwards; font-weight: 800; z-index: 9999; text-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 18px; }
+        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-50px) scale(1.3); opacity: 0; } }
+        .confetti-piece { position: fixed; width: 10px; height: 10px; z-index: 9999; pointer-events: none; animation: fall linear forwards; }
+        @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+
+        /* ACHIEVEMENTS LIST */
+        .ach-list { display: flex; flex-direction: column; gap: 10px; }
+        .ach-row { display: flex; align-items: center; gap: 15px; background: var(--bg); padding: 15px; border-radius: 15px; transition: 0.2s; border: 2px solid transparent; }
+        .ach-row.unlocked { background: var(--surface); border-color: var(--success); box-shadow: var(--shadow); }
+        .ach-icon { font-size: 28px; width: 50px; height: 50px; background: rgba(0,0,0,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ach-row.unlocked .ach-icon { background: var(--success); color: white; }
+        .ach-info { flex-grow: 1; }
+        .ach-title { font-weight: bold; font-size: 14px; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .ach-desc { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+        .ach-bar-bg { width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 3px; overflow: hidden; }
+        .ach-bar-fill { height: 100%; background: var(--primary); transition: 0.5s; }
+        .ach-row.unlocked .ach-bar-fill { background: var(--success); }
+
+        /* GENDER & DATE PICKER */
+        .reg-group { text-align: left; margin-bottom: 15px; }
+        .reg-label { font-size: 12px; color: var(--text-light); margin-bottom: 5px; font-weight: bold; }
+        .gender-switch { display: flex; gap: 10px; }
+        .gender-btn { flex: 1; padding: 10px; border: 2px solid var(--bg); background: var(--bg); border-radius: 12px; cursor: pointer; font-weight: bold; color: var(--text-light); }
+        .gender-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(108, 99, 255, 0.05); }
+
+        /* DIFFICULTY BUTTONS */
+        .diff-switch { display: flex; gap: 5px; justify-content: center; margin-bottom: 20px; }
+        .diff-btn { padding: 8px 15px; border: 2px solid var(--bg); background: var(--surface); border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text-light); }
+        .diff-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* MUSIC WIDGET */
+        .music-widget { display: flex; align-items: center; justify-content: space-between; background: var(--bg); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; }
+        .music-info { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 13px; color: var(--text); }
+        .visualizer { display: flex; gap: 2px; align-items: flex-end; height: 15px; }
+        .bar { width: 3px; background: var(--primary); animation: equalizer 1s infinite; }
+        @keyframes equalizer { 0% { height: 5px; } 50% { height: 15px; } 100% { height: 5px; } }
+
+        @media (max-width: 600px) {
+            .stat-detail-grid { grid-template-columns: 1fr; }
+            .header-card { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .currency-block { width: 100%; justify-content: space-between; }
+            .nav-btn { padding: 10px 15px; font-size: 13px; }
+            .preset-grid { grid-template-columns: repeat(3, 1fr); }
+            .auth-card { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- PWA Manifest Generation (Автоматическая) -->
+<script>
+    const manifest = {
+        "name": "MathBooster PRO",
+        "short_name": "MathBooster",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#F4F7FE",
+        "theme_color": "#6C63FF",
+        "orientation": "portrait",
+        "icons": [
+            { "src": "https://cdn-icons-png.flaticon.com/512/3771/3771518.png", "sizes": "192x192", "type": "image/png" },
+            { "src": "https://cdn-icons-png.flaticon.com/512/3771/3771518.png", "sizes": "512x512", "type": "image/png" }
+        ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(blob));
+</script>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+    <div class="auth-card" id="login-view">
+        <img src="https://cdn-icons-png.flaticon.com/512/3771/3771518.png" alt="Logo" class="app-logo">
+        <h2 style="margin-bottom: 5px; color: var(--primary);">MathBooster PRO</h2>
+        <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
+        <div id="user-list"></div>
+        <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
+    </div>
+
+    <div class="auth-card" id="register-view" style="display: none;">
+        <h2>Новый профиль</h2>
+        <div class="avatar-grid" id="avatar-selector"></div>
+        <input type="text" id="reg-name" class="input-field" placeholder="Ваше имя...">
+        <div class="reg-group" style="margin:15px 0;">
+            <div style="font-size:12px; color:var(--text-light); margin-bottom:5px;">Пол</div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn gender-btn active" onclick="Auth.setGender('male')" style="border:2px solid var(--bg);">👨 Парень</button>
+                <button class="btn gender-btn" onclick="Auth.setGender('female')" style="border:2px solid var(--bg);">👩 Девушка</button>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-outline" onclick="Auth.showLogin()">Назад</button>
+            <button class="btn btn-primary" onclick="Auth.createAccount()">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="container" id="app-container" style="display: none;"> 
+    <div class="header-card">
+        <div class="profile-mini" onclick="App.switchTab('profile')">
+            <div class="profile-img" id="header-avatar-box"><div id="header-avatar">😎</div></div>
+            <div>
+                <div style="font-weight: bold; font-size: 18px;" id="header-name">Игрок</div>
+                <div style="font-size: 12px; color: var(--text-light);" id="header-league">Новичок</div>
+            </div>
+        </div>
+        <div class="currency-block">
+            <div class="currency-item"><span>💰</span> <span id="coin-display">0</span></div>
+            <div class="currency-item" style="color:#FF7675;"><span>🔥</span> <span id="streak-display">0</span></div>
+        </div>
+    </div>
+
+    <nav class="nav">
+        <button class="nav-btn active" onclick="App.switchTab('dashboard', this)">⏱️ Учеба</button>
+        <button class="nav-btn" onclick="App.switchTab('trainer', this)">🧠 Тренажер</button>
+        <button class="nav-btn" onclick="App.switchTab('stats', this)">📊 Статистика</button>
+        <button class="nav-btn" onclick="App.switchTab('leaderboard', this)">🏆 Топ</button>
+        <button class="nav-btn" onclick="App.switchTab('shop', this)">🛒 Магазин</button>
+        <button class="nav-btn" onclick="App.switchTab('achievements', this)">🏅 Награды</button>
+        <button class="nav-btn" onclick="App.switchTab('settings', this)">⚙️ Опции</button>
+    </nav>
+
+    <!-- 1. DASHBOARD -->
+    <section id="dashboard" class="section active">
+        <div class="grid">
+            <div class="card zen-target" style="text-align: center; position: relative;">
+                <!-- TOOLS -->
+                <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
+                    <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
+                    <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
+                    <button onclick="App.toggleZen()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Режим ZEN">🧘</button>
+                </div>
+                
+                <h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>
+                <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
+                
+                <div id="timer" class="timer-display">00:00:00</div>
+                <div style="font-size: 13px; color: var(--text-light); margin-bottom: 15px;">
+                    1 монета 💰 за каждые 10 минут
+                </div>
+                
+                <!-- SESSION GOAL -->
+                <input type="text" id="session-goal" class="input-field" placeholder="🎯 Цель на сессию (опционально)..." style="text-align: center; font-size: 14px; padding: 10px;">
+
+                <div class="zen-controls" style="position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
+                    <button class="btn btn-outline" onclick="Timer.stop()">⏹ СТОП</button>
+                </div>
+                
+                <!-- EXIT ZEN BTN (Hidden by default) -->
+                <button class="btn btn-outline" style="margin-top:20px; display:none;" id="exit-zen-btn" onclick="App.toggleZen()">Выйти из Zen</button>
+            </div>
+            
+            <div class="card">
+                <h3>🎧 Lo-Fi Радио</h3>
+                <div class="music-widget">
+                    <div class="music-info">
+                        <span style="font-size: 20px;">🎵</span>
+                        <span>Chill Study Beats</span>
+                    </div>
+                    <div class="visualizer" id="music-vis" style="opacity: 0;">
+                        <div class="bar" style="animation-duration: 0.5s"></div>
+                        <div class="bar" style="animation-duration: 0.7s"></div>
+                        <div class="bar" style="animation-duration: 0.4s"></div>
+                        <div class="bar" style="animation-duration: 0.6s"></div>
+                    </div>
+                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px;" onclick="MusicPlayer.toggle()">▶</button>
+                </div>
+                <!-- FIXED AUDIO SOURCE -->
+                <audio id="lofi-stream" crossorigin="anonymous" preload="none">
+                    <source src="https://lofi.stream.laut.fm/lofi" type="audio/mpeg">
+                    <source src="https://stream.zeno.fm/f3wvbbqmdg8uv" type="audio/mpeg">
+                </audio>
+                
+                <h3 style="margin-top: 20px;">📚 Предметы</h3>
+                <div id="subjects-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. TRAINER -->
+    <section id="trainer" class="section">
+        <div class="card" id="trainer-menu" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 60px; margin-bottom: 20px;">🧠</div>
+            <h2>Математический Спринт</h2>
+            <p style="color: var(--text-light); margin: 10px 0 20px;">Реши как можно больше примеров за 60 секунд.</p>
+            
+            <div class="diff-switch">
+                <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
+                <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
+                <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
+            </div>
+
+            <div class="stat-pill" style="display: inline-block; margin-bottom: 30px;">
+                <span class="stat-label">Ваш Рекорд</span><br>
+                <span class="stat-val" style="font-size: 24px;" id="trainer-high-score">0</span>
+            </div>
+            <br>
+            <button class="btn btn-primary" style="font-size: 20px; padding: 15px 40px;" onclick="Trainer.start()">Начать Игру 🚀</button>
+        </div>
+
+        <div class="card" id="trainer-game" style="display: none; text-align: center;">
+            <div class="trainer-stats">
+                <div>⏳ <span id="game-time">60</span>s</div>
+                <div>✅ <span id="game-score">0</span></div>
+            </div>
+            <div class="trainer-problem" id="game-problem">2 x 2</div>
+            <input type="number" id="game-input" class="input-field trainer-input" placeholder="?">
+            <div style="font-size: 12px; color: var(--text-light); margin-top: 10px;">Нажми Enter чтобы ответить</div>
+            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
+        </div>
+
+        <div class="card" id="trainer-result" style="display: none; text-align: center;">
+            <h2>Время вышло! 🏁</h2>
+            <div style="margin: 30px 0;">
+                <div style="font-size: 14px; color: var(--text-light);">Ваш счет</div>
+                <div style="font-size: 48px; font-weight: bold; color: var(--primary);" id="result-score">0</div>
+            </div>
+            <div class="grid" style="margin-bottom: 20px;">
+                <div class="stat-pill">
+                    <div class="stat-val" id="result-xp">+0 XP</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val" id="result-coins">+0 💰</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="Trainer.init()">Сыграть еще раз</button>
+        </div>
+    </section>
+
+    <!-- 3. STATS -->
+    <section id="stats" class="section">
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>📊 Детальная статистика</h3>
+            <div class="stat-detail-grid">
+                <div class="stat-detail-card">
+                    <div class="stat-detail-title">За неделю</div>
+                    <div class="stat-detail-value" id="stat-week-time">0ч</div>
+                    <div class="stat-detail-sub" id="stat-week-xp">0 XP</div>
+                </div>
+                <div class="stat-detail-card">
+                    <div class="stat-detail-title">За месяц</div>
+                    <div class="stat-detail-value" id="stat-month-time">0ч</div>
+                    <div class="stat-detail-sub" id="stat-month-xp">0 XP</div>
+                </div>
+                <div class="stat-detail-card">
+                    <div class="stat-detail-title">Все время</div>
+                    <div class="stat-detail-value" id="stat-total-time">0ч</div>
+                    <div class="stat-detail-sub" id="stat-total-xp">0 XP</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>🔥 Активность (30 дней)</h3>
+                <div id="heatmap" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 15px;"></div>
+            </div>
+            <div class="card">
+                <h3>📜 Журнал занятий</h3>
+                <div id="session-log" class="session-log"></div>
+            </div>
+            <div class="card">
+                <h3>История (Текущая неделя)</h3>
+                <div style="height: 200px;"><canvas id="weekChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3>🧩 Распределение предметов</h3>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. LEADERBOARD -->
+    <section id="leaderboard" class="section">
+        <div class="card">
+            <h3>🏆 Глобальный Топ</h3>
+            <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Глобальный рейтинг (требует интернет)</p>
+            <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
+            <div id="leaderboard-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                <div style="text-align:center; color:gray;">Нажми обновить...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. SHOP -->
+    <section id="shop" class="section">
+        <div class="card">
+            <h3>🎨 Темы оформления</h3>
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Покупайте новые стили за 💰 монеты!</p>
+            <div id="theme-list" class="shop-grid"></div>
+        </div>
+        <div class="card" style="margin-top: 20px;">
+            <h3>😎 Аватары</h3>
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Выделитесь из толпы!</p>
+            <div id="avatar-shop-list" class="shop-grid"></div>
+        </div>
+    </section>
+
+    <!-- 6. SETTINGS & DONATION -->
+    <section id="settings" class="section">
+        <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
+            <h3>ℹ️ О приложении</h3>
+            <p style="color: var(--text-light); font-size: 12px;">Версия 1.9 PRO • Информация</p>
+        </div>
+
+        <div style="background:linear-gradient(135deg, #FFD700, #FFA500); padding:20px; border-radius:20px; color:#333; margin:20px 0; text-align:center; position:relative; overflow:hidden; box-shadow:0 10px 20px rgba(255,215,0,0.3);">
+            <div style="font-size:40px; margin-bottom:5px;">💎</div>
+            <h3 style="margin:0; font-weight:800; text-transform:uppercase;">Premium</h3>
+            <p style="font-size:12px; margin:5px 0;">Поддержи проект и получи бонусы!</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
+                <button class="btn" style="background:white; color:#2B3674; font-size:12px;" onclick="Donation.payUz()">🇺🇿 UZB (Humo)</button>
+                <button class="btn" style="background:#2B3674; color:white; font-size:12px;" onclick="Donation.payWorld()">🌍 World (Visa)</button>
+            </div>
+            <button class="btn" style="background:rgba(255,255,255,0.3); color:white; margin-top:10px;" onclick="Donation.enterCode()">🔑 Ввести код</button>
+        </div>
+
+        <div class="card">
+            <h3>⚙️ Опции и Данные</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--bg); padding: 15px; border-radius: 15px;">
+                <span>🔊 Звуковые эффекты</span>
+                <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
+            </div>
+            
+            <div style="margin-top:20px;">
+                <h4 style="margin-bottom:10px;">Предметы</h4>
+                <div id="settings-subject-list" class="subject-manage-grid"></div>
+                <div class="preset-grid" style="margin-top:10px;">
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('📖','Лит-ра')">📖</button>
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('⚛️','Физика')">⚛️</button>
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('🧪','Химия')">🧪</button>
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('🧬','Био')">🧬</button>
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('🏺','История')">🏺</button>
+                    <button class="preset-btn" onclick="SubjectSys.addPreset('🌐','Англ')">🌐</button>
+                </div>
+            </div>
+
+            <h4 style="margin-top:20px;">Данные</h4>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-outline" onclick="Data.export()">💾 Файл</button>
+                <button class="btn btn-outline" onclick="Sync.upload()">☁️ Облако</button>
+            </div>
+            <button class="btn btn-outline" style="margin-top:10px; border-color:#FF7675; color:#FF7675;" onclick="Auth.resetData()">🗑️ Сброс данных</button>
+        </div>
+    </section>
+    
+    <!-- 7. ACHIEVEMENTS -->
+    <section id="achievements" class="section">
+        <div class="card">
+            <h3>🏅 Награды</h3>
+            <div id="ach-list" class="ach-list"></div>
+        </div>
+    </section>
+    
+    <!-- PROFILE -->
+    <section id="profile" class="section">
+        <div class="card" style="text-align: center;">
+            <div class="profile-img" id="profile-avatar-box" style="width: 80px; height: 80px; margin: 0 auto; font-size: 40px; border-width: 6px;">
+                <div id="profile-avatar-big">😎</div>
+            </div>
+            <h2 style="margin-top: 10px;" id="profile-name-big">Игрок</h2>
+            <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>
+            
+            <div class="stats-row">
+                <div class="stat-pill"><div class="stat-val" id="prof-lvl">1</div><div class="stat-label">Уровень</div></div>
+                <div class="stat-pill"><div class="stat-val" id="prof-xp">0</div><div class="stat-label">Опыт</div></div>
+                <div class="stat-pill"><div class="stat-val" id="prof-coins">0</div><div class="stat-label">Монеты</div></div>
+            </div>
+            <div style="margin-top: 20px; text-align: left;">
+                <p style="font-size: 12px; color: var(--text-light); margin-bottom: 5px;">
+                    Прогресс уровня: 
+                    <span id="xp-progress-text" style="float:right; font-weight:bold;">0 / 500 XP</span>
+                </p>
+                <div style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden;">
+                    <div id="prof-xp-bar" style="height: 100%; width: 0%; background: var(--primary);"></div>
+                </div>
+            </div>
+            <button class="btn btn-outline" style="margin-top: 30px; border-color: #FF7675; color: #FF7675;" onclick="Auth.logout()">🚪 Выйти из аккаунта</button>
+        </div>
+    </section>
+</div>
+
+<!-- MODALS -->
+<div id="calc-modal" class="modal">
+    <div class="modal-content calc-box">
+        <div id="calc-display" class="calc-display">0</div>
+        <div class="calc-grid">
+            <button class="calc-btn" style="color:#FF7675" onclick="Calc.clear()">C</button>
+            <button class="calc-btn" onclick="Calc.append('(')">(</button>
+            <button class="calc-btn" onclick="Calc.append(')')">)</button>
+            <button class="calc-btn op" onclick="Calc.append('/')">÷</button>
+            <button class="calc-btn" onclick="Calc.append('7')">7</button>
+            <button class="calc-btn" onclick="Calc.append('8')">8</button>
+            <button class="calc-btn" onclick="Calc.append('9')">9</button>
+            <button class="calc-btn op" onclick="Calc.append('*')">×</button>
+            <button class="calc-btn" onclick="Calc.append('4')">4</button>
+            <button class="calc-btn" onclick="Calc.append('5')">5</button>
+            <button class="calc-btn" onclick="Calc.append('6')">6</button>
+            <button class="calc-btn op" onclick="Calc.append('-')">-</button>
+            <button class="calc-btn" onclick="Calc.append('1')">1</button>
+            <button class="calc-btn" onclick="Calc.append('2')">2</button>
+            <button class="calc-btn" onclick="Calc.append('3')">3</button>
+            <button class="calc-btn op" onclick="Calc.append('+')">+</button>
+            <button class="calc-btn" onclick="Calc.append('0')">0</button>
+            <button class="calc-btn" onclick="Calc.append('.')">.</button>
+            <button class="calc-btn eq" style="grid-column:span 2; background:var(--primary); color:white;" onclick="Calc.solve()">=</button>
+        </div>
+        <button class="btn btn-outline" style="margin-top: 15px; width: 100%;" onclick="Calc.toggle()">Закрыть</button>
+    </div>
+</div>
+
+<div id="wb-modal" class="modal">
+    <div class="modal-content" style="width:95%;">
+        <h3>Черновик</h3>
+        <div style="border:2px solid var(--text-light); border-radius:15px; overflow:hidden;">
+            <canvas id="wb-canvas" class="canvas-box" height="350"></canvas>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-outline" style="color:#FF7675;" onclick="Whiteboard.clear()">Очистить</button>
+            <button class="btn btn-primary" onclick="Whiteboard.close()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<div id="daily-modal" class="modal">
+    <div class="modal-content" style="background:linear-gradient(135deg,var(--surface),var(--bg)); border:2px solid var(--gold);">
+        <h2 style="color:var(--gold);">🎁 Ежедневный Бонус!</h2>
+        <div class="daily-grid" id="daily-grid"></div>
+        <div style="margin:20px 0; font-size:40px;">💰 <span id="daily-reward-amount">10</span></div>
+        <button class="btn btn-primary" style="background:var(--gold); color:#333;" onclick="DailySys.claim()">Забрать Награду</button>
+    </div>
+</div>
+
+<div id="ach-details-box" class="modal">
+    <div class="modal-content">
+        <h2 id="ach-title"></h2>
+        <p id="ach-desc" style="color:var(--text-light); margin-bottom:10px;"></p>
+        <div id="ach-status" style="font-weight:bold;"></div>
+        <button class="btn btn-primary" style="margin-top:20px;" onclick="document.getElementById('ach-details-box').classList.remove('show')">Закрыть</button>
+    </div>
+</div>
+
+<!-- ABOUT MODAL -->
+<div id="about-modal" class="modal">
+    <div class="modal-content">
+        <div style="font-size: 60px; margin-bottom: 10px;">💎</div>
+        <h2 style="color: var(--primary);">MathBooster PRO</h2>
+        <div style="background: var(--bg); display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: var(--text-light); margin: 10px 0;">v1.9 PRO</div>
+        <p style="margin: 20px 0; line-height: 1.6;">Лучшее приложение для геймификации учебы.</p>
+        <div style="text-align: left; background: var(--bg); padding: 15px; border-radius: 15px; font-size: 13px; margin: 15px 0;">
+            <div>👨‍💻 <b>Разработчик:</b> Мансуров Рустам Уктамович</div>
+            <div style="margin-top: 8px;">💾 <b>Данные:</b> Локальное хранение</div>
+        </div>
+        <button class="btn btn-primary" style="margin-top: 20px;" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">📖 Подробнее о нас</button>
+        <button class="btn btn-outline" style="margin-top: 10px;" onclick="document.getElementById('about-modal').classList.remove('show')">Закрыть</button>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ==========================================
+   0. FX SYSTEM
+   ========================================== */
+const FX = {
+    floatText(x, y, text, color) {
+        const el = document.createElement('div'); el.className = 'float-text';
+        el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.color = color || '#FFD700'; el.innerText = text;
+        document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
+    },
+    confetti() {
+        for(let i=0; i<30; i++) {
+            const el = document.createElement('div'); el.className = 'confetti-piece';
+            el.style.left = Math.random() * 100 + 'vw'; el.style.background = ['#FFD700', '#FF7675', '#6C63FF', '#00d26a'][Math.floor(Math.random()*4)];
+            el.style.animationDuration = (Math.random() * 2 + 2) + 's'; document.body.appendChild(el); setTimeout(() => el.remove(), 4000);
+        }
+    }
+};
+
+/* ==========================================
+   0. PWA & SOUND
+   ========================================== */
+const PWA = {
+    prompt: null,
+    init() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); this.prompt = e;
+            document.getElementById('btn-install').style.display = 'block';
+        });
+    },
+    install() {
+        if(this.prompt) {
+            this.prompt.prompt();
+            this.prompt.userChoice.then(() => {
+                document.getElementById('btn-install').style.display = 'none'; this.prompt = null;
+            });
+        }
+    }
+};
+
+const MusicPlayer = {
+    playing: false,
+    audio: null,
+    
+    init() { 
+        this.audio = document.getElementById('lofi-stream'); 
+        this.audio.addEventListener('ended', () => this.reset());
+        this.audio.addEventListener('error', (e) => {
+            App.toast("❌ Ошибка радио. Попробуйте позже.");
+            this.reset();
+        });
+    },
+
+    reset() {
+        this.playing = false;
+        const btn = document.getElementById('music-btn');
+        const vis = document.getElementById('music-vis');
+        if(btn) btn.innerText = "▶";
+        if(vis) vis.style.opacity = "0";
+    },
+
+    toggle() {
+        if(!this.audio) this.init();
+        
+        const btn = document.getElementById('music-btn');
+        const vis = document.getElementById('music-vis');
+        
+        if(this.playing) {
+            this.audio.pause();
+            this.reset();
+        } else {
+            const playPromise = this.audio.play();
+            if (playPromise !== undefined) {
+                btn.innerText = "⏳";
+                playPromise.then(_ => {
+                    this.playing = true;
+                    btn.innerText = "⏸";
+                    vis.style.opacity = "1";
+                })
+                .catch(error => {
+                    console.error("Audio Play Error:", error);
+                    App.toast("⚠️ Не удалось включить радио");
+                    this.reset();
+                });
+            }
+        }
+    }
+};
+
+const SoundSys = {
+    ctx: null, enabled: true,
+    init() { try { const AudioContext = window.AudioContext || window.webkitAudioContext; this.ctx = new AudioContext(); } catch(e) {} },
+    toggleSFX(val) { this.enabled = val; DB.settings.sfx = val; Data.save(); if(val) this.play('click'); },
+    play(type) {
+        if(!this.enabled || !this.ctx) return; if(this.ctx.state === 'suspended') this.ctx.resume();
+        const t = this.ctx.currentTime; const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        if(type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(1200, t+0.1); gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0.001, t+0.1); osc.start(t); osc.stop(t+0.1); }
+        else if(type === 'coin') { osc.type = 'sine'; osc.frequency.setValueAtTime(1200, t); osc.frequency.exponentialRampToValueAtTime(1800, t+0.3); gain.gain.setValueAtTime(0.1, t); gain.gain.linearRampToValueAtTime(0, t+0.5); osc.start(t); osc.stop(t+0.5); }
+        else if(type === 'success') { this.beep(523.25, t, 0.1); this.beep(659.25, t+0.1, 0.1); this.beep(783.99, t+0.2, 0.2); }
+        else if(type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(100, t+0.3); gain.gain.setValueAtTime(0.1, t); gain.gain.linearRampToValueAtTime(0, t+0.3); osc.start(t); osc.stop(t+0.3); }
+        else if(type === 'win') { this.beep(523.25, t, 0.15); this.beep(523.25, t+0.15, 0.15); this.beep(523.25, t+0.30, 0.15); this.beep(659.25, t+0.45, 0.4); }
+    },
+    beep(freq, time, dur) { const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain(); osc.connect(gain); gain.connect(this.ctx.destination); osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time); gain.gain.setValueAtTime(0.1, time); gain.gain.linearRampToValueAtTime(0, time+dur); osc.start(time); osc.stop(time+dur); }
+};
+
+/* ==========================================
+   1. DATA & CONFIG
+   ========================================= */
+const GenAch = () => {
+    const list = []; let id = 1; const add = (title, desc, max, icon, type, sub=null) => list.push({id: id++, title, desc, max, icon, type, sub, unlocked:false});
+    add("Первый шаг", "1 минута учебы", 60, "🌱", "total"); add("Разминка", "15 минут", 900, "🤸", "total"); add("Час силы", "1 час", 3600, "🕐", "total"); add("Спринтер", "5 часов", 18000, "🏃", "total"); add("Марафонец", "10 часов", 36000, "👟", "total"); add("Сутки", "24 часа", 86400, "🌙", "total"); add("Неделя", "50 часов", 180000, "📆", "total"); add("Профи", "100 часов", 360000, "🎓", "total"); add("Эксперт", "250 часов", 900000, "💼", "total"); add("Гуру", "500 часов", 1800000, "🧘", "total"); add("Мудрец", "1000 часов", 3600000, "🧙‍♂️", "total"); add("Легенда", "2000 часов", 7200000, "👑", "total"); add("Титан", "5000 часов", 18000000, "🗿", "total"); add("Вечность", "10000 часов", 36000000, "⚡", "total");
+    [2, 5, 10, 15, 20, 30, 40, 50, 75, 100].forEach(l => add(`Уровень ${l}`, `Достигни ${l} уровня`, l, "🆙", "lvl"));
+    add("Начало пути", "Заработай 100 XP", 100, "⭐", "xp"); add("Опытный", "Заработай 1000 XP", 1000, "🌟", "xp"); add("Машина XP", "Заработай 10.000 XP", 10000, "🤖", "xp"); add("Миллионер", "Заработай 1.000.000 XP", 1000000, "💎", "xp");
+    return list;
+};
+
+const DefaultDB = { 
+    user: { 
+        xp: 0, level: 1, nextXp: 500, totalSec: 0, subject: 'algebra', 
+        theme: 'standard', avatar: null, gender: 'male', dob: '',
+        coins: 0, streak: 0, lastStudyDate: null, dailyStreak: 0, lastDailyClaim: null, 
+        ownedThemes: ['standard'], ownedAvatars: [], trainerRecord: 0, usedCodes: []
+    }, 
+    settings: { mathCheck: true, sfx: true }, 
+    subjects: { algebra: { name: 'Алгебра', icon: '✖️', sec: 0 }, geometry: { name: 'Геометрия', icon: '📐', sec: 0 }, trigonometry: { name: 'Тригонометрия', icon: '〰️', sec: 0 } }, 
+    history: {}, achievements: [], sessions: [] 
+};
+
+const THEMES = [
+    { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
+    { id: 'dark', name: 'Темная', icon: '🌑', price: 50 },
+    { id: 'pantone', name: 'Персик', icon: '🍑', price: 100 },
+    { id: 'forest', name: 'Лес', icon: '🌲', price: 150 },
+    { id: 'neon', name: 'Неон', icon: '🦄', price: 500 },
+    { id: 'math', name: 'MathBooster', icon: '💎', price: 600 }
+];
+
+const SHOP_AVATARS = [
+    { id: 'ninja', icon: '🦁', name: 'Лев', price: 50 }, 
+    { id: 'cyborg', icon: '👾', name: 'Монстр', price: 100 }, 
+    { id: 'alien', icon: '👽', name: 'Пришелец', price: 150 }, 
+    { id: 'dragon', icon: '🐲', name: 'Дракон', price: 200 }, 
+    { id: 'vampire', icon: '🧛‍♀️', name: 'Вампирша', price: 200 },
+    { id: 'fairy', icon: '🧚‍♀️', name: 'Фея', price: 250 },
+    { id: 'wizard', icon: '🧙‍♂️', name: 'Маг', price: 250 }, 
+    { id: 'mermaid', icon: '🧜‍♀️', name: 'Русалка', price: 300 },
+    { id: 'ghost', icon: '👻', name: 'Призрак', price: 300 }, 
+    { id: 'crown', icon: '👑', name: 'Король', price: 500 }, 
+    { id: 'queen', icon: '👸', name: 'Королева', price: 500 },
+    { id: 'brain', icon: '🧠', name: 'Гений', price: 1000 }
+];
+
+const LEAGUES = [{ min: 0, name: "🥉 Бронзовая Лига", color: "league-bronze" }, { min: 1000, name: "🥈 Серебряная Лига", color: "league-silver" }, { min: 5000, name: "🥇 Золотая Лига", color: "league-gold" }, { min: 15000, name: "💎 Алмазная Лига", color: "league-diamond" }, { min: 50000, name: "👑 Легендарная Лига", color: "league-legend" }];
+
+let DB = null; 
+const Data = {
+    currentKey: null,
+    initNewData(userId) { const newDB = JSON.parse(JSON.stringify(DefaultDB)); newDB.achievements = GenAch(); localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); },
+    load(userId) { 
+        this.currentKey = 'MathData_' + userId; const raw = localStorage.getItem(this.currentKey); 
+        if (raw) { 
+            const loaded = JSON.parse(raw);
+            if(loaded.user) { 
+                DB = loaded; 
+                if(DB.user.coins === undefined) DB.user.coins = 0;
+                if(DB.user.gender === undefined) DB.user.gender = 'male';
+                if(DB.user.dob === undefined) DB.user.dob = '';
+                if(DB.user.ownedAvatars === undefined) DB.user.ownedAvatars = [];
+                if(DB.user.avatar === null && Auth.currentUser) DB.user.avatar = Auth.currentUser.avatar;
+                if(DB.settings.sfx === undefined) DB.settings.sfx = true;
+                if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
+                if(DB.sessions === undefined) DB.sessions = []; 
+                if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
+                
+                // Cloud Sync
+                if(window.DB_Online) {
+                    this.syncWithCloud(userId);
+                }
+            } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); }
+        } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
+    },
+    async syncWithCloud(userId) {
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
+            const docSnap = await window.DB_Online.getDoc(docRef);
+            if(docSnap.exists()) {
+                const cloudData = docSnap.data();
+                // Basic conflict resolution: take cloud if more playtime
+                if(cloudData.user.totalSec > DB.user.totalSec) {
+                    DB = cloudData;
+                    this.save();
+                }
+            }
+        } catch(e) {}
+    },
+    save() { 
+        if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB)); 
+        if (window.DB_Online && Auth.currentUser) {
+             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+             window.DB_Online.setDoc(docRef, DB).catch(e => console.log(e));
+        }
+    },
+    export() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB)); const node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", `${Auth.currentUser.name}_MathData.json`); document.body.appendChild(node); node.click(); node.remove(); },
+    import(el) { const fr = new FileReader(); fr.onload = (e) => { try { DB = JSON.parse(e.target.result); this.save(); location.reload(); } catch(x) { alert("Ошибка файла"); } }; fr.readAsText(el.files[0]); }
+};
+
+const Sync = {
+    copyCode() {
+        if(!DB) return;
+        const json = JSON.stringify(DB);
+        const encoded = btoa(unescape(encodeURIComponent(json)));
+        navigator.clipboard.writeText(encoded).then(() => {
+            App.toast("☁️ Код скопирован в буфер!");
+        });
+    },
+    pasteCode() {
+        const code = prompt("Вставьте код сохранения:");
+        if(!code) return;
+        try {
+            const decoded = decodeURIComponent(escape(atob(code)));
+            DB = JSON.parse(decoded);
+            Data.save();
+            location.reload();
+        } catch(e) {
+            alert("Ошибка кода! Проверьте формат.");
+        }
+    },
+    upload() {
+         alert("Данные синхронизируются автоматически при подключении к интернету!");
+    }
+};
+
+// --- WHITEBOARD & CALC ---
+const Whiteboard = {
+    canvas: null, ctx: null, isDrawing: false,
+    init() {
+        this.canvas = document.getElementById('wb-canvas'); this.ctx = this.canvas.getContext('2d'); this.resize();
+        const h = (e) => { e.preventDefault(); this.start(e.touches?e.touches[0]:e); };
+        const m = (e) => { e.preventDefault(); this.draw(e.touches?e.touches[0]:e); };
+        const e = () => this.stop();
+        this.canvas.onmousedown = h; this.canvas.onmousemove = m; this.canvas.onmouseup = e; this.canvas.onmouseout = e;
+        this.canvas.ontouchstart = h; this.canvas.ontouchmove = m; this.canvas.ontouchend = e;
+    },
+    open() { document.getElementById('wb-modal').classList.add('show'); this.resize(); },
+    close() { document.getElementById('wb-modal').classList.remove('show'); },
+    resize() { const p = this.canvas.parentElement; this.canvas.width = p.clientWidth; this.canvas.height = 350; this.ctx.lineCap = 'round'; this.ctx.lineWidth = 3; this.ctx.strokeStyle = '#2B3674'; },
+    start(e) { this.isDrawing = true; this.ctx.beginPath(); const r = this.canvas.getBoundingClientRect(); this.ctx.moveTo(e.clientX - r.left, e.clientY - r.top); },
+    draw(e) { if(!this.isDrawing) return; const r = this.canvas.getBoundingClientRect(); this.ctx.lineTo(e.clientX - r.left, e.clientY - r.top); this.ctx.stroke(); },
+    stop() { this.isDrawing = false; },
+    clear() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); },
+    toggle() { this.open(); SoundSys.play('click'); }
+};
+
+const Calc = { 
+    current: '', 
+    toggle() { document.getElementById('calc-modal').classList.toggle('show'); this.clear(); SoundSys.play('click'); }, 
+    append(val) { if(this.current.length>15)return; this.current+=val; this.update(); SoundSys.play('click'); }, 
+    clear() { this.current=''; this.update(); }, 
+    solve() { 
+        try { 
+            // Simple security check (SAFE EVAL)
+            if(/^[0-9+\-*/.() ]*$/.test(this.current)) {
+                this.current=new Function('return ' + this.current)().toString();
+            } else {
+                this.current='Error';
+            }
+        } catch { this.current='Error'; } 
+        this.update(); SoundSys.play('success'); 
+    }, 
+    update() { document.getElementById('calc-display').innerText=this.current||'0'; } 
+};
+
+// --- SUBJECT SYSTEM ---
+const SubjectSys = {
+    render() {
+        const list = document.getElementById('settings-subject-list'); if(!list) return;
+        list.innerHTML = Object.keys(DB.subjects).map(key => { const s = DB.subjects[key]; return `<div class="subject-manage-row"><div class="subject-manage-info"><span style="font-size:20px;">${s.icon}</span> ${s.name}</div><button class="btn-delete" onclick="SubjectSys.delete('${key}')">✕</button></div>`; }).join('');
+    },
+    addPreset(icon, name) {
+        const id = 'subj_' + Date.now(); 
+        DB.subjects[id] = { name: name, icon: icon, sec: 0 };
+        Data.save(); this.render(); App.renderSubjects(); App.toast(name + " добавлен!");
+    },
+    delete(key) {
+        if(Object.keys(DB.subjects).length <= 1) return App.toast("Нельзя удалить последний предмет!");
+        if(!confirm("Удалить этот предмет?")) return;
+        delete DB.subjects[key]; if(DB.user.subject === key) { DB.user.subject = Object.keys(DB.subjects)[0]; }
+        Data.save(); this.render(); App.renderSubjects(); App.updateUI(); App.toast("Предмет удален");
+    }
+};
+
+// --- DAILY REWARD SYSTEM ---
+const DailySys = {
+    rewards: [10, 20, 30, 40, 50, 75, 100],
+    check() {
+        const today = new Date().toISOString().split('T')[0]; const last = DB.user.lastDailyClaim;
+        if (last !== today) { if (last) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().split('T')[0]; if (last !== yesterdayStr) DB.user.dailyStreak = 0; } this.showModal(); }
+    },
+    showModal() {
+        const modal = document.getElementById('daily-modal'); const grid = document.getElementById('daily-grid'); const currentDayIndex = DB.user.dailyStreak % 7;
+        grid.innerHTML = this.rewards.map((r, i) => { let cls = 'daily-day'; if (i < currentDayIndex) cls += ' claimed'; if (i === currentDayIndex) cls += ' active'; return `<div class="${cls}"><div class="daily-coin">💰</div><div>${r}</div></div>`; }).join('');
+        document.getElementById('daily-reward-amount').innerText = this.rewards[currentDayIndex]; modal.classList.add('show'); FX.confetti(); SoundSys.play('win');
+    },
+    claim() {
+        const currentDayIndex = DB.user.dailyStreak % 7; const reward = this.rewards[currentDayIndex];
+        DB.user.coins += reward; DB.user.dailyStreak++; DB.user.lastDailyClaim = new Date().toISOString().split('T')[0];
+        if (currentDayIndex === 6) { App.addXP(500); App.toast("🎉 Неделя пройдена! +500 XP"); FX.confetti(); }
+        Data.save(); App.updateUI(); document.getElementById('daily-modal').classList.remove('show'); SoundSys.play('coin'); App.toast(`Получено: ${reward} монет!`);
+    }
+};
+
+// --- DONATION & ONLINE ---
+const Donation = {
+    uzCardLink: "https://payme.uz/", 
+    worldCardLink: "https://ko-fi.com/",
+    
+    payUz() { 
+        if(confirm("Открыть Payme/Click для оплаты? \nПосле оплаты пришли чек и получи код!")) 
+            window.open(this.uzCardLink, '_blank'); 
+    },
+    payWorld() { 
+        if(confirm("Открыть оплату картой (Visa)? \nПосле оплаты пришли чек и получи код!")) 
+            window.open(this.worldCardLink, '_blank'); 
+    },
+    enterCode() {
+        const c = prompt("Введите полученный промокод:"); if(!c) return;
+        const code = c.trim().toUpperCase();
+        if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) return App.toast("Этот код уже использован!");
+        
+        // ВАШИ СЕКРЕТНЫЕ КОДЫ (Придумывайте и раздавайте)
+        const rewards = { 
+            "START":{c:100,msg:"Бонус новичка!"}, 
+            "HUMO":{c:5000,msg:"Спасибо за поддержку из Узбекистана! 🇺🇿"}, 
+            "VISA":{c:5000,msg:"Thanks for support! 🌍"},
+            "ADMIN":{c:1000000,msg:"GOD MODE ON"} 
+        };
+        
+        if(rewards[code]) {
+            DB.user.coins += rewards[code].c;
+            if(!DB.user.usedCodes) DB.user.usedCodes = [];
+            DB.user.usedCodes.push(code);
+            Data.save(); App.updateUI(); FX.confetti(); SoundSys.play('win'); 
+            alert(`✅ КОД ПРИНЯТ!\n\n${rewards[code].msg}\nНачислено: ${rewards[code].c} монет`);
+        } else { 
+            SoundSys.play('error');
+            App.toast("❌ Неверный код"); 
+        }
+    }
+};
+
+const Online = {
+    async loadLeaderboard() {
+        if(!window.DB_Online) return App.toast("⚠️ Нет подключения к онлайн базе");
+        const list = document.getElementById('leaderboard-list'); list.innerHTML = 'Загрузка...';
+        try {
+            const q = window.DB_Online.query(window.DB_Online.collection(window.DB_Online.db, "users"), window.DB_Online.orderBy("user.xp", "desc"), window.DB_Online.limit(20));
+            const snap = await window.DB_Online.getDocs(q);
+            list.innerHTML = '';
+            document.getElementById('total-players-count').innerText = `Всего игроков: ${snap.size}`; 
+            let r=1;
+            snap.forEach(doc => {
+                const u = doc.data().user;
+                if(!u) return;
+                list.innerHTML += `<div class="user-list-item" style="justify-content:space-between;"><div><b>#${r++} ${u.name}</b><br><small>Lvl ${u.level}</small></div><b style="color:var(--primary)">${u.xp} XP</b></div>`;
+            });
+            if(r===1) list.innerHTML = "Список пуст.";
+        } catch(e) { list.innerHTML = "Ошибка загрузки"; console.error(e); }
+    }
+};
+
+/* ==========================================
+   APP CORE
+   ========================================== */
+const Auth = {
+    users: [], currentUser: null, 
+    avatars: ['👨‍🚀', '👩‍🚀', '👩‍🔬', '👨‍🔬', '🤖', '🦊', '🦉', '👩‍🏫', '👨‍🏫', '👩‍🎓'], 
+    selectedAvatar: '👨‍🚀', selectedGender: 'male',
+    
+    init() { const stored = localStorage.getItem('MathUsers'); if (stored) this.users = JSON.parse(stored); this.renderUserList(); this.renderAvatars(); SoundSys.init(); Whiteboard.init(); PWA.init(); MusicPlayer.init(); },
+    renderUserList() { const list = document.getElementById('user-list'); list.innerHTML = ''; if (this.users.length === 0) { list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>'; return; } this.users.forEach(u => { const div = document.createElement('div'); div.className = 'user-list-item'; div.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,4)}...</div></div>`; div.onclick = () => this.login(u.id); list.appendChild(div); }); },
+    renderAvatars() { document.getElementById('avatar-selector').innerHTML = this.avatars.map(a => `<div class="avatar-option ${a===this.selectedAvatar?'selected':''}" onclick="Auth.selectAvatar('${a}')">${a}</div>`).join(''); },
+    selectAvatar(a) { this.selectedAvatar = a; this.renderAvatars(); SoundSys.play('click'); },
+    setGender(g) {
+        this.selectedGender = g;
+        const btns = document.querySelectorAll('.gender-btn');
+        btns.forEach(b => b.classList.remove('active'));
+        if(g==='male') btns[0].classList.add('active'); else btns[1].classList.add('active');
+    },
+    showRegister() { document.getElementById('login-view').style.display = 'none'; document.getElementById('register-view').style.display = 'block'; SoundSys.play('click'); },
+    showLogin() { document.getElementById('login-view').style.display = 'block'; document.getElementById('register-view').style.display = 'none'; SoundSys.play('click'); },
+    createAccount() { 
+        const name = document.getElementById('reg-name').value.trim();
+        const dob = document.getElementById('reg-dob').value;
+        if (!name) return alert("Введите имя!"); 
+        
+        const newUser = { 
+            id: 'user_' + Date.now(), 
+            name: name, 
+            avatar: this.selectedAvatar, 
+            gender: this.selectedGender,
+            dob: dob,
+            created: new Date().toISOString() 
+        }; 
+        
+        this.users.push(newUser); 
+        localStorage.setItem('MathUsers', JSON.stringify(this.users)); 
+        Data.initNewData(newUser.id); 
+        this.login(newUser.id); 
+    },
+    login(id) { const user = this.users.find(u => u.id === id); if (!user) return; this.currentUser = user; Data.load(user.id); document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-container').style.display = 'block'; const savedAvatar = DB.user.avatar || user.avatar; document.getElementById('header-avatar').innerText = savedAvatar; document.getElementById('header-name').innerText = user.name; document.getElementById('profile-avatar-big').innerText = savedAvatar; document.getElementById('profile-name-big').innerText = user.name; SoundSys.play('success'); App.init(); DailySys.check(); },
+    logout() { if(confirm("Выйти из профиля?")) { Timer.stop(false); location.reload(); } },
+    resetData() {
+        if(confirm("ВЫ УВЕРЕНЫ? Весь прогресс, монеты и покупки будут удалены безвозвратно!")) {
+            Data.initNewData(this.currentUser.id);
+            alert("Данные сброшены.");
+            location.reload();
+        }
+    }
+};
+
+const Timer = {
+    ref: null, sec: 0, active: false, lastActive: 0, sessionDuration: 0, sessionCoins: 0, maxSessionTime: 30 * 60, maxIdleTime: 15 * 60 * 1000,
+    wakeLock: null,
+    
+    async requestWakeLock() {
+        try { if ('wakeLock' in navigator) this.wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+    },
+    releaseWakeLock() {
+        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+    },
+
+    preStart() { if(this.active) return; this.start(); },
+    start() {
+        this.active = true; this.lastActive = Date.now(); this.sessionDuration = 0; this.sessionCoins = 0; SoundSys.play('click');
+        this.requestWakeLock();
+        
+        window.onmousemove = window.onkeypress = () => { this.lastActive = Date.now(); };
+        this.ref = setInterval(() => {
+            const now = Date.now();
+            if (now - this.lastActive > this.maxIdleTime) { this.forcePause("🛑 Таймер остановлен: Нет активности 15 минут."); return; }
+            if (this.sessionDuration >= this.maxSessionTime) { this.forcePause("👮 Проверка реальностью! Решите пример."); MathGame.show(true); return; }
+            this.sec++; this.sessionDuration++; DB.user.totalSec++; DB.subjects[DB.user.subject].sec++;
+            if(this.sec % 600 === 0) { DB.user.coins++; this.sessionCoins++; SoundSys.play('coin'); const coinEl = document.getElementById('coin-display'); const rect = coinEl.getBoundingClientRect(); FX.floatText(rect.left, rect.top, "+1 💰"); Data.save(); App.updateUI(); } 
+            if(this.sec%60===0) Data.save(); App.updateUI();
+        }, 1000);
+        document.getElementById('btn-start').innerText = "🔥 ИДЕТ..."; document.getElementById('timer').style.color = "var(--primary)";
+    },
+    forcePause(reason) { this.stop(false); App.toast(reason); },
+    stop(manual=true) {
+        if(!this.active && manual) return;
+        clearInterval(this.ref); this.active = false; window.onmousemove = window.onkeypress = null; SoundSys.play('click');
+        this.releaseWakeLock();
+
+        if(manual && this.sec > 60) {
+            App.addXP(Math.floor(this.sec/60)*10);
+            
+            // GOAL CHECK
+            const goal = document.getElementById('session-goal').value.trim();
+            if(goal && confirm(`Вы выполнили цель: "${goal}"?`)) {
+                App.addXP(50);
+                App.toast("🎯 Цель достигнута! +50 XP");
+                SoundSys.play('win');
+            }
+            document.getElementById('session-goal').value = ""; // reset
+        }
+        
+        const k = new Date().toISOString().split('T')[0]; DB.history[k] = (DB.history[k]||0) + this.sec; 
+        if(this.sessionDuration > 5) { const log = { date: new Date().toISOString(), subject: DB.subjects[DB.user.subject].name, sec: this.sessionDuration, coins: this.sessionCoins }; DB.sessions.unshift(log); if(DB.sessions.length > 50) DB.sessions.pop(); }
+        if(this.sessionDuration > 300) { const today = new Date().toISOString().split('T')[0]; const last = DB.user.lastStudyDate; if(last !== today) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().split('T')[0]; if(last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } DB.user.lastStudyDate = today; SoundSys.play('success'); FX.confetti(); } }
+        if(manual) this.sec=0;
+        document.getElementById('btn-start').innerText = "🚀 СТАРТ"; document.getElementById('timer').style.color = "var(--text)"; Data.save(); App.updateUI(); App.renderHistory();
+    }
+};
+
+const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
+
+const Trainer = {
+    score: 0, time: 60, interval: null, ans: 0, difficulty: 'easy',
+    setDiff(diff, btn) {
+        this.difficulty = diff;
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    },
+    init() { document.getElementById('trainer-menu').style.display = 'block'; document.getElementById('trainer-game').style.display = 'none'; document.getElementById('trainer-result').style.display = 'none'; document.getElementById('trainer-high-score').innerText = DB.user.trainerRecord || 0; },
+    start() {
+        this.score = 0; this.time = 60; document.getElementById('trainer-menu').style.display = 'none'; document.getElementById('trainer-game').style.display = 'block';
+        document.getElementById('game-score').innerText = 0; document.getElementById('game-time').innerText = 60;
+        SoundSys.play('click'); this.nextProblem(); const input = document.getElementById('game-input'); input.value = ''; input.focus();
+        input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
+        this.interval = setInterval(() => { this.time--; document.getElementById('game-time').innerText = this.time; if(this.time <= 0) this.end(); }, 1000);
+    },
+    nextProblem() {
+        const ops = this.difficulty === 'hard' ? ['+','-','*','/'] : (this.difficulty === 'medium' ? ['+','-','*'] : ['+','-']);
+        const op = ops[Math.floor(Math.random() * ops.length)];
+        
+        let range = 10;
+        if(this.difficulty === 'medium') range = 50;
+        if(this.difficulty === 'hard') range = 100;
+        
+        let a, b;
+        
+        if (op === '*') {
+            let multRange = this.difficulty === 'hard' ? 20 : 10;
+            a = Math.floor(Math.random() * multRange) + 2; 
+            b = Math.floor(Math.random() * multRange) + 2;
+        } else if (op === '/') {
+             b = Math.floor(Math.random() * 10) + 2;
+             a = b * (Math.floor(Math.random() * 10) + 2);
+        } else {
+            a = Math.floor(Math.random() * range) + 1;
+            b = Math.floor(Math.random() * range) + 1;
+        }
+
+        if(op === '+') this.ans = a + b; 
+        if(op === '-') this.ans = a - b; 
+        if(op === '*') this.ans = a * b;
+        if(op === '/') this.ans = a / b;
+
+        let problemStr = `${a} ${op === '*' ? '×' : (op === '/' ? '÷' : op)} ${b}`;
+        document.getElementById('game-problem').innerText = problemStr; document.getElementById('game-input').value = '';
+    },
+    check() {
+        const val = parseInt(document.getElementById('game-input').value); const inputEl = document.getElementById('game-input');
+        if(val === this.ans) {
+            this.score++; document.getElementById('game-score').innerText = this.score; SoundSys.play('success');
+            inputEl.style.borderColor = 'var(--primary)'; setTimeout(() => inputEl.style.borderColor = 'var(--bg)', 200);
+            
+            // Points based on diff
+            let pts = 10; if(this.difficulty==='medium') pts=20; if(this.difficulty==='hard') pts=30;
+            const rect = inputEl.getBoundingClientRect(); FX.floatText(rect.left + 50, rect.top - 30, `+${pts} XP`, "#6C63FF");
+            this.nextProblem();
+        } else { SoundSys.play('error'); inputEl.style.borderColor = 'red'; inputEl.value = ''; }
+    },
+    end() {
+        clearInterval(this.interval); document.getElementById('trainer-game').style.display = 'none'; document.getElementById('trainer-result').style.display = 'block';
+        
+        let mult = 10; if(this.difficulty==='medium') mult=20; if(this.difficulty==='hard') mult=30;
+        const earnedXP = this.score * mult; 
+        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 5)); 
+        
+        App.addXP(earnedXP);
+        if(earnedCoins > 0) { DB.user.coins += earnedCoins; SoundSys.play('coin'); App.toast(`🪙 +${earnedCoins} 💰`); }
+        if(this.score > DB.user.trainerRecord) { DB.user.trainerRecord = this.score; SoundSys.play('win'); App.toast("🏆 Новый рекорд!"); FX.confetti(); }
+        Data.save(); App.updateUI();
+        document.getElementById('result-score').innerText = this.score; document.getElementById('result-xp').innerText = `+${earnedXP} XP`; document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
+    },
+    stop() { clearInterval(this.interval); this.init(); }
+};
+
+const App = {
+    init() { 
+        this.applyTheme(DB.user.theme); document.getElementById('sfx-toggle').checked = DB.settings.sfx; SoundSys.enabled = DB.settings.sfx;
+        this.renderSubjects(); this.renderShop(); this.renderAchievements(); Trainer.init(); this.updateUI(); this.switchTab('dashboard'); SubjectSys.render();
+        DailySys.check(); this.renderHistory();
+    },
+    toggleZen() {
+        document.body.classList.toggle('zen-active');
+        const btn = document.getElementById('exit-zen-btn');
+        btn.style.display = document.body.classList.contains('zen-active') ? 'inline-block' : 'none';
+    },
+    switchTab(id, btn) { 
+        SoundSys.play('click');
+        if(document.getElementById('trainer').classList.contains('active')) Trainer.stop();
+        document.querySelectorAll('.section').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active')); 
+        document.getElementById(id).classList.add('active'); if(btn) btn.classList.add('active'); 
+        if(id==='stats') { this.renderStats(); this.renderHistory(); }
+        if(id==='trainer') Trainer.init(); if(id==='settings') SubjectSys.render(); if(id==='about') document.getElementById('about').classList.add('active');
+    },
+    setSubject(k) { if(Timer.active) return alert("Стоп таймер!"); DB.user.subject=k; SoundSys.play('click'); this.renderSubjects(); this.updateUI(); },
+    setTheme(id) { if(DB.user.ownedThemes.includes(id)) { DB.user.theme=id; this.applyTheme(id); this.renderShop(); Data.save(); SoundSys.play('click'); } else { this.toast("🔒 Сначала купите эту тему!"); } },
+    applyTheme(id) { document.body.className = ''; if(document.querySelector('.zen-active')) document.body.classList.add('zen-active'); if(id!=='standard') document.body.classList.add(id==='dark'?'dark-mode':`theme-${id}`); else document.body.classList.add('theme-standard'); },
+    buyTheme(id) {
+        const theme = THEMES.find(t=>t.id === id);
+        if(DB.user.coins >= theme.price) {
+            if(confirm(`Купить тему "${theme.name}" за ${theme.price} монет?`)) { DB.user.coins -= theme.price; DB.user.ownedThemes.push(id); this.setTheme(id); SoundSys.play('success'); this.toast("🎉 Тема куплена!"); this.updateUI(); FX.confetti(); }
+        } else { this.toast("❌ Недостаточно монет!"); SoundSys.play('error'); }
+    },
+    setAvatar(icon, id) {
+        if(DB.user.ownedAvatars.includes(id)) { DB.user.avatar = icon; ['header-avatar','profile-avatar-big'].forEach(el => { const e = document.getElementById(el); if(e) e.innerText = icon; }); this.renderShop(); Data.save(); SoundSys.play('click'); } else { this.toast("🔒 Сначала купите этот аватар!"); }
+    },
+    buyAvatar(id) {
+        const av = SHOP_AVATARS.find(a=>a.id === id);
+        if(DB.user.coins >= av.price) {
+            if(confirm(`Купить аватар "${av.name}" за ${av.price} монет?`)) { DB.user.coins -= av.price; DB.user.ownedAvatars.push(id); this.setAvatar(av.icon, id); SoundSys.play('success'); this.toast("🎉 Аватар куплен!"); this.updateUI(); FX.confetti(); }
+        } else { this.toast("❌ Недостаточно монет!"); SoundSys.play('error'); }
+    },
+    addXP(v) { 
+        DB.user.xp += v; 
+        if(DB.user.xp >= DB.user.nextXp) { 
+            DB.user.level++; DB.user.xp-=DB.user.nextXp; DB.user.nextXp=Math.floor(DB.user.nextXp*1.2); 
+            SoundSys.play('win'); FX.confetti(); this.toast(`🎉 Уровень ${DB.user.level}!`); 
+        } else { this.toast(`+${v} XP`); } 
+        Data.save(); 
+        this.checkAch(); 
+        this.updateUI(); 
+    },
+    checkAch() {
+        DB.achievements.forEach(a => {
+            if(a.unlocked) return; 
+            let val=0; if(a.type==='total') val=DB.user.totalSec; if(a.type==='lvl') val=DB.user.level; if(a.type==='xp') val=DB.user.xp; if(a.type==='sub') val=DB.subjects[a.sub].sec;
+            if(val>=a.max) { a.unlocked=true; SoundSys.play('win'); FX.confetti(); this.toast(`🏆 ${a.title}`); this.renderAchievements(); }
+        });
+    },
+    updateUI() {
+        document.getElementById('subject-title').innerText = DB.subjects[DB.user.subject].name;
+        const timeStr = new Date(Timer.sec * 1000).toISOString().substr(11, 8); document.getElementById('timer').innerText = timeStr;
+        const hours = (DB.user.totalSec/3600).toFixed(1);
+        let currentLeague = LEAGUES[0]; for(let l of LEAGUES) { if(DB.user.xp >= l.min) currentLeague = l; }
+        document.getElementById('header-league').innerText = currentLeague.name; document.getElementById('profile-league-big').innerText = currentLeague.name;
+        
+        const headerBox = document.getElementById('header-avatar-box'); const profileBox = document.getElementById('profile-avatar-box');
+        if(headerBox) headerBox.className = `profile-img ${currentLeague.color}`;
+        if(profileBox) profileBox.className = `profile-img ${currentLeague.color}`;
+
+        ['prof-lvl'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.level; });
+        ['prof-xp'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.xp; });
+        ['prof-time'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = hours + 'ч'; });
+        ['prof-coins', 'coin-display'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.coins; });
+        
+        document.getElementById('streak-display').innerText = DB.user.streak;
+        const currentAv = DB.user.avatar || Auth.selectedAvatar;
+        ['header-avatar','profile-avatar-big'].forEach(el => { const e = document.getElementById(el); if(e) e.innerText = currentAv; });
+        document.getElementById('prof-xp-bar').style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
+        
+        const xpTextEl = document.getElementById('xp-progress-text');
+        if(xpTextEl) xpTextEl.innerText = `${DB.user.xp} / ${DB.user.nextXp} XP`;
+        
+        const achCount = DB.achievements.filter(a=>a.unlocked).length; document.getElementById('ach-stats').innerText = `${achCount}/109`;
+    },
+    renderSubjects() { document.getElementById('subjects-grid').innerHTML = Object.keys(DB.subjects).map(k => { const s = DB.subjects[k]; const active = k===DB.user.subject ? 'border:2px solid var(--primary); background:rgba(0,0,0,0.02)' : 'border:2px solid transparent'; return `<div onclick="App.setSubject('${k}')" style="padding:15px; border-radius:15px; text-align:center; cursor:pointer; background:var(--bg); ${active}"><div style="font-size:24px">${s.icon}</div><div style="font-weight:bold; font-size:13px; margin-top:5px;">${s.name}</div></div>`; }).join(''); },
+    renderShop() { 
+        document.getElementById('theme-list').innerHTML = THEMES.map(t => {
+            const isOwned = DB.user.ownedThemes.includes(t.id); const isActive = DB.user.theme === t.id; const canAfford = DB.user.coins >= t.price;
+            let btn = isActive ? `<div style="color:var(--primary); font-weight:bold; font-size:12px;">Выбрано ✅</div>` : (isOwned ? `<button class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="App.setTheme('${t.id}')">Выбрать</button>` : `<button class="btn btn-outline" style="padding:5px 10px; font-size:12px; color:${canAfford ? 'var(--primary)' : 'var(--text-light)'}" onclick="App.buyTheme('${t.id}')">Купить</button>`);
+            const priceTag = isOwned ? '' : `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">💰 ${t.price}</div>`;
+            return `<div class="shop-item ${isActive ? 'active' : ''}"><div style="font-size:24px">${t.icon}</div><div style="font-size:13px; font-weight:bold; margin:5px 0;">${t.name}</div>${priceTag}<div style="margin-top:5px;">${btn}</div></div>`;
+        }).join(''); 
+        document.getElementById('avatar-shop-list').innerHTML = SHOP_AVATARS.map(a => {
+            const isOwned = DB.user.ownedAvatars.includes(a.id); const isActive = DB.user.avatar === a.icon; const canAfford = DB.user.coins >= a.price;
+            let btn = isActive ? `<div style="color:var(--primary); font-weight:bold; font-size:12px;">Выбрано ✅</div>` : (isOwned ? `<button class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="App.setAvatar('${a.icon}', '${a.id}')">Выбрать</button>` : `<button class="btn btn-outline" style="padding:5px 10px; font-size:12px; color:${canAfford ? 'var(--primary)' : 'var(--text-light)'}" onclick="App.buyAvatar('${a.id}')">Купить</button>`);
+            const priceTag = isOwned ? '' : `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">💰 ${a.price}</div>`;
+            return `<div class="shop-item ${isActive ? 'active' : ''}"><div style="font-size:24px">${a.icon}</div><div style="font-size:13px; font-weight:bold; margin:5px 0;">${a.name}</div>${priceTag}<div style="margin-top:5px;">${btn}</div></div>`;
+        }).join('');
+    },
+    renderAchievements() {
+        document.getElementById('ach-list').innerHTML = DB.achievements.map(a => {
+            let current = 0;
+            if(a.type==='total') current = DB.user.totalSec;
+            if(a.type==='lvl') current = DB.user.level;
+            if(a.type==='xp') current = DB.user.xp;
+            if(a.type==='sub') current = DB.subjects[a.sub] ? DB.subjects[a.sub].sec : 0;
+            
+            const pct = Math.min(100, (current / a.max) * 100);
+            const isDone = a.unlocked;
+            const status = isDone ? 'unlocked' : '';
+            
+            let displayCurr = current;
+            let displayMax = a.max;
+            if(a.type === 'total' || a.type === 'sub') {
+                displayCurr = (current/3600).toFixed(1) + 'ч';
+                displayMax = (a.max/3600).toFixed(1) + 'ч';
+            }
+
+            return `<div class="ach-row ${status}" onclick="App.showAchDetails(${a.id})">
+                <div class="ach-icon">${a.icon}</div>
+                <div class="ach-info">
+                    <div class="ach-title"><span>${a.title}</span> <span style="font-size:10px; opacity:0.7;">${isDone ? '✅' : `${displayCurr}/${displayMax}`}</span></div>
+                    <div class="ach-desc">${a.desc}</div>
+                    <div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%"></div></div>
+                </div>
+            </div>`;
+        }).join('');
+    },
+    showAchDetails(id) { 
+        const a = DB.achievements.find(x => x.id === id); 
+        const box = document.getElementById('ach-details-box'); 
+        box.classList.add('show'); 
+        document.getElementById('ach-title').innerText = a.title; 
+        document.getElementById('ach-desc').innerText = a.desc; 
+        const statusEl = document.getElementById('ach-status');
+        statusEl.innerText = a.unlocked ? "Получено ✅" : "В процессе..."; 
+        statusEl.style.color = a.unlocked ? "var(--success)" : "var(--text-light)"; 
+    },
+    calcPeriodStats(days) { let totalSec = 0; const now = new Date(); for(let i=0; i<days; i++) { const d = new Date(); d.setDate(now.getDate() - i); const k=d.toISOString().split('T')[0]; if(DB.history[k]) totalSec += DB.history[k]; } return totalSec; },
+    formatTime(sec) { if(sec < 60) return sec + 'с'; if(sec < 3600) return Math.floor(sec/60) + 'м'; return (sec/3600).toFixed(1) + 'ч'; },
+    renderStats() {
+        const weekSec = this.calcPeriodStats(7); const monthSec = this.calcPeriodStats(30); const totalSec = DB.user.totalSec;
+        document.getElementById('stat-week-time').innerText = this.formatTime(weekSec); document.getElementById('stat-month-time').innerText = this.formatTime(monthSec); document.getElementById('stat-total-time').innerText = this.formatTime(totalSec);
+        document.getElementById('stat-week-xp').innerText = Math.floor(weekSec/60 * 10) + " XP"; document.getElementById('stat-month-xp').innerText = Math.floor(monthSec/60 * 10) + " XP"; document.getElementById('stat-total-xp').innerText = DB.user.xp + " XP";
+        const hm = document.getElementById('heatmap'); hm.innerHTML=''; for(let i=29; i>=0; i--) { const d=new Date(); d.setDate(d.getDate()-i); const k=d.toISOString().split('T')[0]; const v=DB.history[k]||0; const c=v>7200?'var(--primary)':(v>1800?'rgba(10,186,181,0.5)':(v>0?'rgba(10,186,181,0.2)':'rgba(0,0,0,0.05)')); hm.innerHTML+=`<div style="aspect-ratio:1; border-radius:3px; background:${c}" title="${k}: ${(v/60).toFixed(0)}м"></div>`; }
+        const weekLabels = [], weekData = [], days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+        for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = d.toISOString().split('T')[0]; weekLabels.push(days[d.getDay()]); weekData.push(((DB.history[k]||0)/3600).toFixed(2)); }
+        if(window.myChart) window.myChart.destroy(); const ctx = document.getElementById('weekChart'); window.myChart = new Chart(ctx, { type:'bar', data:{ labels: weekLabels, datasets:[{ label:'Часы', data: weekData, backgroundColor: getComputedStyle(document.body).getPropertyValue('--primary'), borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+        const subjLabels = [], subjData = [], subjColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#E7E9ED'];
+        Object.keys(DB.subjects).forEach(k => { const s = DB.subjects[k]; if(s.sec > 0) { subjLabels.push(s.name); subjData.push((s.sec/3600).toFixed(2)); } });
+        if(window.subjectChartInstance) window.subjectChartInstance.destroy(); const ctxSubj = document.getElementById('subjectChart');
+        window.subjectChartInstance = new Chart(ctxSubj, { type: 'doughnut', data: { labels: subjLabels, datasets: [{ data: subjData, backgroundColor: subjColors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } } });
+    },
+    renderHistory() {
+        const list = document.getElementById('session-log'); if(!list) return;
+        if(DB.sessions.length === 0) { list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">История пуста</div>'; return; }
+        list.innerHTML = DB.sessions.map(s => {
+            const d = new Date(s.date); const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            return `<div class="session-row"><div class="session-info"><div style="font-weight:bold">${s.subject}</div><div class="session-date">${dateStr} • ${this.formatTime(s.sec)}</div></div><div class="session-coins">+${s.coins} 💰</div></div>`;
+        }).join('');
+    },
+    toast(msg) { const c = document.getElementById('toast-container'); const d = document.createElement('div'); d.className='toast'; d.innerText=msg; c.appendChild(d); setTimeout(()=>d.classList.add('show'),10); setTimeout(()=>{d.classList.remove('show'); setTimeout(()=>d.remove(),400)},3000); }
+};
+
+window.addEventListener('keydown', function(e) {
+    if(e.key === "Escape" && document.body.classList.contains('zen-active')) {
+        App.toggleZen();
+    }
+});
+
+window.onload = () => Auth.init();
+</script>
+</body>
+</html>
