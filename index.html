@@ -76,6 +76,14 @@
     </script>
     
     <style>
+        @supports (padding: max(0px)) {
+    body.zen-active {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
         /* === БАЗОВЫЕ ПЕРЕМЕННЫЕ === */
         :root {
             --primary: #6C63FF;
@@ -195,34 +203,45 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         body.zen-active #dashboard .card:not(.zen-target) { 
             display: none !important; 
         }
-        body.zen-active .zen-target { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            border-radius: 0; 
-            z-index: 9999; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center;
-            background: var(--bg);
-            padding-top: var(--safe-top);
-            padding-bottom: var(--safe-bottom);
-        }
-        body.zen-active #timer { 
-            font-size: 18vw; 
-            text-shadow: 0 5px 15px rgba(0,0,0,0.1); 
-        }
-        body.zen-active .zen-controls { 
-            position: fixed; 
-            bottom: calc(40px + var(--safe-bottom)); 
-            display: flex; 
-            gap: 20px; 
-            width: 80%; 
-            justify-content: center; 
-        }
+        body.zen-active .zen-target {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;     /* вертикальный центр */
+    align-items: center;         /* горизонтальный центр */
+    padding: 0;
+    margin: 0;
+    background: var(--bg);
+    text-align: center;
+}
+        body.zen-active #timer {
+    font-size: 18vw;              /* адаптивный размер */
+    min-font-size: 60px;          /* минимум на маленьких экранах */
+    max-font-size: 120px;         /* максимум на больших */
+    line-height: 1;
+    margin: 0 0 20px 0;
+    padding: 0;
+    color: var(--text);
+    text-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+       /* Контролы под таймером — тоже по центру */
+body.zen-active .zen-controls {
+    position: static;             /* убираем fixed, чтобы не сдвигалось */
+    margin-top: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+/* Убираем лишние отступы body в Zen */
+body.zen-active {
+    padding: 0 !important;
+    margin: 0;
+    overflow: hidden;
+}
         
         /* === UI ELEMENTS === */
         #auth-screen { 
