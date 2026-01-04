@@ -21,6 +21,8 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
     
+    <!-- Библиотека QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -93,6 +95,8 @@
         }
 
         /* === ТЕМЫ ОФОРМЛЕНИЯ === */
+        body.theme-gold { --primary: #FFD700; --bg: #1E1E2E; --surface: #2D2D44; --text: #FFFFFF; --text-light: #B8B8D1; --shadow: 0 10px 30px rgba(255, 215, 0, 0.3); }
+        body.dark-mode.theme-gold { --primary: #FFEA80; }
         body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; }
         body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
         body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
@@ -416,7 +420,11 @@
     <div class="auth-card" id="register-view" style="display: none;">
         <h2>Новый профиль</h2>
         <div class="avatar-grid" id="avatar-selector"></div>
-        <input type="text" id="reg-name" class="input-field" placeholder="Ваше имя...">
+        
+        <!-- ВОТ САМАЯ ВАЖНАЯ СТРОКА. БЕЗ ID="reg-name" НИЧЕГО НЕ РАБОТАЕТ -->
+        <input type="text" id="reg-name" class="input-field" placeholder="Ваше имя..." maxlength="12">
+        <!-- ----------------------------------------------------------- -->
+
         <div class="reg-group" style="margin:15px 0;">
             <div style="font-size:12px; color:var(--text-light); margin-bottom:5px;">Пол</div>
             <div style="display:flex; gap:10px;">
@@ -424,6 +432,7 @@
                 <button class="btn gender-btn" onclick="Auth.setGender('female')" style="border:2px solid var(--bg);">👩 Девушка</button>
             </div>
         </div>
+
         <div style="display: flex; gap: 10px; margin-top: 20px;">
             <button class="btn btn-outline" onclick="Auth.showLogin()">Назад</button>
             <button class="btn btn-primary" onclick="Auth.createAccount()">Создать</button>
@@ -591,8 +600,7 @@
         <div class="grid">
             <div class="card">
                 <h3>🔥 Активность (30 дней)</h3>
-                <div id="heatmap" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 15px;"></div>
-            </div>
+                <div id="heatmap" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px;"></div>            </div>
             <div class="card">
                 <h3>📜 Журнал занятий</h3>
                 <div id="session-log" class="session-log"></div>
@@ -655,33 +663,62 @@
             <button class="btn" style="background:rgba(255,255,255,0.3); color:white; margin-top:10px;" onclick="Donation.enterCode()">🔑 Ввести код</button>
         </div>
 
-        <div class="card">
-            <h3>⚙️ Опции и Данные</h3>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--bg); padding: 15px; border-radius: 15px;">
-                <span>🔊 Звуковые эффекты</span>
-                <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
-            </div>
-            
-            <div style="margin-top:20px;">
-                <h4 style="margin-bottom:10px;">Предметы</h4>
-                <div id="settings-subject-list" class="subject-manage-grid"></div>
-                <div class="preset-grid" style="margin-top:10px;">
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('📖','Лит-ра')">📖</button>
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('⚛️','Физика')">⚛️</button>
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('🧪','Химия')">🧪</button>
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('🧬','Био')">🧬</button>
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('🏺','История')">🏺</button>
-                    <button class="preset-btn" onclick="SubjectSys.addPreset('🌐','Англ')">🌐</button>
-                </div>
-            </div>
-
-            <h4 style="margin-top:20px;">Данные</h4>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn btn-outline" onclick="Data.export()">💾 Файл</button>
-                <button class="btn btn-outline" onclick="Sync.upload()">☁️ Облако</button>
-            </div>
-            <button class="btn btn-outline" style="margin-top:10px; border-color:#FF7675; color:#FF7675;" onclick="Auth.resetData()">🗑️ Сброс данных</button>
+        
+<div class="card">
+    <h3>⚙️ Опции и перенос прогресса</h3>
+    
+    <!-- Звуковые эффекты -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+        <span>🔊 Звуковые эффекты</span>
+        <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
+    </div>
+    
+    <!-- Управление предметами -->
+    <div style="margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px;">📚 Предметы</h4>
+        <div id="settings-subject-list" class="subject-manage-grid"></div>
+        <div class="preset-grid" style="margin-top:10px;">
+            <button class="preset-btn" onclick="SubjectSys.addPreset('📖','Лит-ра')">📖</button>
+            <button class="preset-btn" onclick="SubjectSys.addPreset('⚛️','Физика')">⚛️</button>
+            <button class="preset-btn" onclick="SubjectSys.addPreset('🧪','Химия')">🧪</button>
+            <button class="preset-btn" onclick="SubjectSys.addPreset('🧬','Био')">🧬</button>
+            <button class="preset-btn" onclick="SubjectSys.addPreset('🏺','История')">🏺</button>
+            <button class="preset-btn" onclick="SubjectSys.addPreset('🌐','Англ')">🌐</button>
         </div>
+    </div>
+    
+    <!-- НОВЫЙ РАЗДЕЛ: Перенос прогресса -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
+        <h4 style="margin-bottom: 15px;">📦 Перенос прогресса на другое устройство</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn btn-outline" onclick="Data.export()">
+                💾 Скачать прогресс как файл (.json)
+            </button>
+            
+            <button class="btn btn-outline" onclick="Transfer.copyCode()">
+                📋 Скопировать код переноса
+            </button>
+            
+            <button class="btn btn-outline" onclick="Transfer.pasteCode()">
+                📥 Вставить код переноса
+            </button>
+            
+            <button class="btn btn-outline" onclick="Transfer.showQR()">
+                📱 Показать QR-код для переноса
+            </button>
+            
+            <!-- Опционально: автосинхронизация через Firebase -->
+            <button class="btn btn-outline" onclick="Sync.toggleAuto()" style="margin-top: 15px;">
+                ☁️ Автосинхронизация с облаком: <span id="sync-status">Выкл</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Сброс прогресса -->
+    <button class="btn btn-outline" style="margin-top: 40px; border-color: #FF7675; color: #FF7675;" onclick="Auth.resetData()">
+        🗑️ Сбросить весь прогресс
+    </button>
+</div>
     </section>
     
     <!-- 7. ACHIEVEMENTS -->
@@ -917,15 +954,37 @@ const GenAch = () => {
 
 const DefaultDB = { 
     user: { 
-        xp: 0, level: 1, nextXp: 500, totalSec: 0, subject: 'algebra', 
-        theme: 'standard', avatar: null, gender: 'male', dob: '',
-        coins: 0, streak: 0, lastStudyDate: null, dailyStreak: 0, lastDailyClaim: null, 
-        ownedThemes: ['standard'], ownedAvatars: [], trainerRecord: 0, usedCodes: []
+        xp:0, level:1, nextXp:500, totalSec:0, subject:'algebra', theme:'standard', 
+        avatar:'😎', gender:'male', coins:0, streak:0, lastStudyDate:null, 
+        dailyStreak:0, lastDailyClaim:null, ownedThemes:['standard'], ownedAvatars:[], 
+        trainerRecord:0, usedCodes:[] 
     }, 
-    settings: { mathCheck: true, sfx: true }, 
-    subjects: { algebra: { name: 'Алгебра', icon: '✖️', sec: 0 }, geometry: { name: 'Геометрия', icon: '📐', sec: 0 }, trigonometry: { name: 'Тригонометрия', icon: '〰️', sec: 0 } }, 
-    history: {}, achievements: [], sessions: [] 
+    settings: { sfx:true }, 
+
+    
+    // 👇 ВОТ ЗДЕСЬ МЫ ДОБАВИЛИ ВСЕ НОВЫЕ ПРЕДМЕТЫ 👇
+    subjects: { 
+        algebra: {name:'Алгебра', icon:'✖️', sec:0}, 
+        geometry: {name:'Геометрия', icon:'📐', sec:0},
+        calculus: {name:'Мат. анализ', icon:'∫', sec:0},
+        arithmetic: {name:'Арифметика', icon:'🔢', sec:0},
+        combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
+        statistics: {name:'Статистика', icon:'📊', sec:0},
+        trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
+        stereometry: {name:'Стереометрияя', icon:'🧊', sec:0}
+    }, 
+    history:{}, sessions:[], achievements:[] 
 };
+
+
+const AVATARS = [
+    {id:'lion',icon:'🦁',price:50}, 
+    {id:'robot',icon:'🤖',price:100}, 
+    {id:'alien',icon:'👽',price:150}, 
+    {id:'dragon',icon:'🐲',price:300}, 
+    {id:'wizard',icon:'🧙‍♂️',price:300}, 
+    {id:'king',icon:'👑',price:500}
+];
 
 const THEMES = [
     { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
@@ -933,7 +992,8 @@ const THEMES = [
     { id: 'pantone', name: 'Персик', icon: '🍑', price: 100 },
     { id: 'forest', name: 'Лес', icon: '🌲', price: 150 },
     { id: 'neon', name: 'Неон', icon: '🦄', price: 500 },
-    { id: 'math', name: 'MathBooster', icon: '💎', price: 600 }
+    { id: 'math', name: 'MathBooster', icon: '💎', price: 600 },
+    { id: 'gold', name: 'Золото', icon: '🥇', price: 1000 }
 ];
 
 const SHOP_AVATARS = [
@@ -1006,28 +1066,25 @@ const Data = {
 };
 
 const Sync = {
-    copyCode() {
-        if(!DB) return;
-        const json = JSON.stringify(DB);
-        const encoded = btoa(unescape(encodeURIComponent(json)));
-        navigator.clipboard.writeText(encoded).then(() => {
-            App.toast("☁️ Код скопирован в буфер!");
-        });
-    },
-    pasteCode() {
-        const code = prompt("Вставьте код сохранения:");
-        if(!code) return;
-        try {
-            const decoded = decodeURIComponent(escape(atob(code)));
-            DB = JSON.parse(decoded);
-            Data.save();
-            location.reload();
-        } catch(e) {
-            alert("Ошибка кода! Проверьте формат.");
+    autoSync: false,
+
+    init() {
+        const saved = localStorage.getItem('autoSync');
+        if (saved === 'true') {
+            this.autoSync = true;
+            document.getElementById('sync-status').innerText = 'Вкл';
         }
     },
-    upload() {
-         alert("Данные синхронизируются автоматически при подключении к интернету!");
+
+    toggleAuto() {
+        this.autoSync = !this.autoSync;
+        localStorage.setItem('autoSync', this.autoSync);
+        document.getElementById('sync-status').innerText = this.autoSync ? 'Вкл' : 'Выкл';
+        App.toast(this.autoSync ? "☁️ Автосинхра включена" : "☁️ Автосинхра выключена");
+        
+        if (this.autoSync && window.DB_Online && Auth.currentUser) {
+            Data.save(); // сразу синхронизируем
+        }
     }
 };
 
@@ -1112,16 +1169,18 @@ const DailySys = {
 
 // --- DONATION & ONLINE ---
 const Donation = {
-    uzCardLink: "https://payme.uz/", 
-    worldCardLink: "https://ko-fi.com/",
+    // ВСТАВЬ СЮДА НОМЕРА КАРТ
+    uzCard: "9860 1901 0789 6911 (Rustam M.)", 
+    worldCard: "4916 9903 0189 0056 (Rustam M.)",
     
     payUz() { 
-        if(confirm("Открыть Payme/Click для оплаты? \nПосле оплаты пришли чек и получи код!")) 
-            window.open(this.uzCardLink, '_blank'); 
+        // При нажатии покажет окно с номером карты, который можно скопировать
+        prompt("Скопируйте номер карты для перевода (Payme/Click):", this.uzCard);
+        alert("После перевода скинь скриншот мне в тг @rustambey708, чтобы получить код!");
     },
     payWorld() { 
-        if(confirm("Открыть оплату картой (Visa)? \nПосле оплаты пришли чек и получи код!")) 
-            window.open(this.worldCardLink, '_blank'); 
+        prompt("Скопируйте номер карты для перевода (Visa):", this.worldCard);
+        alert("После перевода скинь скриншот мне в тг @rustambey708, чтобы получить код!");
     },
     enterCode() {
         const c = prompt("Введите полученный промокод:"); if(!c) return;
@@ -1173,45 +1232,120 @@ const Online = {
    APP CORE
    ========================================== */
 const Auth = {
-    users: [], currentUser: null, 
-    avatars: ['👨‍🚀', '👩‍🚀', '👩‍🔬', '👨‍🔬', '🤖', '🦊', '🦉', '👩‍🏫', '👨‍🏫', '👩‍🎓'], 
-    selectedAvatar: '👨‍🚀', selectedGender: 'male',
-    
-    init() { const stored = localStorage.getItem('MathUsers'); if (stored) this.users = JSON.parse(stored); this.renderUserList(); this.renderAvatars(); SoundSys.init(); Whiteboard.init(); PWA.init(); MusicPlayer.init(); },
-    renderUserList() { const list = document.getElementById('user-list'); list.innerHTML = ''; if (this.users.length === 0) { list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>'; return; } this.users.forEach(u => { const div = document.createElement('div'); div.className = 'user-list-item'; div.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,4)}...</div></div>`; div.onclick = () => this.login(u.id); list.appendChild(div); }); },
-    renderAvatars() { document.getElementById('avatar-selector').innerHTML = this.avatars.map(a => `<div class="avatar-option ${a===this.selectedAvatar?'selected':''}" onclick="Auth.selectAvatar('${a}')">${a}</div>`).join(''); },
-    selectAvatar(a) { this.selectedAvatar = a; this.renderAvatars(); SoundSys.play('click'); },
+    users: [], currentUser: null,
+    avatars: ['👨‍🚀', '👩‍🚀', '👩‍🔬', '👨‍🔬', '🤖', '🦊', '🦉', '👩‍🏫', '👨‍🏫', '👩‍🎓'],
+    selectedAvatar: '😎', selectedGender: 'male',
+
+    init() { 
+        const stored = localStorage.getItem('MathUsers'); 
+        if (stored) this.users = JSON.parse(stored); 
+        this.renderUserList(); 
+        this.renderAvatars(); 
+        SoundSys.init(); 
+        Whiteboard.init(); 
+        PWA.init(); 
+        MusicPlayer.init(); 
+    },
+
+    renderUserList() { 
+        const list = document.getElementById('user-list'); 
+        list.innerHTML = ''; 
+        if (this.users.length === 0) { 
+            list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>'; 
+            return; 
+        } 
+        this.users.forEach(u => { 
+            const div = document.createElement('div'); 
+            div.className = 'user-list-item'; 
+            div.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,8)}...</div></div>`; 
+            div.onclick = () => this.login(u.id); 
+            list.appendChild(div); 
+        }); 
+    },
+
+    renderAvatars() { 
+        document.getElementById('avatar-selector').innerHTML = this.avatars.map(a => 
+            `<div class="avatar-option ${a===this.selectedAvatar?'selected':''}" onclick="Auth.selectAvatar('${a}')">${a}</div>`
+        ).join(''); 
+    },
+
+    selectAvatar(a) { 
+        this.selectedAvatar = a; 
+        this.renderAvatars(); 
+        SoundSys.play('click'); 
+    },
+
     setGender(g) {
         this.selectedGender = g;
-        const btns = document.querySelectorAll('.gender-btn');
-        btns.forEach(b => b.classList.remove('active'));
-        if(g==='male') btns[0].classList.add('active'); else btns[1].classList.add('active');
+        document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.gender-btn')[g==='male'?0:1].classList.add('active');
     },
-    showRegister() { document.getElementById('login-view').style.display = 'none'; document.getElementById('register-view').style.display = 'block'; SoundSys.play('click'); },
-    showLogin() { document.getElementById('login-view').style.display = 'block'; document.getElementById('register-view').style.display = 'none'; SoundSys.play('click'); },
-    createAccount() { 
-        const name = document.getElementById('reg-name').value.trim();
-        const dob = document.getElementById('reg-dob').value;
-        if (!name) return alert("Введите имя!"); 
-        
-        const newUser = { 
-            id: 'user_' + Date.now(), 
-            name: name, 
-            avatar: this.selectedAvatar, 
-            gender: this.selectedGender,
-            dob: dob,
-            created: new Date().toISOString() 
-        }; 
-        
-        this.users.push(newUser); 
-        localStorage.setItem('MathUsers', JSON.stringify(this.users)); 
-        Data.initNewData(newUser.id); 
-        this.login(newUser.id); 
+
+    showRegister() { 
+        document.getElementById('login-view').style.display = 'none'; 
+        document.getElementById('register-view').style.display = 'block'; 
+        SoundSys.play('click'); 
     },
-    login(id) { const user = this.users.find(u => u.id === id); if (!user) return; this.currentUser = user; Data.load(user.id); document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-container').style.display = 'block'; const savedAvatar = DB.user.avatar || user.avatar; document.getElementById('header-avatar').innerText = savedAvatar; document.getElementById('header-name').innerText = user.name; document.getElementById('profile-avatar-big').innerText = savedAvatar; document.getElementById('profile-name-big').innerText = user.name; SoundSys.play('success'); App.init(); DailySys.check(); },
-    logout() { if(confirm("Выйти из профиля?")) { Timer.stop(false); location.reload(); } },
+
+    showLogin() { 
+        document.getElementById('login-view').style.display = 'block'; 
+        document.getElementById('register-view').style.display = 'none'; 
+        SoundSys.play('click'); 
+    },
+
+    createAccount() {
+        const inputField = document.getElementById('reg-name');
+        if (!inputField) {
+            alert("Ошибка: поле имени не найдено!");
+            return;
+        }
+        const name = inputField.value.trim();
+        if (!name) {
+            alert('Введите имя!');
+            return;
+        }
+
+        const user = {
+            id: 'u' + Date.now(),
+            name: name,
+            avatar: this.selectedAvatar,
+            gender: this.selectedGender
+        };
+
+        this.users.push(user);
+        localStorage.setItem('MathUsers', JSON.stringify(this.users));
+        this.login(user.id);
+    },
+
+    login(id) { 
+        const user = this.users.find(u => u.id === id); 
+        if (!user) return; 
+        this.currentUser = user; 
+        Data.load(user.id); 
+        
+        document.getElementById('auth-screen').classList.add('hidden'); 
+        document.getElementById('app-container').style.display = 'block'; 
+        
+        const savedAvatar = DB.user.avatar || user.avatar;
+        App.setText('header-avatar', savedAvatar);
+        App.setText('header-name', user.name);
+        App.setText('profile-avatar-big', savedAvatar);
+        App.setText('profile-name-big', user.name);
+        
+        SoundSys.play('success'); 
+        App.initAfterLogin();  // <-- Важно!
+        DailySys.check(); 
+    },
+
+    logout() { 
+        if(confirm("Выйти из профиля?")) { 
+            Timer.stop(false); 
+            location.reload(); 
+        } 
+    },
+
     resetData() {
-        if(confirm("ВЫ УВЕРЕНЫ? Весь прогресс, монеты и покупки будут удалены безвозвратно!")) {
+        if(confirm("ВЫ УВЕРЕНЫ? Всё будет удалено навсегда!")) {
             Data.initNewData(this.currentUser.id);
             alert("Данные сброшены.");
             location.reload();
@@ -1269,7 +1403,7 @@ const Timer = {
         if(this.sessionDuration > 5) { const log = { date: new Date().toISOString(), subject: DB.subjects[DB.user.subject].name, sec: this.sessionDuration, coins: this.sessionCoins }; DB.sessions.unshift(log); if(DB.sessions.length > 50) DB.sessions.pop(); }
         if(this.sessionDuration > 300) { const today = new Date().toISOString().split('T')[0]; const last = DB.user.lastStudyDate; if(last !== today) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().split('T')[0]; if(last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } DB.user.lastStudyDate = today; SoundSys.play('success'); FX.confetti(); } }
         if(manual) this.sec=0;
-        document.getElementById('btn-start').innerText = "🚀 СТАРТ"; document.getElementById('timer').style.color = "var(--text)"; Data.save(); App.updateUI(); App.renderHistory();
+        document.getElementById('btn-start').innerText = "🚀 СТАРТ"; document.getElementById('timer').style.color = "var(--text)"; Data.save(); App.updateUI(); App.renderHistory(); 
     }
 };
 
@@ -1349,163 +1483,472 @@ const Trainer = {
 };
 
 const App = {
-    init() { 
-        this.applyTheme(DB.user.theme); document.getElementById('sfx-toggle').checked = DB.settings.sfx; SoundSys.enabled = DB.settings.sfx;
-        this.renderSubjects(); this.renderShop(); this.renderAchievements(); Trainer.init(); this.updateUI(); this.switchTab('dashboard'); SubjectSys.render();
-        DailySys.check(); this.renderHistory();
+    async init() { Auth.init(); },
+    
+    // БЕЗОПАСНАЯ ФУНКЦИЯ (Защита от твоей ошибки)
+       setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerText = text;
+        } else {
+            console.warn(`Элемент с id="${id}" не найден — но это не критично`);
+        }
     },
-    toggleZen() {
-        document.body.classList.toggle('zen-active');
-        const btn = document.getElementById('exit-zen-btn');
-        btn.style.display = document.body.classList.contains('zen-active') ? 'inline-block' : 'none';
+    
+    initAfterLogin() {
+        this.updateUI();
+        this.renderSubjects();
+        SubjectSys.render();
+        Trainer.init();
+        this.renderHistory();
+        // Если есть графики — можно добавить App.renderStats();
     },
-    switchTab(id, btn) { 
-        SoundSys.play('click');
-        if(document.getElementById('trainer').classList.contains('active')) Trainer.stop();
-        document.querySelectorAll('.section').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active')); 
-        document.getElementById(id).classList.add('active'); if(btn) btn.classList.add('active'); 
-        if(id==='stats') { this.renderStats(); this.renderHistory(); }
-        if(id==='trainer') Trainer.init(); if(id==='settings') SubjectSys.render(); if(id==='about') document.getElementById('about').classList.add('active');
+
+    updateUI() {
+        if(!DB) return;
+
+        // --- ВСТАВЬ ЭТОТ БЛОК СЮДА ---
+        // Полный список предметов, который мы хотим видеть
+        const newSubjects = {
+            algebra: {name:'Алгебра', icon:'✖️', sec:0},
+            geometry: {name:'Геометрия', icon:'📐', sec:0},
+            calculus: {name:'Мат. анализ', icon:'∫', sec:0},
+            arithmetic: {name:'Арифметика', icon:'🔢', sec:0},
+            combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
+            statistics: {name:'Статистика', icon:'📊', sec:0},
+            trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
+            stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
+        };
+        let changed = false;
+        for (let key in newSubjects) {
+            if (!DB.subjects[key]) {
+                DB.subjects[key] = newSubjects[key];
+                changed = true;
+            }
+        }
+        if (changed) Data.save();
+
+
+        this.setText('coin-display', DB.user.coins);
+        this.setText('streak-display', DB.user.streak);
+        this.setText('header-name', DB.user.name || 'Игрок');
+        this.setText('header-avatar', DB.user.avatar || '😎');
+
+        document.body.className = `theme-${DB.user.theme}`;
+        
+        // Лиги
+        let cl = LEAGUES[0]; 
+        for(let l of LEAGUES) { if(DB.user.xp >= l.min) cl = l; }
+        
+        this.setText('header-league', cl.name);
+        this.setText('profile-league-big', cl.name);
+        
+        const headerBox = document.getElementById('header-avatar-box');
+        if(headerBox) headerBox.className = `profile-img ${cl.color}`;
+        
+        const pb = document.getElementById('profile-avatar-box');
+        if(pb) pb.className = `profile-img ${cl.color}`;
+
+        // МАГАЗИН ТЕМ
+        const themeList = document.getElementById('theme-list');
+        if (themeList) {
+            themeList.innerHTML = THEMES.map(t => {
+                const owned = DB.user.ownedThemes.includes(t.id), active = DB.user.theme === t.id;
+                return `<div class="shop-item ${active?'active':''}" onclick="App.buyTheme('${t.id}')"><div>${t.icon}</div><div>${t.name}</div>${owned?'':'<small>'+t.price+'💰</small>'}</div>`
+            }).join('');
+        }
+
+        // МАГАЗИН АВАТАРОВ
+        const avatarList = document.getElementById('avatar-shop-list');
+        if (avatarList) {
+            avatarList.innerHTML = AVATARS.map(a => {
+                const owned = DB.user.ownedAvatars.includes(a.id), active = DB.user.avatar === a.icon;
+                return `<div class="shop-item ${active?'active':''}" onclick="App.buyAvatar('${a.id}')"><div>${a.icon}</div>${owned?'':'<small>'+a.price+'💰</small>'}</div>`
+            }).join('');
+        }
+        
+        // ДОСТИЖЕНИЯ
+        const achList = document.getElementById('ach-list');
+        if (achList && DB.achievements) {
+            achList.innerHTML = DB.achievements.map(a => {
+                let currentVal = 0;
+                if (a.type === 'total') currentVal = DB.user.totalSec;
+                else if (a.type === 'lvl') currentVal = DB.user.level;
+                else if (a.type === 'xp') currentVal = DB.user.xp;
+
+                const pct = Math.min(100, (currentVal / a.max) * 100);
+                const unlocked = pct >= 100;
+
+                return `<div class="ach-row ${unlocked ? 'unlocked' : ''}">
+                    <div class="ach-icon">${unlocked ? '✅' : a.icon}</div>
+                    <div class="ach-info">
+                        <div class="ach-title">${a.title}</div>
+                        <div class="ach-desc">${a.desc}</div>
+                        <div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%"></div></div>
+                        <small>${currentVal} / ${a.max}</small>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // СТАТИСТИКА
+        const h = (DB.user.totalSec/3600).toFixed(1);
+        this.setText('timer', new Date(Timer.sec * 1000).toISOString().substr(11, 8));
+        this.setText('stat-total-time', h + 'ч');
+        this.setText('prof-lvl', DB.user.level);
+        this.setText('prof-xp', DB.user.xp);
+        this.setText('prof-coins', DB.user.coins);
+        
+        const xpBar = document.getElementById('prof-xp-bar');
+        if(xpBar) xpBar.style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
+        
+        this.setText('xp-progress-text', `${DB.user.xp} / ${DB.user.nextXp} XP`);
     },
-    setSubject(k) { if(Timer.active) return alert("Стоп таймер!"); DB.user.subject=k; SoundSys.play('click'); this.renderSubjects(); this.updateUI(); },
-    setTheme(id) { if(DB.user.ownedThemes.includes(id)) { DB.user.theme=id; this.applyTheme(id); this.renderShop(); Data.save(); SoundSys.play('click'); } else { this.toast("🔒 Сначала купите эту тему!"); } },
-    applyTheme(id) { document.body.className = ''; if(document.querySelector('.zen-active')) document.body.classList.add('zen-active'); if(id!=='standard') document.body.classList.add(id==='dark'?'dark-mode':`theme-${id}`); else document.body.classList.add('theme-standard'); },
+
     buyTheme(id) {
-        const theme = THEMES.find(t=>t.id === id);
-        if(DB.user.coins >= theme.price) {
-            if(confirm(`Купить тему "${theme.name}" за ${theme.price} монет?`)) { DB.user.coins -= theme.price; DB.user.ownedThemes.push(id); this.setTheme(id); SoundSys.play('success'); this.toast("🎉 Тема куплена!"); this.updateUI(); FX.confetti(); }
-        } else { this.toast("❌ Недостаточно монет!"); SoundSys.play('error'); }
-    },
-    setAvatar(icon, id) {
-        if(DB.user.ownedAvatars.includes(id)) { DB.user.avatar = icon; ['header-avatar','profile-avatar-big'].forEach(el => { const e = document.getElementById(el); if(e) e.innerText = icon; }); this.renderShop(); Data.save(); SoundSys.play('click'); } else { this.toast("🔒 Сначала купите этот аватар!"); }
+        const t = THEMES.find(x=>x.id===id);
+        if(DB.user.ownedThemes.includes(id)) { 
+            DB.user.theme=id; Data.save(); App.updateUI(); 
+        } else if(DB.user.coins >= t.price && confirm(`Купить за ${t.price}?`)) {
+            DB.user.coins -= t.price; DB.user.ownedThemes.push(id); DB.user.theme=id; Data.save(); App.updateUI(); SoundSys.play('success');
+        } else { App.toast("Недостаточно монет"); }
     },
     buyAvatar(id) {
-        const av = SHOP_AVATARS.find(a=>a.id === id);
-        if(DB.user.coins >= av.price) {
-            if(confirm(`Купить аватар "${av.name}" за ${av.price} монет?`)) { DB.user.coins -= av.price; DB.user.ownedAvatars.push(id); this.setAvatar(av.icon, id); SoundSys.play('success'); this.toast("🎉 Аватар куплен!"); this.updateUI(); FX.confetti(); }
-        } else { this.toast("❌ Недостаточно монет!"); SoundSys.play('error'); }
+        const a = AVATARS.find(x=>x.id===id);
+        if(DB.user.ownedAvatars.includes(id)) { 
+            DB.user.avatar=a.icon; Data.save(); App.updateUI(); 
+        } else if(DB.user.coins >= a.price && confirm(`Купить за ${a.price}?`)) {
+            DB.user.coins -= a.price; DB.user.ownedAvatars.push(id); DB.user.avatar=a.icon; Data.save(); App.updateUI(); SoundSys.play('success');
+        } else { App.toast("Недостаточно монет"); }
     },
-    addXP(v) { 
-        DB.user.xp += v; 
-        if(DB.user.xp >= DB.user.nextXp) { 
-            DB.user.level++; DB.user.xp-=DB.user.nextXp; DB.user.nextXp=Math.floor(DB.user.nextXp*1.2); 
-            SoundSys.play('win'); FX.confetti(); this.toast(`🎉 Уровень ${DB.user.level}!`); 
-        } else { this.toast(`+${v} XP`); } 
-        Data.save(); 
-        this.checkAch(); 
-        this.updateUI(); 
+    addXP(n) { 
+        DB.user.xp+=n; 
+        if(DB.user.xp >= DB.user.nextXp){
+            DB.user.level++; DB.user.xp=0; DB.user.nextXp=Math.floor(DB.user.nextXp*1.2); 
+            alert("LEVEL UP!"); FX.confetti();
+        } 
+        Data.save(); this.updateUI(); 
     },
-    checkAch() {
-        DB.achievements.forEach(a => {
-            if(a.unlocked) return; 
-            let val=0; if(a.type==='total') val=DB.user.totalSec; if(a.type==='lvl') val=DB.user.level; if(a.type==='xp') val=DB.user.xp; if(a.type==='sub') val=DB.subjects[a.sub].sec;
-            if(val>=a.max) { a.unlocked=true; SoundSys.play('win'); FX.confetti(); this.toast(`🏆 ${a.title}`); this.renderAchievements(); }
-        });
+    switchTab(id, btn) {
+        document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+        const sec = document.getElementById(id);
+        if(sec) sec.classList.add('active');
+       
+        document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+       
+        if (id === 'stats') {
+            this.renderStats();
+        }
     },
-    updateUI() {
-        document.getElementById('subject-title').innerText = DB.subjects[DB.user.subject].name;
-        const timeStr = new Date(Timer.sec * 1000).toISOString().substr(11, 8); document.getElementById('timer').innerText = timeStr;
-        const hours = (DB.user.totalSec/3600).toFixed(1);
-        let currentLeague = LEAGUES[0]; for(let l of LEAGUES) { if(DB.user.xp >= l.min) currentLeague = l; }
-        document.getElementById('header-league').innerText = currentLeague.name; document.getElementById('profile-league-big').innerText = currentLeague.name;
-        
-        const headerBox = document.getElementById('header-avatar-box'); const profileBox = document.getElementById('profile-avatar-box');
-        if(headerBox) headerBox.className = `profile-img ${currentLeague.color}`;
-        if(profileBox) profileBox.className = `profile-img ${currentLeague.color}`;
+    
+    renderStats(){
+        const ctx = document.getElementById('weekChart');
+        if(window.myChart) window.myChart.destroy();
+        // Проверка существования канваса
+        if (ctx) {
+            window.myChart = new Chart(ctx, {type:'bar', data:{labels:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], datasets:[{label:'Часы',data:[0,0,0,0,0,0,0],backgroundColor:'#6C63FF'}]}});
+        }
+    },
+       renderSubjects() {
+        const grid = document.getElementById('subjects-grid');
+        if (!grid || !DB || !DB.subjects) return;
 
-        ['prof-lvl'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.level; });
-        ['prof-xp'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.xp; });
-        ['prof-time'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = hours + 'ч'; });
-        ['prof-coins', 'coin-display'].forEach(id => { const el = document.getElementById(id); if(el) el.innerText = DB.user.coins; });
-        
-        document.getElementById('streak-display').innerText = DB.user.streak;
-        const currentAv = DB.user.avatar || Auth.selectedAvatar;
-        ['header-avatar','profile-avatar-big'].forEach(el => { const e = document.getElementById(el); if(e) e.innerText = currentAv; });
-        document.getElementById('prof-xp-bar').style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
-        
-        const xpTextEl = document.getElementById('xp-progress-text');
-        if(xpTextEl) xpTextEl.innerText = `${DB.user.xp} / ${DB.user.nextXp} XP`;
-        
-        const achCount = DB.achievements.filter(a=>a.unlocked).length; document.getElementById('ach-stats').innerText = `${achCount}/109`;
-    },
-    renderSubjects() { document.getElementById('subjects-grid').innerHTML = Object.keys(DB.subjects).map(k => { const s = DB.subjects[k]; const active = k===DB.user.subject ? 'border:2px solid var(--primary); background:rgba(0,0,0,0.02)' : 'border:2px solid transparent'; return `<div onclick="App.setSubject('${k}')" style="padding:15px; border-radius:15px; text-align:center; cursor:pointer; background:var(--bg); ${active}"><div style="font-size:24px">${s.icon}</div><div style="font-weight:bold; font-size:13px; margin-top:5px;">${s.name}</div></div>`; }).join(''); },
-    renderShop() { 
-        document.getElementById('theme-list').innerHTML = THEMES.map(t => {
-            const isOwned = DB.user.ownedThemes.includes(t.id); const isActive = DB.user.theme === t.id; const canAfford = DB.user.coins >= t.price;
-            let btn = isActive ? `<div style="color:var(--primary); font-weight:bold; font-size:12px;">Выбрано ✅</div>` : (isOwned ? `<button class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="App.setTheme('${t.id}')">Выбрать</button>` : `<button class="btn btn-outline" style="padding:5px 10px; font-size:12px; color:${canAfford ? 'var(--primary)' : 'var(--text-light)'}" onclick="App.buyTheme('${t.id}')">Купить</button>`);
-            const priceTag = isOwned ? '' : `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">💰 ${t.price}</div>`;
-            return `<div class="shop-item ${isActive ? 'active' : ''}"><div style="font-size:24px">${t.icon}</div><div style="font-size:13px; font-weight:bold; margin:5px 0;">${t.name}</div>${priceTag}<div style="margin-top:5px;">${btn}</div></div>`;
-        }).join(''); 
-        document.getElementById('avatar-shop-list').innerHTML = SHOP_AVATARS.map(a => {
-            const isOwned = DB.user.ownedAvatars.includes(a.id); const isActive = DB.user.avatar === a.icon; const canAfford = DB.user.coins >= a.price;
-            let btn = isActive ? `<div style="color:var(--primary); font-weight:bold; font-size:12px;">Выбрано ✅</div>` : (isOwned ? `<button class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="App.setAvatar('${a.icon}', '${a.id}')">Выбрать</button>` : `<button class="btn btn-outline" style="padding:5px 10px; font-size:12px; color:${canAfford ? 'var(--primary)' : 'var(--text-light)'}" onclick="App.buyAvatar('${a.id}')">Купить</button>`);
-            const priceTag = isOwned ? '' : `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">💰 ${a.price}</div>`;
-            return `<div class="shop-item ${isActive ? 'active' : ''}"><div style="font-size:24px">${a.icon}</div><div style="font-size:13px; font-weight:bold; margin:5px 0;">${a.name}</div>${priceTag}<div style="margin-top:5px;">${btn}</div></div>`;
+        grid.innerHTML = Object.keys(DB.subjects).map(k => {
+            const s = DB.subjects[k];
+            const isActive = DB.user.subject === k;
+            return `
+                <div onclick="App.selectSubject('${k}')"
+                     class="card"
+                     style="padding:15px; text-align:center; cursor:pointer; 
+                            ${isActive ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.1);' : 'border:2px solid transparent;'}">
+                    <div style="font-size:24px">${s.icon}</div>
+                    <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
+                </div>`;
         }).join('');
+        
+        // Обновляем заголовок на дашборде
+        const currentSub = DB.subjects[DB.user.subject];
+        if (currentSub && document.getElementById('subject-title')) {
+            document.getElementById('subject-title').innerText = currentSub.name;
+        }
     },
-    renderAchievements() {
-        document.getElementById('ach-list').innerHTML = DB.achievements.map(a => {
-            let current = 0;
-            if(a.type==='total') current = DB.user.totalSec;
-            if(a.type==='lvl') current = DB.user.level;
-            if(a.type==='xp') current = DB.user.xp;
-            if(a.type==='sub') current = DB.subjects[a.sub] ? DB.subjects[a.sub].sec : 0;
-            
-            const pct = Math.min(100, (current / a.max) * 100);
-            const isDone = a.unlocked;
-            const status = isDone ? 'unlocked' : '';
-            
-            let displayCurr = current;
-            let displayMax = a.max;
-            if(a.type === 'total' || a.type === 'sub') {
-                displayCurr = (current/3600).toFixed(1) + 'ч';
-                displayMax = (a.max/3600).toFixed(1) + 'ч';
+
+    selectSubject(key) {
+        if (DB.subjects[key]) {
+            DB.user.subject = key;
+            Data.save();
+            this.renderSubjects();
+            this.updateUI();
+            App.toast("Предмет: " + DB.subjects[key].name);
+        }
+    },
+
+        renderHistory() {
+        // Эта функция обновляет журнал занятий в разделе "Статистика"
+        const logContainer = document.getElementById('session-log');
+        if (!logContainer || !DB || !DB.sessions) return;
+
+        logContainer.innerHTML = '';
+        DB.sessions.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'session-row';
+            row.innerHTML = `
+                <div class="session-info">
+                    <div>${s.subject}</div>
+                    <div class="session-date">${new Date(s.date).toLocaleDateString('ru-RU')}</div>
+                </div>
+                <div>
+                    <span style="color:var(--text-light);">${Math.floor(s.sec/60)} мин</span>
+                    ${s.coins > 0 ? `<span class="session-coins">+${s.coins} 💰</span>` : ''}
+                </div>
+            `;
+            logContainer.appendChild(row);
+        });
+
+        // Если сессий нет — покажем сообщение
+        if (DB.sessions.length === 0) {
+            logContainer.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет записей</div>';
+        }
+    },
+
+            renderStats() {
+        // Даём время, чтобы вкладка стала видимой и canvas появился в DOM
+        setTimeout(() => {
+            // Пирог предметов
+            const subjectCtx = document.getElementById('subjectChart');
+            if (subjectCtx) {
+                // Проверяем, существует ли чарт и можно ли его уничтожить
+                if (window.subjectChart && typeof window.subjectChart.destroy === 'function') {
+                    window.subjectChart.destroy();
+                }
+
+                const labels = [];
+                const data = [];
+                const colors = ['#6C63FF', '#00E0D0', '#FF8F66', '#556B2F', '#D60270', '#FF7675', '#00d26a', '#FFD700'];
+
+                if (DB.subjects) {
+                    Object.values(DB.subjects).forEach(s => {
+                        if (s.sec > 0) {
+                            labels.push(s.name);
+                            data.push(Math.round(s.sec / 60));
+                        }
+                    });
+                }
+
+                window.subjectChart = new Chart(subjectCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels.length ? labels : ['Нет данных'],
+                        datasets: [{
+                            data: data.length ? data : [1],
+                            backgroundColor: colors,
+                            borderWidth: 3,
+                            borderColor: 'var(--bg)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
             }
 
-            return `<div class="ach-row ${status}" onclick="App.showAchDetails(${a.id})">
-                <div class="ach-icon">${a.icon}</div>
-                <div class="ach-info">
-                    <div class="ach-title"><span>${a.title}</span> <span style="font-size:10px; opacity:0.7;">${isDone ? '✅' : `${displayCurr}/${displayMax}`}</span></div>
-                    <div class="ach-desc">${a.desc}</div>
-                    <div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%"></div></div>
-                </div>
-            </div>`;
-        }).join('');
+            // Бар-чарт недели
+            const weekCtx = document.getElementById('weekChart');
+            if (weekCtx) {
+                if (window.weekChart && typeof window.weekChart.destroy === 'function') {
+                    window.weekChart.destroy();
+                }
+
+                const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+                const data = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - d.getDay() + 1 + i);
+                    const key = d.toISOString().split('T')[0];
+                    data.push(Math.round(((DB.history && DB.history[key]) || 0) / 3600 * 10) / 10);
+                }
+
+                window.weekChart = new Chart(weekCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: days,
+                        datasets: [{
+                            label: 'Часы учёбы',
+                            data: data,
+                            backgroundColor: 'var(--primary)',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+
+                           // Активность — heatmap за 30 дней (квадратики)
+        const heatmap = document.getElementById('heatmap');
+        if (heatmap) {
+            const today = new Date();
+            const start = new Date(today);
+            start.setDate(today.getDate() - 29); // 30 дней назад
+
+            // День недели: понедельник = 0
+            const firstDayOffset = start.getDay() === 0 ? 6 : start.getDay() - 1;
+
+            let html = '';
+            // Добавляем пустые клетки для выравнивания
+            for (let i = 0; i < firstDayOffset; i++) {
+                html += '<div style="background:var(--bg); border-radius:4px; aspect-ratio:1/1;"></div>';
+            }
+
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(start);
+                date.setDate(start.getDate() + i);
+                const key = date.toISOString().split('T')[0];
+                const sec = (DB.history && DB.history[key]) || 0;
+                const minutes = Math.round(sec / 60);
+                const intensity = sec === 0 ? 0 : Math.min(4, Math.ceil(minutes / 30)); // каждые 30 мин = уровень
+
+                const colors = ['var(--bg)', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
+                const title = minutes > 0 ? `${minutes} мин — ${date.toLocaleDateString('ru-RU')}` : 'Нет активности';
+
+                html += `<div title="${title}" style="background:${colors[intensity]}; border-radius:4px; aspect-ratio:1/1; display:flex; align-items:flex-end; justify-content:center; padding-bottom:2px; font-size:9px; color:var(--text); font-weight:bold;">
+                    ${minutes > 0 ? minutes : ''}
+                </div>`;
+            }
+
+            heatmap.innerHTML = html;
+        }
+
+        }, 200); // задержка 200мс — чтобы canvas точно был видимым
     },
-    showAchDetails(id) { 
-        const a = DB.achievements.find(x => x.id === id); 
-        const box = document.getElementById('ach-details-box'); 
-        box.classList.add('show'); 
-        document.getElementById('ach-title').innerText = a.title; 
-        document.getElementById('ach-desc').innerText = a.desc; 
-        const statusEl = document.getElementById('ach-status');
-        statusEl.innerText = a.unlocked ? "Получено ✅" : "В процессе..."; 
-        statusEl.style.color = a.unlocked ? "var(--success)" : "var(--text-light)"; 
+    
+    toggleZen() { 
+        document.body.classList.toggle('zen-active'); 
+        const btn = document.getElementById('exit-zen-btn');
+        if(btn) btn.style.display = document.body.classList.contains('zen-active') ? 'inline-block' : 'none'; 
     },
-    calcPeriodStats(days) { let totalSec = 0; const now = new Date(); for(let i=0; i<days; i++) { const d = new Date(); d.setDate(now.getDate() - i); const k=d.toISOString().split('T')[0]; if(DB.history[k]) totalSec += DB.history[k]; } return totalSec; },
-    formatTime(sec) { if(sec < 60) return sec + 'с'; if(sec < 3600) return Math.floor(sec/60) + 'м'; return (sec/3600).toFixed(1) + 'ч'; },
-    renderStats() {
-        const weekSec = this.calcPeriodStats(7); const monthSec = this.calcPeriodStats(30); const totalSec = DB.user.totalSec;
-        document.getElementById('stat-week-time').innerText = this.formatTime(weekSec); document.getElementById('stat-month-time').innerText = this.formatTime(monthSec); document.getElementById('stat-total-time').innerText = this.formatTime(totalSec);
-        document.getElementById('stat-week-xp').innerText = Math.floor(weekSec/60 * 10) + " XP"; document.getElementById('stat-month-xp').innerText = Math.floor(monthSec/60 * 10) + " XP"; document.getElementById('stat-total-xp').innerText = DB.user.xp + " XP";
-        const hm = document.getElementById('heatmap'); hm.innerHTML=''; for(let i=29; i>=0; i--) { const d=new Date(); d.setDate(d.getDate()-i); const k=d.toISOString().split('T')[0]; const v=DB.history[k]||0; const c=v>7200?'var(--primary)':(v>1800?'rgba(10,186,181,0.5)':(v>0?'rgba(10,186,181,0.2)':'rgba(0,0,0,0.05)')); hm.innerHTML+=`<div style="aspect-ratio:1; border-radius:3px; background:${c}" title="${k}: ${(v/60).toFixed(0)}м"></div>`; }
-        const weekLabels = [], weekData = [], days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-        for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = d.toISOString().split('T')[0]; weekLabels.push(days[d.getDay()]); weekData.push(((DB.history[k]||0)/3600).toFixed(2)); }
-        if(window.myChart) window.myChart.destroy(); const ctx = document.getElementById('weekChart'); window.myChart = new Chart(ctx, { type:'bar', data:{ labels: weekLabels, datasets:[{ label:'Часы', data: weekData, backgroundColor: getComputedStyle(document.body).getPropertyValue('--primary'), borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
-        const subjLabels = [], subjData = [], subjColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#E7E9ED'];
-        Object.keys(DB.subjects).forEach(k => { const s = DB.subjects[k]; if(s.sec > 0) { subjLabels.push(s.name); subjData.push((s.sec/3600).toFixed(2)); } });
-        if(window.subjectChartInstance) window.subjectChartInstance.destroy(); const ctxSubj = document.getElementById('subjectChart');
-        window.subjectChartInstance = new Chart(ctxSubj, { type: 'doughnut', data: { labels: subjLabels, datasets: [{ data: subjData, backgroundColor: subjColors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } } });
+    toast(m) { 
+        const container = document.getElementById('toast-container');
+        if (container) {
+            const t=document.createElement('div'); t.className='toast'; t.innerText=m; 
+            container.appendChild(t); 
+            setTimeout(()=>t.classList.add('show'),10); 
+            setTimeout(()=>{t.classList.remove('show');t.remove()},3000); 
+        }
+    }    
+};
+
+
+
+const Transfer = {
+    copyCode() {
+        if (!DB || !Auth.currentUser) {
+            App.toast("⚠️ Нет данных для копирования");
+            return;
+        }
+        const json = JSON.stringify(DB);
+        const compressed = btoa(unescape(encodeURIComponent(json)));
+        
+        navigator.clipboard.writeText(compressed).then(() => {
+            App.toast("✅ Код скопирован в буфер!");
+        }).catch(() => {
+            prompt("Скопируйте этот код вручную:", compressed);
+        });
     },
-    renderHistory() {
-        const list = document.getElementById('session-log'); if(!list) return;
-        if(DB.sessions.length === 0) { list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">История пуста</div>'; return; }
-        list.innerHTML = DB.sessions.map(s => {
-            const d = new Date(s.date); const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            return `<div class="session-row"><div class="session-info"><div style="font-weight:bold">${s.subject}</div><div class="session-date">${dateStr} • ${this.formatTime(s.sec)}</div></div><div class="session-coins">+${s.coins} 💰</div></div>`;
-        }).join('');
+
+    pasteCode() {
+        const code = prompt("Вставьте код переноса:");
+        if (!code) return;
+        try {
+            const decoded = decodeURIComponent(escape(atob(code.trim())));
+            const imported = JSON.parse(decoded);
+            if (imported.user && imported.subjects) {
+                DB = imported;
+                Data.save();
+                App.toast("✅ Прогресс успешно перенесён!");
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                App.toast("❌ Неверный формат данных");
+            }
+        } catch (e) {
+            App.toast("❌ Ошибка чтения кода");
+            console.error(e);
+        }
     },
-    toast(msg) { const c = document.getElementById('toast-container'); const d = document.createElement('div'); d.className='toast'; d.innerText=msg; c.appendChild(d); setTimeout(()=>d.classList.add('show'),10); setTimeout(()=>{d.classList.remove('show'); setTimeout(()=>d.remove(),400)},3000); }
+
+            showQR() {
+        if (!DB || !Auth.currentUser) {
+            App.toast("⚠️ Нет данных для QR-кода");
+            return;
+        }
+
+        const json = JSON.stringify(DB);
+        const compressed = btoa(unescape(encodeURIComponent(json)));
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = `
+            <div class="modal-content" style="text-align:center; max-width:90vw; padding:20px;">
+                <h3 style="margin-bottom:15px;">📱 QR-код для переноса</h3>
+                <p style="color:var(--text-light); font-size:14px; margin-bottom:25px;">
+                    Увеличьте яркость экрана до максимума<br>Держите телефон на расстоянии 15-30 см
+                </p>
+                <canvas id="qrcode-canvas" style="width:400px; height:400px; margin:0 auto 25px; background:white; border-radius:15px; padding:30px; box-shadow:0 10px 30px rgba(0,0,0,0.2);"></canvas>
+                <div id="qr-status" style="font-size:14px; margin-bottom:15px; color:var(--text-light);">Генерация...</div>
+                <button class="btn btn-outline" onclick="this.closest('.modal').remove()">Закрыть</button>
+                <button class="btn btn-primary" onclick="Transfer.saveQRAsImage()" style="margin-top:10px;">💾 Сохранить QR как картинку</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        setTimeout(() => {
+            const canvas = document.getElementById('qrcode-canvas');
+            const statusEl = document.getElementById('qr-status');
+
+            if (!canvas) {
+                statusEl.innerText = "Ошибка: canvas не найден";
+                statusEl.style.color = "red";
+                return;
+            }
+
+            try {
+                new QRious({
+                    element: canvas,
+                    size: 400,  // Большой размер для лёгкого сканирования
+                    value: compressed,
+                    background: '#FFFFFF',
+                    foreground: '#2B3674',
+                    level: 'H'  // Максимальная коррекция ошибок
+                });
+
+                statusEl.innerText = "Готово! Наведите камеру (или сохраните картинку)";
+                statusEl.style.color = "var(--success)";
+            } catch (err) {
+                console.error("QR error:", err);
+                statusEl.innerText = "Ошибка генерации QR";
+                statusEl.style.color = "red";
+            }
+        }, 200);
+    },
+
+    saveQRAsImage() {
+        const canvas = document.getElementById('qrcode-canvas');
+        if (canvas) {
+            const link = document.createElement('a');
+            link.download = 'MathBooster_Transfer_QR.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            App.toast("✅ QR сохранён в галерею! Теперь сканируйте с фото");
+        } else {
+            App.toast("Ошибка сохранения");
+        }
+    }
 };
 
 window.addEventListener('keydown', function(e) {
