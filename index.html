@@ -99,13 +99,40 @@
         body.dark-mode.theme-gold { --primary: #FFEA80; }
         body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; }
         body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
+        body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
         body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
         body.theme-forest { --primary: #556B2F; --bg: #F5F5DC; --surface: #FFFFF0; --text: #3E2723; --text-light: #6D4C41; --shadow: 0 10px 30px rgba(85, 107, 47, 0.15); }
-        body.dark-mode { --bg: #1E1E2E; --surface: #27293D; --text: #EAEAEA; --text-light: #A0A0B0; --primary: #7F8C8D; }
-        body.dark-mode.theme-standard { --primary: #7B73FF; }
-        body.dark-mode.theme-math { --primary: #00E0D0; } 
-        body.dark-mode.theme-pantone { --primary: #FFAB91; }
-        body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
+        body.dark-mode {
+    --bg: #1A1A2E;
+    --surface: #16213E;
+    --text: #EAEAEA;
+    --text-light: #8892B0;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Комбинации: тёмный режим + конкретная тема (акцент остаётся, фон тёмный) */
+body.dark-mode.theme-standard { --primary: #8B7EFF; }
+body.dark-mode.theme-math { --primary: #00F5E0; }
+body.dark-mode.theme-pantone { --primary: #FFB399; }
+body.dark-mode.theme-forest { --primary: #8FBC8F; }
+body.dark-mode.theme-neon { --primary: #FF69B4; }
+body.dark-mode.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
+body.dark-mode.theme-dark { --primary: #9D7EFF; } /* если есть отдельная "dark" тема */
+        
+        body.theme-dark {
+    --primary: #7B73FF;
+    --bg: #1E1E2E;
+    --surface: #27293D;
+    --text: #EAEAEA;
+    --text-light: #A0A0B0;
+    --shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+/* Если хочешь комбо с другими темами в тёмном режиме */
+body.theme-dark.theme-standard { --primary: #8B7EFF; }
+body.theme-dark.theme-math { --primary: #00F5E0; }
+body.theme-dark.theme-pantone { --primary: #FFAB91; }
+body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; }
         
         * { 
             box-sizing: border-box; 
@@ -384,6 +411,63 @@
             .preset-grid { grid-template-columns: repeat(3, 1fr); }
             .auth-card { padding: 30px 20px; }
         }
+
+/* === АДАПТАЦИЯ ПОД ТЕЛЕФОН — ГЛАВНОЕ === */
+body {
+    -webkit-text-size-adjust: 100%;
+    word-break: break-word; /* длинные слова переносятся */
+    overflow-wrap: anywhere;
+}
+
+/* Все карточки и кнопки */
+.card, .btn, .input-field, .modal-content, .nav-btn {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Тексты, которые часто вылезали */
+.trainer-problem {
+    font-size: 9vw; /* вместо 42px — теперь масштабируется */
+    word-break: break-all;
+    padding: 10px;
+}
+
+/* Таймер в Zen-режиме */
+body.zen-active #timer {
+    font-size: 16vw; /* было 18vw — чуть меньше, чтобы влезал */
+}
+
+/* Кнопки в нижней навигации */
+.nav {
+    padding: 10px 5px calc(10px + var(--safe-bottom));
+    gap: 5px;
+}
+.nav-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-width: 60px;
+}
+
+/* Статистика — чтобы графики не вылезали */
+#subjectChart, #weekChart {
+    max-height: 250px;
+}
+
+/* Модалки */
+.modal-content {
+    margin: 20px;
+    max-width: calc(100vw - 40px);
+}
+
+/* Уменьшаем шрифты на маленьких экранах */
+@media (max-width: 380px) {
+    .timer-display { font-size: 60px; }
+    .trainer-problem { font-size: 8vw; }
+    .nav-btn { font-size: 11px; padding: 10px 8px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 18px; }
+}
+
     </style>
 </head>
 <body>
@@ -519,8 +603,7 @@
                 </audio>
                 
                 <h3 style="margin-top: 20px;">📚 Предметы</h3>
-                <div id="subjects-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px;"></div>
-            </div>
+                <div id="subjects-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:15px; justify-items:center;"></div>            </div>
         </div>
     </section>
 
@@ -550,8 +633,7 @@
                 <div>⏳ <span id="game-time">60</span>s</div>
                 <div>✅ <span id="game-score">0</span></div>
             </div>
-            <div class="trainer-problem" id="game-problem">2 x 2</div>
-            <input type="number" id="game-input" class="input-field trainer-input" placeholder="?">
+            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>            <input type="number" id="game-input" class="input-field trainer-input" placeholder="?">
             <div style="font-size: 12px; color: var(--text-light); margin-top: 10px;">Нажми Enter чтобы ответить</div>
             <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
         </div>
@@ -673,6 +755,11 @@
         <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
     </div>
     
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+    <span>🌙 Тёмный режим</span>
+    <input type="checkbox" id="dark-toggle" onchange="App.toggleDarkMode(this.checked)" style="transform: scale(1.5);">
+</div>
+
     <!-- Управление предметами -->
     <div style="margin-bottom: 20px;">
         <h4 style="margin-bottom: 10px;">📚 Предметы</h4>
@@ -954,6 +1041,7 @@ const GenAch = () => {
 
 const DefaultDB = { 
     user: { 
+        darkMode: false,
         xp:0, level:1, nextXp:500, totalSec:0, subject:'algebra', theme:'standard', 
         avatar:'😎', gender:'male', coins:0, streak:0, lastStudyDate:null, 
         dailyStreak:0, lastDailyClaim:null, ownedThemes:['standard'], ownedAvatars:[], 
@@ -988,7 +1076,7 @@ const AVATARS = [
 
 const THEMES = [
     { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
-    { id: 'dark', name: 'Темная', icon: '🌑', price: 50 },
+    { id: 'dark', name: 'Темная', icon: '🌙', price: 10 },
     { id: 'pantone', name: 'Персик', icon: '🍑', price: 100 },
     { id: 'forest', name: 'Лес', icon: '🌲', price: 150 },
     { id: 'neon', name: 'Неон', icon: '🦄', price: 500 },
@@ -1563,13 +1651,29 @@ const App = {
         SubjectSys.render();
         Trainer.init();
         this.renderHistory();
+        this.updateUI(); // чтобы классы применились
         // Если есть графики — можно добавить App.renderStats();
+    },
+
+toggleDarkMode(enabled) {
+        DB.user.darkMode = enabled;
+        if (enabled) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        localStorage.setItem('darkMode', enabled);
+        Data.save();
+        this.updateUI();
     },
 
     updateUI() {
         if(!DB) return;
+document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        // Восстановление переключателя
+        const toggle = document.getElementById('dark-toggle');
+        if (toggle) toggle.checked = DB.user.darkMode;
 
-        // --- ВСТАВЬ ЭТОТ БЛОК СЮДА ---
         // Полный список предметов, который мы хотим видеть
         const newSubjects = {
             algebra: {name:'Алгебра', icon:'✖️', sec:0},
@@ -1596,8 +1700,8 @@ const App = {
         this.setText('header-name', DB.user.name || 'Игрок');
         this.setText('header-avatar', DB.user.avatar || '😎');
 
-        document.body.className = `theme-${DB.user.theme}`;
-        
+document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+
         // Лиги
         let cl = LEAGUES[0]; 
         for(let l of LEAGUES) { if(DB.user.xp >= l.min) cl = l; }
