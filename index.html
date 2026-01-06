@@ -6,22 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
     
-    <!-- PWA Настройки -->
-    <link id="manifest-link" rel="manifest" href="">
-    <!-- Splash screen для Android -->
+    <!-- PWA настройки -->
+<link id="manifest-link" rel="manifest" href="">
 <meta name="theme-color" content="#6C63FF">
-<link rel="manifest" href="/manifest.json">
-    
-    <!-- iOS Specifics -->
-    <!-- Splash screen для iOS -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="MathBooster PRO">
-<link rel="apple-touch-startup-image" href="logo.png">
+<meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MathBooster">
 
-    <!-- Иконки -->
-<link rel="apple-touch-icon" href="logo.png">
-<link rel="icon" type="image/png" href="logo.png">    
+<!-- Иконки -->
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <!-- Библиотека QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
@@ -543,41 +539,80 @@ body.zen-active #timer {
 </head>
 <body>
 
-<!-- SPLASH SCREEN -->
-<div id="splash-screen">
-    <!-- Сюда вставь ссылку на свой логотип вместо my-logo.png -->
-    <img src="logo.png" alt="Logo" class="splash-logo"> <!-- Здесь -->
-    <h1 class="splash-title">MathBooster PRO</h1>
-    <div class="loader"></div>
+<!-- SPLASH SCREEN — улучшенная версия -->
+<div id="splash-screen" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: var(--bg); /* ← фон берётся из текущей темы (никакой разницы в цвете) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.8s ease-out;
+">
+    <img src="logo.png" alt="MathBooster" style="
+        width: clamp(140px, 40vw, 220px); /* ← адаптивный размер: от 140px до 220px */
+        height: auto;
+        max-width: 80vw;
+        animation: float 3s infinite ease-in-out;
+        filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+    ">
+    <h1 style="
+        color: var(--text);
+        margin-top: 30px;
+        font-size: clamp(32px, 8vw, 48px);
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-align: center;
+    ">
+        MATH BOOSTER
+    </h1>
+    <p style="
+        color: var(--text);
+        margin-top: 10px;
+        font-size: clamp(16px, 4vw, 20px);
+    ">
+        PRO
+    </p>
 </div>
+
+<style>
+/* Анимация лого — плавное "плавание" вверх-вниз */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+</style>
+
+<script>
+// Плавное исчезновение splash через 1.8 секунды после загрузки
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            setTimeout(() => splash.remove(), 800);
+        }
+    }, 1800); // 1.8 секунды показа
+});
+</script>
 
 <!-- PWA Manifest Generation (Автоматическая) -->
 <script>
     const manifest = {
     "name": "MathBooster PRO",
     "short_name": "MathBooster",
-    "start_url": "/",
+    "start_url": "/",  // ← фикс
     "display": "standalone",
-    "background_color": "#6C63FF",          // Цвет фона splash
+    "background_color": "#F4F7FE",
     "theme_color": "#6C63FF",
     "orientation": "portrait",
     "icons": [
-    {
-        "src": "logo.png", // <--- Здесь меняем на имя файла
-        "sizes": "192x192",
-        "type": "image/png",
-        "purpose": "any maskable"
-    },
-    {
-        "src": "logo.png", // <--- И здесь тоже
-        "sizes": "512x512",
-        "type": "image/png",
-        "purpose": "any maskable"
-    }
-],
-    "splash_pages": null,
-    "description": "Твой путь к знаниям",
-    "prefer_related_applications": false
+        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    ]
 };
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(blob));
