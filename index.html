@@ -8,19 +8,20 @@
     
     <!-- PWA Настройки -->
     <link id="manifest-link" rel="manifest" href="">
-    <meta name="theme-color" content="#6C63FF" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#1E1E2E" media="(prefers-color-scheme: dark)">
+    <!-- Splash screen для Android -->
+<meta name="theme-color" content="#6C63FF">
+<link rel="manifest" href="/manifest.json">
     
     <!-- iOS Specifics -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MathBooster">
-    <meta name="format-detection" content="telephone=no">
+    <!-- Splash screen для iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MathBooster PRO">
+<link rel="apple-touch-startup-image" href="logo.png">
 
     <!-- Иконки -->
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3771/3771518.png">
-    
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="icon" type="image/png" href="logo.png">    
     <!-- Библиотека QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
@@ -487,25 +488,97 @@ body.zen-active #timer {
     h3 { font-size: 18px; }
 }
 
+/* === SPLASH SCREEN STYLES === */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg); /* Или используй цвет бренда: #6C63FF */
+    z-index: 99999; /* Самый верхний слой */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.5s ease-out, visibility 0.5s;
+}
+
+#splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+    filter: drop-shadow(0 10px 20px rgba(108, 99, 255, 0.3));
+}
+
+.splash-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+}
+
+/* Крутилка загрузки */
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(108, 99, 255, 0.2);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
     </style>
 </head>
 <body>
 
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+    <!-- Сюда вставь ссылку на свой логотип вместо my-logo.png -->
+    <img src="logo.png" alt="Logo" class="splash-logo"> <!-- Здесь -->
+    <h1 class="splash-title">MathBooster PRO</h1>
+    <div class="loader"></div>
+</div>
+
 <!-- PWA Manifest Generation (Автоматическая) -->
 <script>
     const manifest = {
-        "name": "MathBooster PRO",
-        "short_name": "MathBooster",
-        "start_url": ".",
-        "display": "standalone",
-        "background_color": "#F4F7FE",
-        "theme_color": "#6C63FF",
-        "orientation": "portrait",
-        "icons": [
-            { "src": "https://cdn-icons-png.flaticon.com/512/3771/3771518.png", "sizes": "192x192", "type": "image/png" },
-            { "src": "https://cdn-icons-png.flaticon.com/512/3771/3771518.png", "sizes": "512x512", "type": "image/png" }
-        ]
-    };
+    "name": "MathBooster PRO",
+    "short_name": "MathBooster",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#6C63FF",          // Цвет фона splash
+    "theme_color": "#6C63FF",
+    "orientation": "portrait",
+    "icons": [
+    {
+        "src": "logo.png", // <--- Здесь меняем на имя файла
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any maskable"
+    },
+    {
+        "src": "logo.png", // <--- И здесь тоже
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+    }
+],
+    "splash_pages": null,
+    "description": "Твой путь к знаниям",
+    "prefer_related_applications": false
+};
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(blob));
 </script>
@@ -513,7 +586,7 @@ body.zen-active #timer {
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
     <div class="auth-card" id="login-view">
-        <img src="https://cdn-icons-png.flaticon.com/512/3771/3771518.png" alt="Logo" class="app-logo">
+        <img src="logo.png" alt="Logo" class="app-logo"> <!-- Здесь -->
         <h2 style="margin-bottom: 5px; color: var(--primary);">MathBooster PRO</h2>
         <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
         <div id="user-list"></div>
@@ -793,36 +866,27 @@ body.zen-active #timer {
         </div>
     </div>
     
-    <!-- НОВЫЙ РАЗДЕЛ: Перенос прогресса -->
+    <!-- Новый чистый раздел переноса -->
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
-        <h4 style="margin-bottom: 15px;">📦 Перенос прогресса на другое устройство</h4>
+        <h4 style="margin-bottom: 15px;">📦 Перенос прогресса</h4>
         <div style="display: flex; flex-direction: column; gap: 12px;">
-            <button class="btn btn-outline" onclick="Data.export()">
-                💾 Скачать прогресс как файл (.json)
+            <button class="btn btn-primary" onclick="Transfer.showQR()">
+                📱 Перенос через QR-код
             </button>
             
-            <button class="btn btn-outline" onclick="Transfer.copyCode()">
-                📋 Скопировать код переноса
-            </button>
-            
-            <button class="btn btn-outline" onclick="Transfer.pasteCode()">
-                📥 Вставить код переноса
-            </button>
-            
-            <button class="btn btn-outline" onclick="Transfer.showQR()">
-                📱 Показать QR-код для переноса
-            </button>
-            
-            <!-- Опционально: автосинхронизация через Firebase -->
-            <button class="btn btn-outline" onclick="Sync.toggleAuto()" style="margin-top: 15px;">
+            <button class="btn btn-outline" onclick="Sync.toggleAuto()" style="margin-top: 10px;">
                 ☁️ Автосинхронизация с облаком: <span id="sync-status">Выкл</span>
             </button>
         </div>
+        <p style="font-size: 12px; color: var(--text-light); margin-top: 15px; text-align: center;">
+            QR-код — быстрое переноса на другое устройство<br>
+            Автосинхронизация — прогресс везде автоматически
+        </p>
     </div>
     
-    <!-- Сброс прогресса -->
+    <!-- Сброс -->
     <button class="btn btn-outline" style="margin-top: 40px; border-color: #FF7675; color: #FF7675;" onclick="Auth.resetData()">
-        🗑️ Сбросить весь прогресс
+        🗑️ Сбросить прогресс
     </button>
 </div>
     </section>
@@ -2142,7 +2206,21 @@ window.addEventListener('keydown', function(e) {
     }
 });
 
-window.onload = () => Auth.init();
+/* === SPLASH SCREEN LOGIC === */
+window.onload = () => {
+    // 1. Инициализируем приложение
+    Auth.init();
+
+    // 2. Убираем сплэш-скрин через задержку (чтобы лого успело показаться)
+    setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if(splash) {
+            splash.classList.add('hidden');
+            // Удаляем из DOM полностью после анимации
+            setTimeout(() => splash.remove(), 500);
+        }
+    }, 2000); // 2000 мс = 2 секунды показа логотипа
+};
 </script>
 </body>
 </html>
