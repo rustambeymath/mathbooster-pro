@@ -1410,12 +1410,11 @@ const Donation = {
         const code = c.trim().toUpperCase();
         if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) return App.toast("Этот код уже использован!");
         
-        // ВАШИ СЕКРЕТНЫЕ КОДЫ (Придумывайте и раздавайте)
         const rewards = { 
             "START":{c:100,msg:"Бонус новичка!"}, 
             "HUMO":{c:5000,msg:"Спасибо за поддержку из Узбекистана! 🇺🇿"}, 
             "VISA":{c:5000,msg:"Thanks for support! 🌍"},
-            "ADMIN":{c:1000000,msg:"GOD MODE ON"} 
+            "ADMIN_708":{c:1000000,msg:"GOD MODE ON"} 
         };
         
         if(rewards[code]) {
@@ -2259,3 +2258,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
