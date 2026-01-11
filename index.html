@@ -349,15 +349,72 @@ body.zen-active {
         .daily-day.claimed { opacity: 1; background: var(--primary); color: white; }
         .daily-coin { font-size: 18px; margin-bottom: 4px; }
 
-        .subject-manage-grid { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 20px; }
-        .subject-manage-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 12px 15px; border-radius: 15px; }
+.subject-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.subject-item {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--surface);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.subject-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+/* Убираем любое выделение — теперь ВСЁ одинаково */
+.subject-item.added {
+    /* Пусто — никаких изменений, чтобы "Мои" и "Доступные" выглядели одинаково */
+}
+
+.subject-item .icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+.subject-item .name {
+    font-size: 13px;
+    font-weight: 600;
+}        .subject-manage-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 12px 15px; border-radius: 15px; }
         .subject-manage-info { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .btn-delete { width: 32px; height: 32px; border-radius: 50%; border: none; background: #FF7675; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.2s; }
         .btn-delete:hover { transform: scale(1.1); }
         
         .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
-        .preset-btn { padding: 12px; border: 2px solid var(--bg); background: var(--surface); border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; color: var(--text); }
-        .preset-btn:hover { border-color: var(--primary); background: rgba(108, 99, 255, 0.05); }
+        .preset-btn {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 2px solid var(--primary);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.preset-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    background: rgba(var(--primary-rgb), 0.1);
+}
+
+.preset-btn::before {
+    font-size: 24px;
+    content: attr(data-emoji); /* если хочешь использовать data-атрибут */
+}
 
         /* CALCULATOR */
         .calc-box { width: 95%; max-width: 320px; }
@@ -889,17 +946,44 @@ window.addEventListener('load', () => {
 
     <!-- Управление предметами -->
     <div style="margin-bottom: 20px;">
-        <h4 style="margin-bottom: 10px;">📚 Предметы</h4>
-        <div id="settings-subject-list" class="subject-manage-grid"></div>
-        <div class="preset-grid" style="margin-top:10px;">
-            <button class="preset-btn" onclick="SubjectSys.addPreset('📖','Лит-ра')">📖</button>
-            <button class="preset-btn" onclick="SubjectSys.addPreset('⚛️','Физика')">⚛️</button>
-            <button class="preset-btn" onclick="SubjectSys.addPreset('🧪','Химия')">🧪</button>
-            <button class="preset-btn" onclick="SubjectSys.addPreset('🧬','Био')">🧬</button>
-            <button class="preset-btn" onclick="SubjectSys.addPreset('🏺','История')">🏺</button>
-            <button class="preset-btn" onclick="SubjectSys.addPreset('🌐','Англ')">🌐</button>
-        </div>
+    <h4 style="margin-bottom: 10px;">📚 Мои предметы</h4>
+    <div id="my-subjects-list" class="subject-manage-grid"></div>
+
+    <h4 style="margin-top: 30px; margin-bottom: 10px;">Доступные для добавления</h4>
+    <div id="available-subjects-list" class="subject-manage-grid"></div>
+</div>
+
+<div class="preset-grid" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
+    <div class="subject-item" onclick="moveFromPreset('📖', 'Литература')">
+        <div class="icon">📖</div>
+        <div class="name">Литература</div>
     </div>
+
+    <div class="subject-item" onclick="moveFromPreset('⚛️', 'Физика')">
+        <div class="icon">⚛️</div>
+        <div class="name">Физика</div>
+    </div>
+
+    <div class="subject-item" onclick="moveFromPreset('🧪', 'Химия')">
+        <div class="icon">🧪</div>
+        <div class="name">Химия</div>
+    </div>
+
+    <div class="subject-item" onclick="moveFromPreset('🧬', 'Биология')">
+        <div class="icon">🧬</div>
+        <div class="name">Биология</div>
+    </div>
+
+    <div class="subject-item" onclick="moveFromPreset('🏺', 'История')">
+        <div class="icon">🏺</div>
+        <div class="name">История</div>
+    </div>
+
+    <div class="subject-item" onclick="moveFromPreset('🌐', 'Иностранный язык')">
+        <div class="icon">🌐</div>
+        <div class="name">Иностранный язык</div>
+    </div>
+</div>
     
     <!-- Новый чистый раздел переноса -->
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
@@ -1414,7 +1498,7 @@ const Donation = {
             "START":{c:100,msg:"Бонус новичка!"}, 
             "HUMO":{c:5000,msg:"Спасибо за поддержку из Узбекистана! 🇺🇿"}, 
             "VISA":{c:5000,msg:"Thanks for support! 🌍"},
-            "ADMIN_708":{c:1000000,msg:"GOD MODE ON"} 
+            "ADMIN_708":{c:10000,msg:"JACKPOT!!! "} 
         };
         
         if(rewards[code]) {
@@ -1432,66 +1516,69 @@ const Donation = {
 
 const Online = {
     async loadLeaderboard() {
-        if (!window.DB_Online) {
-            App.toast("⚠️ Нет подключения к онлайн-базе");
+    if (!window.DB_Online) {
+        App.toast("⚠️ Нет подключения к онлайн-базе");
+        return;
+    }
+
+    const list = document.getElementById('leaderboard-list');
+    const countEl = document.getElementById('total-players-count');
+    list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Загрузка...</div>';
+
+    try {
+        const q = window.DB_Online.query(
+            window.DB_Online.collection(window.DB_Online.db, "users"),
+            window.DB_Online.orderBy("user.totalSec", "desc"),  // ← Сортировка по времени (секундам)
+            window.DB_Online.limit(20)
+        );
+
+        const snap = await window.DB_Online.getDocs(q);
+        countEl.innerText = `Всего игроков в базе: ${snap.size}`;
+
+        if (snap.empty) {
+            list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Топ пуст 😔</div>';
             return;
         }
 
-        const list = document.getElementById('leaderboard-list');
-        const countEl = document.getElementById('total-players-count');
-        list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Загрузка...</div>';
+        list.innerHTML = '';
+        let rank = 1;
+        snap.forEach(doc => {
+            const data = doc.data();
+            const u = data.user || {};
+            const name = u.name || "Игрок";
+            const totalSec = u.totalSec || 0;
+            const hours = Math.floor(totalSec / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const level = u.level || 1;
+            const xp = u.xp || 0;
+            const avatar = u.avatar || "😎";
 
-        try {
-            const q = window.DB_Online.query(
-                window.DB_Online.collection(window.DB_Online.db, "users"),
-                window.DB_Online.orderBy("user.xp", "desc"),
-                window.DB_Online.limit(20)
-            );
-            const snap = await window.DB_Online.getDocs(q);
+            const timeStr = `${hours} ч ${minutes} мин`;
 
-            countEl.innerText = `Всего игроков в базе: ${snap.size}`;
-
-            if (snap.empty) {
-                list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Топ пуст 😔</div>';
-                return;
-            }
-
-            list.innerHTML = '';
-            let rank = 1;
-            snap.forEach(doc => {
-                const data = doc.data();
-                const u = data.user || {};
-
-                // Защита от undefined
-                const name = u.name || Auth.currentUser?.name || "Игрок";                
-                const level = u.level || 1;
-                const xp = u.xp || 0;
-                const avatar = u.avatar || "😎";
-
-                const item = document.createElement('div');
-                item.className = 'user-list-item';
-                item.style.justifyContent = 'space-between';
-                item.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <div style="font-size:24px;">${avatar}</div>
-                        <div>
-                            <b>#${rank} ${name}</b><br>
-                            <small>Уровень ${level} • ${xp.toLocaleString()} XP</small>
-                        </div>
+            const item = document.createElement('div');
+            item.className = 'user-list-item';
+            item.style.justifyContent = 'space-between';
+            item.innerHTML = `
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="font-size:24px;">${avatar}</div>
+                    <div>
+                        <b>#${rank} ${name}</b><br>
+                        <small>Уровень ${level} • ${xp.toLocaleString()} XP</small>
                     </div>
-                    <b style="color:var(--primary);">${xp.toLocaleString()} XP</b>
-                `;
-                list.appendChild(item);
-                rank++;
-            });
+                </div>
+                <b style="color:var(--primary); font-size:18px;">${timeStr}</b>
+            `;
+            list.appendChild(item);
+            rank++;
+        });
 
-            App.toast("🏆 Топ обновлён!");
-        } catch (e) {
-            console.error("Ошибка лидерборда:", e);
-            list.innerHTML = '<div style="text-align:center; color:red;">Ошибка загрузки 😔</div>';
-            App.toast("❌ Ошибка связи с сервером");
-        }
+        App.toast("🏆 Топ по времени учёбы обновлён!");
+    } catch (e) {
+        console.error("Ошибка лидерборда:", e);
+        list.innerHTML = '<div style="text-align:center; color:red;">Ошибка загрузки 😔</div>';
+        App.toast("❌ Ошибка связи с сервером");
     }
+}
 };
 
 /* ==========================================
@@ -2255,7 +2342,295 @@ window.onload = () => {
         }
     }, 2000); // 2000 мс = 2 секунды показа логотипа
 };
+
+// ===== АНТИ-АФК: проверка каждые 20 минут =====
+let afkTimer = null;
+let afkPromptActive = false;
+const AFK_INTERVAL = 20 * 60 * 1000; // 20 минут
+const PROMPT_TIMEOUT = 30 * 1000;    // 30 секунд на ответ
+
+function startAfkCheck() {
+    if (afkTimer) clearTimeout(afkTimer);
+    afkTimer = setTimeout(showAfkPrompt, AFK_INTERVAL);
+}
+
+function stopAfkCheck() {
+    if (afkTimer) {
+        clearTimeout(afkTimer);
+        afkTimer = null;
+    }
+    afkPromptActive = false;
+    hideAfkPrompt();
+}
+
+function showAfkPrompt() {
+    if (afkPromptActive || !Timer.isRunning) return;
+    afkPromptActive = true;
+
+    const prompt = document.createElement('div');
+    prompt.id = 'afk-prompt';
+    prompt.style.cssText = `
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface);
+        padding: 15px 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        z-index: 999;
+        text-align: center;
+        max-width: 90vw;
+    `;
+    prompt.innerHTML = `
+        <p style="margin:0 0 10px; font-weight:bold;">Продолжаешь учиться? 😊</p>
+        <p style="margin:0 0 15px; font-size:14px;">Нажми "Да" в течение 30 секунд</p>
+        <button onclick="confirmAfk()" class="btn btn-primary" style="margin-right:10px;">Да, продолжаю!</button>
+        <button onclick="pauseAfk()" class="btn btn-outline">Я отошёл</button>
+    `;
+    document.body.appendChild(prompt);
+
+    setTimeout(() => {
+        if (afkPromptActive) pauseAfk();
+    }, PROMPT_TIMEOUT);
+}
+
+function confirmAfk() {
+    afkPromptActive = false;
+    hideAfkPrompt();
+    startAfkCheck();
+    App.toast("Круто! Продолжаем 💪");
+}
+
+function pauseAfk() {
+    afkPromptActive = false;
+    hideAfkPrompt();
+    Timer.pause();
+    App.toast("Таймер на паузе. Возобнови когда вернёшься!");
+}
+
+function hideAfkPrompt() {
+    const prompt = document.getElementById('afk-prompt');
+    if (prompt) prompt.remove();
+}
+
+// Подключаем к таймеру (если у тебя Timer — объект)
+if (typeof Timer !== 'undefined') {
+    const originalStart = Timer.start;
+    Timer.start = function() {
+        originalStart?.apply(this, arguments);
+        startAfkCheck();
+    };
+
+    const originalPause = Timer.pause;
+    Timer.pause = function() {
+        originalPause?.apply(this, arguments);
+        stopAfkCheck();
+    };
+
+    const originalStop = Timer.stop;
+    Timer.stop = function() {
+        originalStop?.apply(this, arguments);
+        stopAfkCheck();
+    };
+}
+
+// ===== ПРЕДМЕТЫ: ПЕРЕМЕЩЕНИЕ ОДНИМ КЛИКОМ — ФИНАЛЬНЫЙ ВАРИАНТ =====
+
+// Все предметы
+const ALL_SUBJECTS = [
+    { id: 'algebra', name: 'Алгебра', icon: '✖️' },
+    { id: 'geometry', name: 'Геометрия', icon: '📐' },
+    { id: 'calculus', name: 'Мат. анализ', icon: '∫' },
+    { id: 'arithmetic', name: 'Арифметика', icon: '🔢' },
+    { id: 'combinatorics', name: 'Комбинаторика', icon: '🔀' },
+    { id: 'statistics', name: 'Статистика', icon: '📊' },
+    { id: 'trigonometry', name: 'Тригонометрия', icon: '📏' },
+    { id: 'stereometry', name: 'Стереометрия', icon: '🧊' }
+];
+
+// Защита от null (самое важное!)
+if (!DB) DB = {};
+if (!DB.subjects) DB.subjects = {};
+
+// Очистка от пустых ключей (фикс Firebase)
+function cleanSubjects() {
+    if (!DB.subjects) return;
+    Object.keys(DB.subjects).forEach(key => {
+        if (!key || key.trim() === '') {
+            delete DB.subjects[key];
+            console.log("Удалён пустой ключ:", key);
+        }
+    });
+}
+
+// Обновление списков
+function updateSubjectLists() {
+    const my = document.getElementById('my-subjects-list');
+    const avail = document.getElementById('available-subjects-list');
+
+    if (!my || !avail) return;
+
+    my.innerHTML = '';
+    avail.innerHTML = '';
+
+    // Защита от null
+    if (!DB || !DB.subjects) {
+        my.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Загрузка...</div>';
+        return;
+    }
+
+    // Мои предметы
+    Object.keys(DB.subjects).forEach(id => {
+        const s = DB.subjects[id];
+        if (s) {
+            const div = document.createElement('div');
+            div.className = 'subject-item added';
+            div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+            div.addEventListener('click', () => moveSubject(id, true));
+            div.style.cursor = 'pointer';
+            my.appendChild(div);
+        }
+    });
+
+    if (my.children.length === 0) {
+        my.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет предметов</div>';
+    }
+
+    // Доступные
+    ALL_SUBJECTS.forEach(s => {
+        if (!DB.subjects[s.id]) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+            div.addEventListener('click', () => moveSubject(s.id, false));
+            div.style.cursor = 'pointer';
+            avail.appendChild(div);
+        }
+    });
+}
+function updatePresets() {
+    const presetGrid = document.querySelector('.preset-grid');
+    if (!presetGrid) return;
+
+    presetGrid.innerHTML = ''; // очищаем старые пресеты
+
+    // Добавляем только те пресеты, которых нет в моих предметах
+    const availablePresets = [
+        { emoji: '📖', name: 'Литература' },
+        { emoji: '⚛️', name: 'Физика' },
+        { emoji: '🧪', name: 'Химия' },
+        { emoji: '🧬', name: 'Биология' },
+        { emoji: '🏺', name: 'История' },
+        { emoji: '🌐', name: 'Иностранный язык' }
+    ];
+
+    availablePresets.forEach(p => {
+        const id = p.name.toLowerCase().replace(/[^a-zа-я0-9]/gi, '-');
+        if (!DB.subjects[id]) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            div.innerHTML = `<div class="icon">${p.emoji}</div><div class="name">${p.name}</div>`;
+            div.addEventListener('click', () => moveFromPreset(p.emoji, p.name));
+            div.style.cursor = 'pointer';
+            presetGrid.appendChild(div);
+        }
+    });
+}
+// Перемещение
+function moveSubject(id, isInMyList) {
+    if (!DB || !DB.subjects) {
+        App.toast("Данные ещё не загружены");
+        return;
+    }
+
+    let toastText = '';
+
+    if (isInMyList) {
+        if (DB.subjects[id]) {
+            delete DB.subjects[id];
+            toastText = `Перемещён в доступные`;
+        }
+    } else {
+        const subj = ALL_SUBJECTS.find(s => s.id === id);
+        if (subj && !DB.subjects[id]) {
+            DB.subjects[id] = { name: subj.name, icon: subj.icon, sec: 0 };
+            toastText = `Перемещён в мои предметы`;
+        }
+    }
+
+    Data.save();
+
+    // Принудительное обновление всех списков
+    setTimeout(() => {
+        updateSubjectLists();
+        updatePresets(); // ← новая функция для пресетов
+        if (App && App.renderSubjects) App.renderSubjects();
+    }, 0);
+
+    if (toastText) App.toast(toastText);
+}
+
+// Запуск после загрузки страницы и профиля
+document.addEventListener('DOMContentLoaded', updateSubjectLists);
+
+// Важно! Вызов после загрузки профиля (добавь это в Auth.login или initAfterLogin)
+if (typeof Auth !== 'undefined' && Auth.login) {
+    const originalLogin = Auth.login;
+    Auth.login = function(...args) {
+        originalLogin.apply(Auth, args);
+        setTimeout(() => {
+            updateSubjectLists();
+            console.log("Списки обновлены после логина");
+        }, 500); // 0.5 сек — достаточно, чтобы DB загрузился
+    };
+}
+
+// ===== ПЕРЕМЕЩЕНИЕ ИЗ ПРЕСЕТА В "МОИ ПРЕДМЕТЫ" =====
+
+// Функция перемещения из пресета
+function moveFromPreset(emoji, name) {
+    const id = name.toLowerCase().replace(/[^a-zа-я0-9]/gi, '-');
+
+    if (DB.subjects[id]) {
+        App.toast("Предмет уже добавлен");
+        return;
+    }
+
+    DB.subjects[id] = { name: name, icon: emoji, sec: 0 };
+    Data.save();
+
+    App.toast(`Перемещён: ${name}`);
+
+    // Обновляем все списки
+    updateSubjectLists();
+    updatePresets(); // ← обновляем пресеты
+
+    if (App && App.renderSubjects) App.renderSubjects();
+}
+// Очистка от пустых/невалидных ключей в subjects (защита от ошибки Firebase)
+function cleanSubjects() {
+    if (!DB || !DB.subjects) return;
+
+    const keys = Object.keys(DB.subjects);
+    keys.forEach(key => {
+        if (!key || key.trim() === '' || key === 'undefined' || key === 'null') {
+            delete DB.subjects[key];
+            console.log("Удалён пустой/невалидный ключ:", key);
+        }
+    });
+}
+function cleanEmptyKeys() {
+    if (!DB || !DB.subjects) return;
+
+    const keys = Object.keys(DB.subjects);
+    keys.forEach(key => {
+        if (!key || key.trim() === '' || key === 'undefined' || key === 'null') {
+            delete DB.subjects[key];
+            console.log("Удалён пустой ключ subjects:", key);
+        }
+    });
+}
 </script>
 </body>
 </html>
-
