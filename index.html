@@ -22,7 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <!-- YANDEX METRIKA -->
     <script type="text/javascript" >
        
@@ -681,6 +681,10 @@ window.addEventListener('load', () => {
         <img src="logo.png" alt="Logo" class="app-logo"> <!-- Здесь -->
         <h2 style="margin-bottom: 5px; color: var(--primary);">MathBooster PRO</h2>
         <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
+        <!--  КНОПКА СКАНИРОВАНИЯ QR — САМАЯ ВЕРХНЯЯ -->
+        <button class="btn btn-primary" onclick="Transfer.scanQR()" style="margin-bottom: 20px; font-size: 18px; padding: 15px;">
+            📱 Сканировать QR-код (перенос прогресса)
+        </button>
         <div id="user-list"></div>
         <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
     </div>
@@ -2631,6 +2635,68 @@ function cleanEmptyKeys() {
         }
     });
 }
+// ===== СКАНИРОВАНИЕ QR ДЛЯ ПЕРЕНОСА =====
+Transfer.scanQR = function() {
+    // Создаём модалку с видео-потоком камеры
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content" style="text-align:center; max-width:90vw; padding:20px;">
+            <h3>📱 Сканирование QR-кода</h3>
+            <p style="color:var(--text-light); margin-bottom:15px;">Наведите камеру на QR со старого устройства</p>
+            <div style="position:relative; width:100%; max-width:400px; margin:0 auto;">
+                <video id="qr-video" autoplay playsinline style="width:100%; border-radius:15px;"></video>
+                <canvas id="qr-canvas" style="display:none;"></canvas>
+            </div>
+            <div id="qr-result" style="margin-top:15px; font-size:16px; color:var(--success); min-height:30px;"></div>
+            <button class="btn btn-outline" style="margin-top:20px;" onclick="this.closest('.modal').remove()">Закрыть</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Запускаем камеру
+    const video = document.getElementById('qr-video');
+    const canvas = document.getElementById('qr-canvas');
+    const result = document.getElementById('qr-result');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+            requestAnimationFrame(scan);
+        })
+        .catch(err => {
+            result.innerText = "Ошибка доступа к камере";
+            result.style.color = 'red';
+            console.error("Камера ошибка:", err);
+        });
+
+    function scan() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            try {
+                const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert"
+                });
+
+                if (code) {
+                    result.innerText = "QR найден! Обработка...";
+                    result.style.color = 'var(--success)';
+                    // Здесь обрабатываем код (перенос прогресса)
+                    Transfer.pasteCode(code.data); // передаём содержимое QR
+                    modal.remove();
+                    return;
+                }
+            } catch (e) {}
+        }
+        requestAnimationFrame(scan);
+    }
+};
+
 </script>
 </body>
 </html>
