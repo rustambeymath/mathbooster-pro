@@ -22,7 +22,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <!-- YANDEX METRIKA -->
     <script type="text/javascript" >
        
@@ -678,15 +677,18 @@ window.addEventListener('load', () => {
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
     <div class="auth-card" id="login-view">
+
         <img src="logo.png" alt="Logo" class="app-logo"> <!-- Здесь -->
         <h2 style="margin-bottom: 5px; color: var(--primary);">MathBooster PRO</h2>
         <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
-        <!--  КНОПКА СКАНИРОВАНИЯ QR — САМАЯ ВЕРХНЯЯ -->
-        <button class="btn btn-primary" onclick="Transfer.scanQR()" style="margin-bottom: 20px; font-size: 18px; padding: 15px;">
-            📱 Сканировать QR-код (перенос прогресса)
-        </button>
         <div id="user-list"></div>
         <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
+
+<!-- 👇 НОВАЯ КНОПКА ДЛЯ ПЕРЕНОСА 👇 -->
+<button class="btn btn-outline" onclick="Transfer.transferByID()" style="margin-top: 10px; border-color: var(--primary); color: var(--primary);">
+    📥 Восстановить / Перенести
+</button>
+<!-- 👆 КОНЕЦ ВСТАВКИ 👆 -->
     </div>
 
     <div class="auth-card" id="register-view" style="display: none;">
@@ -991,21 +993,19 @@ window.addEventListener('load', () => {
     
     <!-- Новый чистый раздел переноса -->
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
-        <h4 style="margin-bottom: 15px;">📦 Перенос прогресса</h4>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <button class="btn btn-primary" onclick="Transfer.showQR()">
-                📱 Перенос через QR-код
-            </button>
-            
-            <button class="btn btn-outline" onclick="Sync.toggleAuto()" style="margin-top: 10px;">
-                ☁️ Автосинхронизация с облаком: <span id="sync-status">Выкл</span>
-            </button>
-        </div>
-        <p style="font-size: 12px; color: var(--text-light); margin-top: 15px; text-align: center;">
-            QR-код — быстрое переноса на другое устройство<br>
-            Автосинхронизация — прогресс везде автоматически
-        </p>
+    <h4 style="margin-bottom: 15px;">📦 Перенос прогресса</h4>
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+        <button class="btn btn-primary" onclick="Transfer.generateTransferID()">
+            Создать код переноса (8 символов)
+        </button>
+        <button class="btn btn-outline" onclick="Transfer.transferByID()">
+            Ввести код с другого устройства
+        </button>
     </div>
+    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px; text-align: center;">
+        Код действует 24 часа. Скопируйте и введите на новом устройстве.
+    </p>
+</div>
     
     <!-- Сброс -->
     <button class="btn btn-outline" style="margin-top: 40px; border-color: #FF7675; color: #FF7675;" onclick="Auth.resetData()">
@@ -2220,108 +2220,101 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
 
 
 
+// ===== НОВАЯ СИСТЕМА ПЕРЕНОСА — ПО КОРОТКОМУ ID =====
 const Transfer = {
-    copyCode() {
-        if (!DB || !Auth.currentUser) {
-            App.toast("⚠️ Нет данных для копирования");
-            return;
+    generateTransferID() {
+        if (!Auth.currentUser) return App.toast("Сначала войдите в аккаунт");
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let id = '';
+        for (let i = 0; i < 8; i++) {
+            id += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        const json = JSON.stringify(DB);
-        const compressed = btoa(unescape(encodeURIComponent(json)));
-        
-        navigator.clipboard.writeText(compressed).then(() => {
-            App.toast("✅ Код скопирован в буфер!");
-        }).catch(() => {
-            prompt("Скопируйте этот код вручную:", compressed);
+
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", id);
+        window.DB_Online.setDoc(docRef, {
+            userId: Auth.currentUser.id,
+            data: DB,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
+        }).then(() => {
+            App.toast("Код создан! Действует 24 часа");
+            prompt("Ваш код переноса:", id);
+        }).catch(e => {
+            console.error(e);
+            App.toast("Ошибка создания кода");
         });
     },
 
-    pasteCode() {
-        const code = prompt("Вставьте код переноса:");
-        if (!code) return;
-        try {
-            const decoded = decodeURIComponent(escape(atob(code.trim())));
-            const imported = JSON.parse(decoded);
-            if (imported.user && imported.subjects) {
-                DB = imported;
+    transferByID() {
+        const inputID = prompt("Введите 8-значный код восстановления:");
+        if (!inputID) return;
+        if (inputID.length !== 8) return App.toast("Код должен состоять из 8 символов");
+
+        App.toast("⏳ Ищем данные...");
+
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", inputID);
+        
+        // Флаг, чтобы знать, успели ли мы восстановить данные
+        let isSuccess = false;
+
+        window.DB_Online.getDoc(docRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const transferData = docSnap.data();
+                
+                // Проверка срока
+                if (new Date() > new Date(transferData.expiresAt)) {
+                    App.toast("❌ Срок действия кода истек");
+                    return;
+                }
+
+                // 1. Применяем скачанную базу
+                DB = transferData.data;
+
+                // 2. Обновляем список пользователей (для экрана входа)
+                let usersList = JSON.parse(localStorage.getItem('MathUsers') || '[]');
+                
+                const existingIndex = usersList.findIndex(u => u.id === DB.user.id);
+                const userSummary = { 
+                    id: DB.user.id, 
+                    name: DB.user.name, 
+                    avatar: DB.user.avatar, 
+                    gender: DB.user.gender 
+                };
+
+                if (existingIndex >= 0) {
+                    usersList[existingIndex] = userSummary;
+                } else {
+                    usersList.push(userSummary);
+                }
+                localStorage.setItem('MathUsers', JSON.stringify(usersList));
+
+                // 3. Сохраняем данные
+                Data.currentKey = 'MathData_' + DB.user.id; 
                 Data.save();
-                App.toast("✅ Прогресс успешно перенесён!");
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                App.toast("❌ Неверный формат данных");
-            }
-        } catch (e) {
-            App.toast("❌ Ошибка чтения кода");
-            console.error(e);
-        }
-    },
 
-            showQR() {
-        if (!DB || !Auth.currentUser) {
-            App.toast("⚠️ Нет данных для QR-кода");
-            return;
-        }
-
-        const json = JSON.stringify(DB);
-        const compressed = btoa(unescape(encodeURIComponent(json)));
-
-        const modal = document.createElement('div');
-        modal.className = 'modal show';
-        modal.innerHTML = `
-            <div class="modal-content" style="text-align:center; max-width:90vw; padding:20px;">
-                <h3 style="margin-bottom:15px;">📱 QR-код для переноса</h3>
-                <p style="color:var(--text-light); font-size:14px; margin-bottom:25px;">
-                    Увеличьте яркость экрана до максимума<br>Держите телефон на расстоянии 15-30 см
-                </p>
-                <canvas id="qrcode-canvas" style="width:400px; height:400px; margin:0 auto 25px; background:white; border-radius:15px; padding:30px; box-shadow:0 10px 30px rgba(0,0,0,0.2);"></canvas>
-                <div id="qr-status" style="font-size:14px; margin-bottom:15px; color:var(--text-light);">Генерация...</div>
-                <button class="btn btn-outline" onclick="this.closest('.modal').remove()">Закрыть</button>
-                <button class="btn btn-primary" onclick="Transfer.saveQRAsImage()" style="margin-top:10px;">💾 Сохранить QR как картинку</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        setTimeout(() => {
-            const canvas = document.getElementById('qrcode-canvas');
-            const statusEl = document.getElementById('qr-status');
-
-            if (!canvas) {
-                statusEl.innerText = "Ошибка: canvas не найден";
-                statusEl.style.color = "red";
-                return;
-            }
-
-            try {
-                new QRious({
-                    element: canvas,
-                    size: 400,  // Большой размер для лёгкого сканирования
-                    value: compressed,
-                    background: '#FFFFFF',
-                    foreground: '#2B3674',
-                    level: 'H'  // Максимальная коррекция ошибок
+                // ✅ ВАЖНО: Ставим флаг успеха
+                isSuccess = true;
+                App.toast("✅ Профиль восстановлен! Перезагрузка...");
+                
+                // 4. Пытаемся удалить код, но если ошибка - игнорируем её (главное данные у нас)
+                window.DB_Online.deleteDoc(docRef).catch(err => {
+                    console.log("Код не удален с сервера (не критично):", err);
                 });
 
-                statusEl.innerText = "Готово! Наведите камеру (или сохраните картинку)";
-                statusEl.style.color = "var(--success)";
-            } catch (err) {
-                console.error("QR error:", err);
-                statusEl.innerText = "Ошибка генерации QR";
-                statusEl.style.color = "red";
-            }
-        }, 200);
-    },
+                // Перезагрузка
+                setTimeout(() => location.reload(), 1500);
 
-    saveQRAsImage() {
-        const canvas = document.getElementById('qrcode-canvas');
-        if (canvas) {
-            const link = document.createElement('a');
-            link.download = 'MathBooster_Transfer_QR.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            App.toast("✅ QR сохранён в галерею! Теперь сканируйте с фото");
-        } else {
-            App.toast("Ошибка сохранения");
-        }
+            } else {
+                App.toast("❌ Код не найден");
+            }
+        }).catch(e => {
+            console.error(e);
+            // Показываем ошибку ТОЛЬКО если мы еще не сохранили данные
+            if (!isSuccess) {
+                App.toast("❌ Ошибка соединения или код неверный");
+            }
+        });
     }
 };
 
@@ -2635,68 +2628,43 @@ function cleanEmptyKeys() {
         }
     });
 }
-// ===== СКАНИРОВАНИЕ QR ДЛЯ ПЕРЕНОСА =====
-Transfer.scanQR = function() {
-    // Создаём модалку с видео-потоком камеры
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content" style="text-align:center; max-width:90vw; padding:20px;">
-            <h3>📱 Сканирование QR-кода</h3>
-            <p style="color:var(--text-light); margin-bottom:15px;">Наведите камеру на QR со старого устройства</p>
-            <div style="position:relative; width:100%; max-width:400px; margin:0 auto;">
-                <video id="qr-video" autoplay playsinline style="width:100%; border-radius:15px;"></video>
-                <canvas id="qr-canvas" style="display:none;"></canvas>
-            </div>
-            <div id="qr-result" style="margin-top:15px; font-size:16px; color:var(--success); min-height:30px;"></div>
-            <button class="btn btn-outline" style="margin-top:20px;" onclick="this.closest('.modal').remove()">Закрыть</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
 
-    // Запускаем камеру
-    const video = document.getElementById('qr-video');
-    const canvas = document.getElementById('qr-canvas');
-    const result = document.getElementById('qr-result');
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(stream => {
-            video.srcObject = stream;
-            video.play();
-            requestAnimationFrame(scan);
-        })
-        .catch(err => {
-            result.innerText = "Ошибка доступа к камере";
-            result.style.color = 'red';
-            console.error("Камера ошибка:", err);
-        });
+// Ручной перенос по коду (запасной вариант)
+function manualQRTransfer() {
+    const code = document.getElementById('manual-qr-code').value.trim();
+    if (!code) return App.toast("Введите код");
+    Transfer.pasteCode(code);
+    document.querySelector('.modal.show').remove();
+}
+Transfer.pasteCode = function(code) {
+    if (!code || code.trim() === '') {
+        App.toast("❌ Код пустой");
+        return;
+    }
 
-    function scan() {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    try {
+        // Убираем все пробелы и переносы строк
+        const cleanedCode = code.trim().replace(/\s+/g, '');
 
-            try {
-                const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert"
-                });
+        // Декодируем base64 → текст → JSON
+        const decoded = atob(cleanedCode);
+        const jsonText = decodeURIComponent(escape(decoded));
+        const imported = JSON.parse(jsonText);
 
-                if (code) {
-                    result.innerText = "QR найден! Обработка...";
-                    result.style.color = 'var(--success)';
-                    // Здесь обрабатываем код (перенос прогресса)
-                    Transfer.pasteCode(code.data); // передаём содержимое QR
-                    modal.remove();
-                    return;
-                }
-            } catch (e) {}
+        if (imported && imported.user && imported.subjects) {
+            DB = imported;
+            Data.save();
+            App.toast("✅ Прогресс успешно перенесён!");
+            setTimeout(() => location.reload(), 1500); // перезагрузка через 1.5 сек
+        } else {
+            App.toast("❌ Неверный формат данных");
         }
-        requestAnimationFrame(scan);
+    } catch (e) {
+        console.error("Ошибка переноса:", e);
+        App.toast("❌ Ошибка чтения кода. Попробуйте скопировать заново.");
     }
 };
-
 </script>
 </body>
 </html>
