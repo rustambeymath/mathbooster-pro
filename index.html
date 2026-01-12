@@ -2249,13 +2249,14 @@ const Transfer = {
     transferByID() {
         const inputID = prompt("Введите 8-значный код восстановления:");
         if (!inputID) return;
-        if (inputID.length !== 8) return App.toast("Код должен состоять из 8 символов");
-
-        App.toast("⏳ Ищем данные...");
-
-        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", inputID);
         
-        // Флаг, чтобы знать, успели ли мы восстановить данные
+        // Убираем пробелы, если случайно скопировали
+        const cleanID = inputID.trim();
+        if (cleanID.length !== 8) return App.toast("Код должен состоять из 8 символов");
+
+        App.toast("⏳ Загрузка данных...");
+
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
         let isSuccess = false;
 
         window.DB_Online.getDoc(docRef).then(docSnap => {
@@ -2268,51 +2269,66 @@ const Transfer = {
                     return;
                 }
 
-                // 1. Применяем скачанную базу
-                DB = transferData.data;
+                // 1. Получаем скачанную базу
+                const downloadedDB = transferData.data;
 
-                // 2. Обновляем список пользователей (для экрана входа)
-                let usersList = JSON.parse(localStorage.getItem('MathUsers') || '[]');
-                
-                const existingIndex = usersList.findIndex(u => u.id === DB.user.id);
-                const userSummary = { 
+                // ПРОВЕРКА ЦЕЛОСТНОСТИ ДАННЫХ
+                if (!downloadedDB || !downloadedDB.user) {
+                    App.toast("❌ Ошибка: пустые данные в облаке");
+                    return;
+                }
+
+                // Присваиваем в глобальную переменную
+                DB = downloadedDB;
+
+                // 2. ГАРАНТИРУЕМ НАЛИЧИЕ ID, ИМЕНИ И АВАТАРА
+                // Если в базе их нет, ставим дефолтные, чтобы профиль не исчез
+                if (!DB.user.id) DB.user.id = 'u' + Date.now();
+                if (!DB.user.name) DB.user.name = "Восстановленный";
+                if (!DB.user.avatar) DB.user.avatar = "😎";
+
+                // 3. ОБНОВЛЯЕМ СПИСОК ПОЛЬЗОВАТЕЛЕЙ (ЭКРАН ВХОДА)
+                let usersList = [];
+                try {
+                    const stored = localStorage.getItem('MathUsers');
+                    if (stored) usersList = JSON.parse(stored);
+                } catch (e) { usersList = []; }
+
+                // Удаляем старую запись с таким же ID (чтобы не дублировалось)
+                usersList = usersList.filter(u => u.id !== DB.user.id);
+
+                // Добавляем обновленного пользователя в начало списка
+                usersList.unshift({ 
                     id: DB.user.id, 
                     name: DB.user.name, 
                     avatar: DB.user.avatar, 
-                    gender: DB.user.gender 
-                };
-
-                if (existingIndex >= 0) {
-                    usersList[existingIndex] = userSummary;
-                } else {
-                    usersList.push(userSummary);
-                }
-                localStorage.setItem('MathUsers', JSON.stringify(usersList));
-
-                // 3. Сохраняем данные
-                Data.currentKey = 'MathData_' + DB.user.id; 
-                Data.save();
-
-                // ✅ ВАЖНО: Ставим флаг успеха
-                isSuccess = true;
-                App.toast("✅ Профиль восстановлен! Перезагрузка...");
-                
-                // 4. Пытаемся удалить код, но если ошибка - игнорируем её (главное данные у нас)
-                window.DB_Online.deleteDoc(docRef).catch(err => {
-                    console.log("Код не удален с сервера (не критично):", err);
+                    gender: DB.user.gender || 'male' 
                 });
 
+                // Сохраняем список пользователей
+                localStorage.setItem('MathUsers', JSON.stringify(usersList));
+
+                // 4. СОХРАНЯЕМ САМУ БАЗУ ДАННЫХ
+                Data.currentKey = 'MathData_' + DB.user.id; 
+                localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+
+                // 5. УСПЕХ
+                isSuccess = true;
+                App.toast("✅ УСПЕШНО! Перезагрузка...");
+                
+                // Пытаемся удалить, но не блокируем, если ошибка
+                window.DB_Online.deleteDoc(docRef).catch(() => console.log("Skip delete"));
+
                 // Перезагрузка
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => location.reload(), 1000);
 
             } else {
                 App.toast("❌ Код не найден");
             }
         }).catch(e => {
             console.error(e);
-            // Показываем ошибку ТОЛЬКО если мы еще не сохранили данные
             if (!isSuccess) {
-                App.toast("❌ Ошибка соединения или код неверный");
+                App.toast("❌ Ошибка соединения (интернет)");
             }
         });
     }
