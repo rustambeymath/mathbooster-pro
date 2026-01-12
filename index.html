@@ -137,7 +137,26 @@ body.theme-dark.theme-standard { --primary: #8B7EFF; }
 body.theme-dark.theme-math { --primary: #00F5E0; }
 body.theme-dark.theme-pantone { --primary: #FFAB91; }
 body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; }
-        
+       /* Кнопка удаления на экране входа */
+.delete-user-btn {
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.delete-user-btn:active {
+    transform: scale(0.9);
+} 
         * { 
             box-sizing: border-box; 
             margin: 0; 
@@ -1601,6 +1620,7 @@ const Auth = {
         MusicPlayer.init(); 
     },
 
+    // ОБНОВЛЕННЫЙ СПИСОК С КНОПКОЙ УДАЛЕНИЯ
     renderUserList() { 
         const list = document.getElementById('user-list'); 
         list.innerHTML = ''; 
@@ -1611,10 +1631,39 @@ const Auth = {
         this.users.forEach(u => { 
             const div = document.createElement('div'); 
             div.className = 'user-list-item'; 
-            div.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,8)}...</div></div>`; 
-            div.onclick = () => this.login(u.id); 
+            
+            // Основной блок (аватар + имя) - клик для входа
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = "display:flex; align-items:center; gap:15px; flex-grow:1;";
+            infoDiv.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,8)}...</div></div>`;
+            infoDiv.onclick = () => this.login(u.id);
+
+            // Кнопка удаления
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-user-btn';
+            delBtn.innerHTML = '✕';
+            delBtn.onclick = (e) => this.deleteUser(u.id, e);
+
+            div.appendChild(infoDiv);
+            div.appendChild(delBtn);
             list.appendChild(div); 
         }); 
+    },
+
+    // НОВАЯ ФУНКЦИЯ УДАЛЕНИЯ
+    deleteUser(id, event) {
+        event.stopPropagation(); // Чтобы не сработал вход при нажатии на удаление
+        if(!confirm("Точно удалить этот профиль? Прогресс будет стерт!")) return;
+        
+        // Удаляем из списка
+        this.users = this.users.filter(u => u.id !== id);
+        localStorage.setItem('MathUsers', JSON.stringify(this.users));
+        
+        // Удаляем сам файл с данными прогресса
+        localStorage.removeItem('MathData_' + id);
+        
+        this.renderUserList();
+        App.toast("🗑️ Профиль удален");
     },
 
     renderAvatars() { 
@@ -1647,9 +1696,8 @@ const Auth = {
         SoundSys.play('click'); 
     },
 
-        createAccount() {
+    createAccount() {
         const inputField = document.getElementById('reg-name');
-        if (!inputField) return alert("Ошибка: поле имени не найдено");
         const name = inputField.value.trim();
         if (!name) return alert('Введите имя!');
 
@@ -1663,12 +1711,6 @@ const Auth = {
         this.users.push(user);
         localStorage.setItem('MathUsers', JSON.stringify(this.users));
 
-        // ←←← ДОБАВЬ ЭТИ СТРОКИ
-        // После создания пользователя — сразу сохраняем имя в DB (для облака)
-        Data.load(user.id); // загружаем новую базу
-        DB.user.name = name; // явно записываем имя
-        Data.save(); // сохраняем (включая облако)
-
         this.login(user.id);
     },
 
@@ -1678,17 +1720,23 @@ const Auth = {
         this.currentUser = user; 
         Data.load(user.id); 
         
+        // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ИМЯ В БАЗЕ ПРИ ВХОДЕ
+        if(DB && DB.user) {
+            DB.user.name = user.name;
+            DB.user.avatar = user.avatar;
+            Data.save();
+        }
+        
         document.getElementById('auth-screen').classList.add('hidden'); 
         document.getElementById('app-container').style.display = 'block'; 
         
-        const savedAvatar = DB.user.avatar || user.avatar;
-        App.setText('header-avatar', savedAvatar);
+        App.setText('header-avatar', user.avatar);
         App.setText('header-name', user.name);
-        App.setText('profile-avatar-big', savedAvatar);
+        App.setText('profile-avatar-big', user.avatar);
         App.setText('profile-name-big', user.name);
         
         SoundSys.play('success'); 
-        App.initAfterLogin();  // <-- Важно!
+        App.initAfterLogin();
         DailySys.check(); 
     },
 
@@ -2217,17 +2265,17 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
 
 
 
-// ===== НОВАЯ СИСТЕМА ПЕРЕНОСА — ПО КОРОТКОМУ ID =====
 const Transfer = {
-    // 1. ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ (Теперь сохраняет имя!)
     generateTransferID() {
         if (!Auth.currentUser) return App.toast("Сначала войдите в аккаунт");
 
-        // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: 
-        // Принудительно записываем текущее имя и аватарку в базу перед отправкой
-        DB.user.name = Auth.currentUser.name;
-        DB.user.avatar = Auth.currentUser.avatar;
-        DB.user.id = Auth.currentUser.id;
+        // 1. Принудительно сохраняем текущее имя в файл перед отправкой
+        if (DB && DB.user) {
+            DB.user.name = Auth.currentUser.name;
+            DB.user.avatar = Auth.currentUser.avatar;
+            DB.user.id = Auth.currentUser.id;
+            Data.save(); // Сохраняем локально
+        }
 
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let id = '';
@@ -2240,7 +2288,7 @@ const Transfer = {
         const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", id);
         window.DB_Online.setDoc(docRef, {
             userId: Auth.currentUser.id,
-            data: DB, // Теперь здесь внутри есть правильное имя
+            data: DB,
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
         }).then(() => {
@@ -2251,11 +2299,9 @@ const Transfer = {
         });
     },
 
-    // 2. ИСПРАВЛЕННОЕ ПОЛУЧЕНИЕ (Без лишних переименований)
     transferByID() {
         const inputID = prompt("Введите 8-значный код восстановления:");
         if (!inputID) return;
-        
         const cleanID = inputID.trim();
         if (cleanID.length !== 8) return App.toast("Код должен состоять из 8 символов");
 
@@ -2267,35 +2313,24 @@ const Transfer = {
         window.DB_Online.getDoc(docRef).then(docSnap => {
             if (docSnap.exists()) {
                 const transferData = docSnap.data();
-                
                 if (new Date() > new Date(transferData.expiresAt)) {
                     App.toast("❌ Срок действия кода истек");
                     return;
                 }
 
-                const downloadedDB = transferData.data;
+                DB = transferData.data;
 
-                if (!downloadedDB || !downloadedDB.user) {
-                    App.toast("❌ Ошибка: пустые данные");
-                    return;
-                }
-
-                DB = downloadedDB;
-
-                // Если ID нет, создаем новый (редкий случай)
-                if (!DB.user.id) DB.user.id = 'u' + Date.now();
-
-                // 🔥 ИСПРАВЛЕНИЕ: Больше не пишем "Восстановленный", если имя есть
-                // Если имя совсем пустое, ставим просто "Игрок"
+                // === ФИКС ИМЕНИ ===
+                // Если имя пустое или "Восстановленный" — спрашиваем у пользователя
                 if (!DB.user.name || DB.user.name === "Восстановленный") {
-                     // Пытаемся оставить как есть или ставим дефолт, но не переписываем нормальное имя
-                     if (!DB.user.name) DB.user.name = "Игрок";
+                    let newName = prompt("Имя не найдено в сохранении. Как назвать профиль?", "Игрок");
+                    DB.user.name = newName && newName.trim() ? newName : "Игрок";
                 }
                 
-                // Если аватарки нет
                 if (!DB.user.avatar) DB.user.avatar = "😎";
+                if (!DB.user.id) DB.user.id = 'u' + Date.now();
 
-                // Обновляем список на экране входа
+                // Обновляем список пользователей
                 let usersList = [];
                 try {
                     const stored = localStorage.getItem('MathUsers');
@@ -2304,10 +2339,9 @@ const Transfer = {
 
                 usersList = usersList.filter(u => u.id !== DB.user.id);
                 
-                // Добавляем в начало списка
                 usersList.unshift({ 
                     id: DB.user.id, 
-                    name: DB.user.name, // Сюда попадет правильное имя
+                    name: DB.user.name, 
                     avatar: DB.user.avatar, 
                     gender: DB.user.gender || 'male' 
                 });
@@ -2318,11 +2352,10 @@ const Transfer = {
                 localStorage.setItem(Data.currentKey, JSON.stringify(DB));
 
                 isSuccess = true;
-                App.toast("✅ УСПЕШНО! Имя: " + DB.user.name);
+                App.toast(`✅ УСПЕШНО! Привет, ${DB.user.name}`);
                 
                 window.DB_Online.deleteDoc(docRef).catch(() => {});
-
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => location.reload(), 1000);
 
             } else {
                 App.toast("❌ Код не найден");
