@@ -1549,7 +1549,7 @@ const Online = {
         const q = window.DB_Online.query(
             window.DB_Online.collection(window.DB_Online.db, "users"),
             window.DB_Online.orderBy("user.totalSec", "desc"),  // ← Сортировка по времени (секундам)
-            window.DB_Online.limit(20)
+            window.DB_Online.limit(200)
         );
 
         const snap = await window.DB_Online.getDocs(q);
@@ -1653,17 +1653,26 @@ const Auth = {
     // НОВАЯ ФУНКЦИЯ УДАЛЕНИЯ
     deleteUser(id, event) {
         event.stopPropagation(); // Чтобы не сработал вход при нажатии на удаление
-        if(!confirm("Точно удалить этот профиль? Прогресс будет стерт!")) return;
+        if(!confirm("Точно удалить этот профиль? Он пропадет с телефона и из Топа!")) return;
         
-        // Удаляем из списка
+        // 1. Удаляем с телефона (список пользователей)
         this.users = this.users.filter(u => u.id !== id);
         localStorage.setItem('MathUsers', JSON.stringify(this.users));
         
-        // Удаляем сам файл с данными прогресса
+        // 2. Удаляем с телефона (файл прогресса)
         localStorage.removeItem('MathData_' + id);
         
+        // 3. 👇 УДАЛЯЕМ ИЗ ОНЛАЙН-БАЗЫ (ТОПА) 👇
+        if (window.DB_Online) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", id);
+            window.DB_Online.deleteDoc(docRef)
+                .then(() => App.toast("🗑️ Удалено из Топа и с телефона"))
+                .catch(err => console.error("Ошибка удаления из облака:", err));
+        } else {
+            App.toast("🗑️ Удалено с телефона");
+        }
+        
         this.renderUserList();
-        App.toast("🗑️ Профиль удален");
     },
 
     renderAvatars() { 
