@@ -22,9 +22,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Библиотека графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   
     <!-- YANDEX METRIKA -->
     <script type="text/javascript" >
-       
        (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
        m[i].l=1*new Date();
        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
@@ -39,6 +39,7 @@
        });
        
     </script>
+<noscript><div><img src="https://mc.yandex.ru/watch/XXXXXXXX" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
     <!-- FIREBASE (База Данных) -->
     <script type="module">
@@ -106,6 +107,16 @@
         body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
         body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
         body.theme-forest { --primary: #556B2F; --bg: #F5F5DC; --surface: #FFFFF0; --text: #3E2723; --text-light: #6D4C41; --shadow: 0 10px 30px rgba(85, 107, 47, 0.15); }
+        body.theme-magma {  --primary: #FF3333; --bg: #000000; --surface: #121212; --text: #FFFFFF; --text-light: #888888; --shadow: 0 0 25px rgba(255, 51, 51, 0.4); 
+}
+
+/* Применим свечение к кнопкам в этой теме */
+body.theme-magma .btn-primary, 
+body.theme-magma .nav-btn.active,
+body.theme-magma .daily-day.active {
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+    border: 1px solid #FF3333;
+}
         body.dark-mode {
     --bg: #1A1A2E;
     --surface: #16213E;
@@ -121,8 +132,9 @@ body.dark-mode.theme-pantone { --primary: #FFB399; }
 body.dark-mode.theme-forest { --primary: #8FBC8F; }
 body.dark-mode.theme-neon { --primary: #FF69B4; }
 body.dark-mode.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
-body.dark-mode.theme-dark { --primary: #9D7EFF; } /* если есть отдельная "dark" тема */
-        
+body.dark-mode.theme-dark { --primary: #9D7EFF; } 
+body.dark-mode.theme-magma { --bg: #000000; --surface: #121212; --primary: #FF3333;
+}        
         body.theme-dark {
     --primary: #7B73FF;
     --bg: #1E1E2E;
@@ -195,68 +207,7 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
             filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1));
         }
 
-        /* === ZEN MODE === */
-        body.zen-active { 
-            overflow: hidden; 
-            padding: 0; 
-        }
-        body.zen-active .nav, 
-        body.zen-active .header-card, 
-        body.zen-active .section:not(#dashboard) { 
-            display: none !important; 
-        }
-        body.zen-active .container { 
-            padding: 0; 
-            max-width: 100%; 
-            height: 100vh; 
-        }
-        body.zen-active #dashboard .grid { 
-            display: flex; 
-            height: 100vh; 
-            width: 100%; 
-        }
-        body.zen-active #dashboard .card:not(.zen-target) { 
-            display: none !important; 
-        }
-        body.zen-active .zen-target {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;     /* вертикальный центр */
-    align-items: center;         /* горизонтальный центр */
-    padding: 0;
-    margin: 0;
-    background: var(--bg);
-    text-align: center;
-}
-        body.zen-active #timer {
-    font-size: 18vw;              /* адаптивный размер */
-    min-font-size: 60px;          /* минимум на маленьких экранах */
-    max-font-size: 120px;         /* максимум на больших */
-    line-height: 1;
-    margin: 0 0 20px 0;
-    padding: 0;
-    color: var(--text);
-    text-shadow: 0 5px 20px rgba(0,0,0,0.3);
-}
-       /* Контролы под таймером — тоже по центру */
-body.zen-active .zen-controls {
-    position: static;             /* убираем fixed, чтобы не сдвигалось */
-    margin-top: 20px;
-    width: 90%;
-    max-width: 400px;
-}
-
-/* Убираем лишние отступы body в Zen */
-body.zen-active {
-    padding: 0 !important;
-    margin: 0;
-    overflow: hidden;
-}
+        
         
         /* === UI ELEMENTS === */
         #auth-screen { 
@@ -295,6 +246,7 @@ body.zen-active {
         .league-bronze { border-color: #CD7F32; }
         .league-silver { border-color: #C0C0C0; }
         .league-gold { border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .league-platinum { border-color: #E5E4E2; box-shadow: 0 0 12px rgba(229, 228, 226, 0.8); }
         .league-diamond { border-color: #b9f2ff; box-shadow: 0 0 15px rgba(185, 242, 255, 0.6); }
         .league-legend { border-color: #ff4d4d; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
@@ -607,6 +559,54 @@ body.zen-active #timer {
     animation: spin 1s linear infinite;
 }
 
+/* === ECO MODE (OLED SAVER) === */
+#eco-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000;
+    z-index: 99999;
+    display: none; /* Скрыт по умолчанию */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #333; /* Очень тусклый текст */
+    font-family: monospace;
+    touch-action: manipulation;
+}
+
+#eco-overlay.active {
+    display: flex;
+}
+
+.eco-text {
+    font-size: 14px;
+    margin-top: 20px;
+    opacity: 0.3;
+}
+
+/* Анимация движения, чтобы не выгорал экран */
+@keyframes drift {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(10px, 10px); }
+    50% { transform: translate(-10px, 20px); }
+    75% { transform: translate(-20px, -10px); }
+    100% { transform: translate(0, 0); }
+}
+
+.eco-floater {
+    animation: drift 60s infinite linear;
+    text-align: center;
+}
+
+#eco-timer-display {
+    font-size: 80px;
+    font-weight: bold;
+    color: #1a1a1a; /* Очень темный серый, чтобы едва светился */
+}
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
@@ -702,9 +702,17 @@ window.addEventListener('load', () => {
         <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
         <div id="user-list"></div>
         <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
-<button class="btn btn-outline" onclick="Transfer.transferByID()" style="margin-top: 10px; border-color: var(--primary); color: var(--primary);">
-    📥 Восстановить / Перенести
+<button class="btn" onclick="Transfer.transferByID()" style="margin-top: 15px; background: white; border: 2px dashed var(--primary); color: var(--primary); font-weight: bold; width: 100%; padding: 15px; animation: pulse-btn 2s infinite;">
+    📥 У меня есть код восстановления
 </button>
+
+<style>
+@keyframes pulse-btn {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+</style>
     </div>
 
     <div class="auth-card" id="register-view" style="display: none;">
@@ -764,7 +772,7 @@ window.addEventListener('load', () => {
                 <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
                     <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
                     <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
-                    <button onclick="App.toggleZen()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Режим ZEN">🧘</button>
+                    <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
                 </div>
                 
                 <h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>
@@ -782,9 +790,6 @@ window.addEventListener('load', () => {
                     <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
                     <button class="btn btn-outline" onclick="Timer.stop()">⏹ СТОП</button>
                 </div>
-                
-                <!-- EXIT ZEN BTN (Hidden by default) -->
-                <button class="btn btn-outline" style="margin-top:20px; display:none;" id="exit-zen-btn" onclick="App.toggleZen()">Выйти из Zen</button>
             </div>
             
             <div class="card">
@@ -813,6 +818,83 @@ window.addEventListener('load', () => {
         </div>
     </section>
 
+<!-- 8. ABOUT SECTION (Новый красивый раздел) -->
+    <section id="about" class="section">
+        
+        <!-- Шапка с градиентом -->
+        <div class="card" style="background: linear-gradient(135deg, #6C63FF, #4834d4); color: white; text-align: center; padding: 40px 20px; position: relative; overflow: hidden; border: none;">
+            <!-- Декор на фоне -->
+            <div style="position: absolute; top: -20px; right: -20px; font-size: 150px; opacity: 0.1;">🚀</div>
+            
+            <img src="logo.png" alt="MathBooster" style="width: 80px; height: 80px; background: white; border-radius: 20px; padding: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); margin-bottom: 15px;">
+            
+            <h2 style="font-size: 28px; margin: 0; font-weight: 800;">MathBooster PRO</h2>
+            <div style="opacity: 0.8; font-size: 14px; margin-top: 5px;">v1.0 • UZ Edition 🇺🇿</div>
+        </div>
+
+        <!-- Миссия -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>🎯 Наша миссия</h3>
+            <p style="color: var(--text-light); line-height: 1.6; margin-top: 10px;">
+                Учеба не должна быть скучной. Мы верим, что <b>геймификация</b> — это ключ к продуктивности. 
+                <br><br>
+                MathBooster превращает часы за учебниками в увлекательную RPG-игру, где ты качаешь свой мозг так же, как персонажа в играх.
+            </p>
+        </div>
+
+        <!-- Карточки фишек -->
+        <div class="grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr;">
+            <div class="card" style="text-align: center; padding: 15px;">
+                <div style="font-size: 30px; margin-bottom: 10px;">⏳</div>
+                <div style="font-weight: bold; font-size: 14px;">Тайм-менеджмент</div>
+                <div style="font-size: 11px; color: var(--text-light);">Фокус без отвлечений</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 15px;">
+                <div style="font-size: 30px; margin-bottom: 10px;">💰</div>
+                <div style="font-weight: bold; font-size: 14px;">Экономика</div>
+                <div style="font-size: 11px; color: var(--text-light);">Зарабатывай умом</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 15px;">
+                <div style="font-size: 30px; margin-bottom: 10px;">📊</div>
+                <div style="font-weight: bold; font-size: 14px;">Статистика</div>
+                <div style="font-size: 11px; color: var(--text-light);">Следи за ростом</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 15px;">
+                <div style="font-size: 30px; margin-bottom: 10px;">🏆</div>
+                <div style="font-weight: bold; font-size: 14px;">Соревнование</div>
+                <div style="font-size: 11px; color: var(--text-light);">Будь первым в топе</div>
+            </div>
+        </div>
+
+        <!-- Разработчик -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>👨‍💻 Разработчик</h3>
+            <div style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
+                <div style="width: 60px; height: 60px; background: #eee; border-radius: 50%; font-size: 30px; display: flex; align-items: center; justify-content: center;">👨‍💻</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 16px;">Мансуров Рустам Уктамович</div>
+                    <div style="color: var(--text-light); font-size: 12px;">Math Teacher</div>
+                    <div style="color: var(--primary); font-size: 12px; font-weight: bold; margin-top: 3px;">Bukhara, Uzbekistan</div>
+                </div>
+            </div>
+            <p style="margin-top: 15px; font-size: 13px; color: var(--text-light);">
+                "Я создал это приложение, чтобы доказать: учиться можно с удовольствием. Спасибо, что вы с нами!"
+            </p>
+            
+            <!-- Кнопка Телеграм -->
+            <a href="https://t.me/rustambey708" target="_blank" style="text-decoration: none;">
+                <button class="btn" style="background: #0088cc; color: white; margin-top: 15px; width: 100%;">
+                    ✈️ Написать в Telegram
+                </button>
+            </a>
+        </div>
+
+        <!-- Кнопка Назад -->
+        <button class="btn btn-outline" style="margin-top: 30px; margin-bottom: 30px;" onclick="App.switchTab('settings')">
+            ⬅️ Вернуться в настройки
+        </button>
+    </section>
+
     <!-- 2. TRAINER -->
     <section id="trainer" class="section">
         <div class="card" id="trainer-menu" style="text-align: center; padding: 40px 20px;">
@@ -839,8 +921,19 @@ window.addEventListener('load', () => {
                 <div>⏳ <span id="game-time">60</span>s</div>
                 <div>✅ <span id="game-score">0</span></div>
             </div>
-            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>            <input type="number" id="game-input" class="input-field trainer-input" placeholder="?">
-            <div style="font-size: 12px; color: var(--text-light); margin-top: 10px;">Нажми Enter чтобы ответить</div>
+            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>           
+            <!-- Контейнер для ввода и кнопки минуса -->
+<div style="display: flex; gap: 10px; justify-content: center; align-items: center; max-width: 300px; margin: 0 auto;">
+    
+    <!-- Поле ввода (изменили тип на tel для лучшей клавиатуры) -->
+    <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="margin-bottom: 0;">
+    
+    <!-- Кнопка +/- -->
+    <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px; border-width: 2px;" title="Поставить минус">+/-</button>
+
+</div>
+
+<div style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Нажми Enter чтобы ответить</div>
             <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
         </div>
 
@@ -935,22 +1028,66 @@ window.addEventListener('load', () => {
 
     <!-- 6. SETTINGS & DONATION -->
     <section id="settings" class="section">
+        <!-- Кнопка установки (видна только в браузере) -->
+<div id="install-promo-card" class="card" style="background: linear-gradient(135deg, #00d26a, #00b894); color: white; display: none; margin-bottom: 20px; cursor: pointer;" onclick="InstallSys.startFlow()">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="font-size: 30px;">📲</div>
+        <div>
+            <div style="font-weight: bold; font-size: 16px;">Установить приложение</div>
+            <div style="font-size: 12px; opacity: 0.9;">Сохранить прогресс и убрать рамки</div>
+        </div>
+    </div>
+</div>
         <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
             <h3>ℹ️ О приложении</h3>
-            <p style="color: var(--text-light); font-size: 12px;">Версия 1.9 PRO • Информация</p>
+            <p style="color: var(--text-light); font-size: 12px;">Версия 1.0 PRO </p>
         </div>
 
-        <div style="background:linear-gradient(135deg, #FFD700, #FFA500); padding:20px; border-radius:20px; color:#333; margin:20px 0; text-align:center; position:relative; overflow:hidden; box-shadow:0 10px 20px rgba(255,215,0,0.3);">
-            <div style="font-size:40px; margin-bottom:5px;">💎</div>
-            <h3 style="margin:0; font-weight:800; text-transform:uppercase;">Premium</h3>
-            <p style="font-size:12px; margin:5px 0;">Поддержи проект и получи бонусы!</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
-                <button class="btn" style="background:white; color:#2B3674; font-size:12px;" onclick="Donation.payUz()">🇺🇿 UZB (Humo)</button>
-                <button class="btn" style="background:#2B3674; color:white; font-size:12px;" onclick="Donation.payWorld()">🌍 World (Visa)</button>
-            </div>
-            <button class="btn" style="background:rgba(255,255,255,0.3); color:white; margin-top:10px;" onclick="Donation.enterCode()">🔑 Ввести код</button>
-        </div>
+<!-- Карточка Premium с Прайс-листом -->
+<div style="background:linear-gradient(135deg, #FFD700, #FFA500); padding:20px; border-radius:20px; color:#333; margin:20px 0; text-align:center; position:relative; overflow:hidden; box-shadow:0 10px 20px rgba(255,215,0,0.3);">
+    
+    <div style="font-size:40px; margin-bottom:5px;">💎</div>
+    <h3 style="margin:0; font-weight:800; text-transform:uppercase; color: #2B3674;">Premium</h3>
+    <p style="font-size:12px; margin:5px 0;">Поддержи проект и сэкономь время!</p>
 
+    <!-- 👇 НОВЫЙ ПРАЙС ЛИСТ 👇 -->
+    <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 12px; margin: 15px 0; color: #333; font-size: 13px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <div style="font-weight: bold; margin-bottom: 8px; text-align: center; color: #2B3674; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">Прайс-лист (UZS)</div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+            <span>300 💰</span> <b>5 000 UZS</b>
+        </div>
+        
+        <!-- Выделяем ХИТ продаж -->
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; background: rgba(255, 215, 0, 0.25); border-radius: 6px; margin: 2px -6px; padding-left: 6px; padding-right: 6px;">
+            <span style="font-weight:800; color:#2B3674;">1 000 💰</span> <b style="color: #d35400;">15 000 UZS 🔥</b>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+            <span>3 000 💰</span> <b>35 000 UZS</b>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+            <span>5 000 💰</span> <b>50 000 UZS 👑</b>
+        </div>
+    </div>
+    <!-- 👆 КОНЕЦ ПРАЙС ЛИСТА 👆 -->
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
+        <button class="btn" style="background:white; color:#2B3674; font-size:12px; font-weight:bold;" onclick="Donation.payUz()">🇺🇿 UZB (Humo)</button>
+        <button class="btn" style="background:#2B3674; color:white; font-size:12px; font-weight:bold;" onclick="Donation.payWorld()">🌍 World (Visa)</button>
+    </div>
+    <button class="btn" style="background:rgba(255,255,255,0.3); color:white; margin-top:10px; font-weight:bold;" onclick="Donation.enterCode()">🔑 Ввести код</button>
+</div>
+
+<!-- Кнопка вызова соглашения -->
+<div class="card" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="document.getElementById('terms-modal').classList.add('show')">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">⚖️</span>
+        <span style="font-weight: bold; font-size: 14px;">Пользовательское соглашение</span>
+    </div>
+    <div style="color: var(--text-light);">➜</div>
+</div>
         
 <div class="card">
     <h3>⚙️ Опции и перенос прогресса</h3>
@@ -1128,20 +1265,137 @@ window.addEventListener('load', () => {
 
 <!-- ABOUT MODAL -->
 <div id="about-modal" class="modal">
-    <div class="modal-content">
-        <div style="font-size: 60px; margin-bottom: 10px;">💎</div>
-        <h2 style="color: var(--primary);">MathBooster PRO</h2>
-        <div style="background: var(--bg); display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: var(--text-light); margin: 10px 0;">v1.9 PRO</div>
-        <p style="margin: 20px 0; line-height: 1.6;">Лучшее приложение для геймификации учебы.</p>
-        <div style="text-align: left; background: var(--bg); padding: 15px; border-radius: 15px; font-size: 13px; margin: 15px 0;">
-            <div>👨‍💻 <b>Разработчик:</b> Мансуров Рустам Уктамович</div>
-            <div style="margin-top: 8px;">💾 <b>Данные:</b> Локальное хранение</div>
+    
+    <div class="modal-content" style="padding: 0; overflow: hidden; max-width: 350px;">
+        
+        <!-- Верхняя часть -->
+        <div style="background: linear-gradient(135deg, #6C63FF, #8B7EFF); padding: 30px 20px; color: white;">
+            <div style="width: 60px; height: 60px; background: white; border-radius: 18px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                💎
+            </div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 800;">MathBooster</h2>
+            <div style="opacity: 0.9; font-weight: 500; font-size: 14px;">PRO Edition</div>
         </div>
-        <button class="btn btn-primary" style="margin-top: 20px;" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">📖 Подробнее о нас</button>
-        <button class="btn btn-outline" style="margin-top: 10px;" onclick="document.getElementById('about-modal').classList.remove('show')">Закрыть</button>
+
+        <!-- Основной контент -->
+        <div style="padding: 25px;">
+            
+            <!-- Бейджики -->
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
+                <span style="background: rgba(108, 99, 255, 0.1); color: var(--primary); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;">v1.0</span>
+                <span style="background: rgba(0, 210, 106, 0.1); color: #00d26a; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;">Release</span>
+                <span style="background: rgba(255, 215, 0, 0.15); color: #b8860b; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;">🇺🇿 UZ</span>
+            </div>
+
+            <p style="color: var(--text-light); font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+                Лучший инструмент для геймификации твоей учебы. Превращай время в опыт и монеты.
+            </p>
+
+            <!-- Техническая инфо -->
+            <div style="background: var(--bg); border-radius: 12px; padding: 15px; text-align: left; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;">
+                    <span style="color: var(--text-light);">Разработчик</span>
+                    <span style="font-weight: bold;">Rustam M.</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;">
+                    <span style="color: var(--text-light);">Релиз</span>
+                    <span style="font-weight: bold;">Январь 2026</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-light);">Лицензия</span>
+                    <!-- Здесь стоит PRO Active, чтобы пользователь радовался -->
+                    <span style="font-weight: bold; color: var(--primary);">PRO Active ✅</span>
+                </div>
+            </div>
+
+            <!-- Кнопки -->
+            <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">
+                    📖 О нас / Миссия
+                </button>
+                <button class="btn btn-outline" onclick="document.getElementById('about-modal').classList.remove('show')">
+                    Закрыть
+                </button>
+            </div>
+            
+            <div style="margin-top: 15px; font-size: 10px; color: var(--text-light); opacity: 0.6;">
+                © 2026 MathBooster Product.
+            </div>
+            
+        </div>
     </div>
 </div>
 
+<!-- LEVEL UP MODAL (Новое красивое окно) -->
+<div id="levelup-modal" class="modal" style="z-index: 10000;">
+    <div class="modal-content" style="text-align: center; background: linear-gradient(135deg, #FFD700, #FFA500); color: #2B3674; border: 4px solid white; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); max-width: 320px; padding: 30px 20px;">
+        
+        <!-- Иконка вылетает сверху -->
+        <div style="font-size: 80px; margin-top: -60px; margin-bottom: 10px; text-shadow: 0 5px 10px rgba(0,0,0,0.2); animation: bounce 2s infinite;">🆙</div>
+        
+        <h2 style="font-weight: 900; font-size: 32px; text-transform: uppercase; margin: 0;">Level Up!</h2>
+        
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
+            Новый уровень: <span id="lvl-up-new-level" style="font-size: 28px; color: white; text-shadow: 1px 1px 0 rgba(0,0,0,0.3);">2</span>
+        </div>
+
+        <!-- Карточка с наградой -->
+        <div style="background: rgba(255,255,255,0.9); padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <div style="font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 5px;">Твоя награда</div>
+            <div style="font-size: 28px; font-weight: 800; color: #00d26a;">+50 💰</div>
+        </div>
+
+        <button class="btn" onclick="document.getElementById('levelup-modal').classList.remove('show')" style="background: #2B3674; color: white; width: 100%; font-weight: bold; box-shadow: 0 5px 15px rgba(43, 54, 116, 0.4);">
+            Круто! 🚀
+        </button>
+    </div>
+</div>
+<!-- TERMS MODAL (Пользовательское соглашение) -->
+<div id="terms-modal" class="modal">
+    <div class="modal-content" style="text-align: left; padding: 0; overflow: hidden; max-height: 85vh; display: flex; flex-direction: column;">
+        
+        <!-- Шапка -->
+        <div style="background: var(--surface); padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 18px;">📄 Соглашение</h3>
+            <button onclick="document.getElementById('terms-modal').classList.remove('show')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">×</button>
+        </div>
+
+        <!-- Текст (с прокруткой) -->
+        <div style="padding: 20px; overflow-y: auto; font-size: 13px; color: var(--text); line-height: 1.6;">
+            <p style="color: var(--text-light); margin-bottom: 15px;">Последнее обновление: Январь 2026</p>
+
+            <h4 style="margin-top: 15px; color: var(--primary);">1. Общие положения</h4>
+            <p>Добро пожаловать в MathBooster PRO. Используя данное приложение, вы автоматически соглашаетесь с условиями данного соглашения. Приложение разработано Мансуровым Рустамом (далее — Разработчик) и предназначено для повышения личной продуктивности.</p>
+
+            <h4 style="margin-top: 15px; color: var(--primary);">2. Интеллектуальная собственность</h4>
+            <p>Все права на исходный код, дизайн, логотип, название "MathBooster", а также игровые механики принадлежат Разработчику. <br>⛔️ <b>Запрещено:</b> копирование, декомпиляция, модификация или распространение приложения без письменного разрешения автора. Нарушение преследуется по Закону РУз «Об авторском праве».</p>
+
+            <h4 style="margin-top: 15px; color: var(--primary);">3. Виртуальные товары и Донат</h4>
+            <p>Приложение распространяется бесплатно (Freeware). Пользователь может совершать добровольные пожертвования (донаты) для поддержки разработки.</p>
+            <ul>
+                <li><b>Монеты (Coins)</b> — это виртуальная игровая единица, не имеющая реальной денежной стоимости.</li>
+                <li>Монеты нельзя обменять обратно на деньги (сумы, доллары и т.д.).</li>
+                <li>Совершая перевод (через Click, Payme, Visa), вы совершаете <b>безвозмездное пожертвование</b>. Возврат средств не предусмотрен.</li>
+            </ul>
+
+            <h4 style="margin-top: 15px; color: var(--primary);">4. Отказ от ответственности</h4>
+            <p>Приложение предоставляется по принципу "как есть" (As Is). Разработчик не несет ответственности за сбои в работе устройства, потерю игрового прогресса из-за очистки кэша или отсутствия интернет-соединения при синхронизации.</p>
+
+            <h4 style="margin-top: 15px; color: var(--primary);">5. Конфиденциальность</h4>
+            <p>Мы уважаем вашу приватность. Приложение не собирает личные данные (номера телефонов, геолокацию), кроме тех, что вы вводите сами (Имя). Данные хранятся на вашем устройстве и в защищенной облачной базе.</p>
+
+            <div style="margin-top: 20px; padding: 15px; background: rgba(108, 99, 255, 0.1); border-radius: 10px; text-align: center;">
+                <b>MathBooster Inc.</b><br>
+                Bukhara, Uzbekistan 🇺🇿
+            </div>
+        </div>
+
+        <!-- Кнопка внизу -->
+        <div style="padding: 15px; border-top: 1px solid rgba(0,0,0,0.1); background: var(--surface);">
+            <button class="btn btn-primary" onclick="document.getElementById('terms-modal').classList.remove('show')">Я понимаю и принимаю</button>
+        </div>
+    </div>
+</div>
 <div id="toast-container"></div>
 
 <script>
@@ -1298,30 +1552,94 @@ const AVATARS = [
 
 const THEMES = [
     { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
-    { id: 'dark', name: 'Темная', icon: '🌙', price: 10 },
+    { id: 'dark', name: 'Темная', icon: '🌙', price: 0 },
     { id: 'pantone', name: 'Персик', icon: '🍑', price: 100 },
     { id: 'forest', name: 'Лес', icon: '🌲', price: 150 },
     { id: 'neon', name: 'Неон', icon: '🦄', price: 500 },
-    { id: 'math', name: 'MathBooster', icon: '💎', price: 600 },
-    { id: 'gold', name: 'Золото', icon: '🥇', price: 1000 }
+    { id: 'math', name: 'Алмаз', icon: '💎', price: 600 },
+    { id: 'gold', name: 'Золото', icon: '🥇', price: 1000 },
+    { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 }
 ];
 
 const SHOP_AVATARS = [
-    { id: 'ninja', icon: '🦁', name: 'Лев', price: 50 }, 
-    { id: 'cyborg', icon: '👾', name: 'Монстр', price: 100 }, 
-    { id: 'alien', icon: '👽', name: 'Пришелец', price: 150 }, 
-    { id: 'dragon', icon: '🐲', name: 'Дракон', price: 200 }, 
-    { id: 'vampire', icon: '🧛‍♀️', name: 'Вампирша', price: 200 },
-    { id: 'fairy', icon: '🧚‍♀️', name: 'Фея', price: 250 },
-    { id: 'wizard', icon: '🧙‍♂️', name: 'Маг', price: 250 }, 
-    { id: 'mermaid', icon: '🧜‍♀️', name: 'Русалка', price: 300 },
-    { id: 'ghost', icon: '👻', name: 'Призрак', price: 300 }, 
-    { id: 'crown', icon: '👑', name: 'Король', price: 500 }, 
-    { id: 'queen', icon: '👸', name: 'Королева', price: 500 },
-    { id: 'brain', icon: '🧠', name: 'Гений', price: 1000 }
+    // 🐣 НАЧАЛЬНЫЕ (50 - 100)
+    { id: 'cat', icon: '🐱', name: 'Котик', price: 50 },
+    { id: 'dog', icon: '🐶', name: 'Песель', price: 50 },
+    { id: 'girl_student', icon: '👩‍🎓', name: 'Студентка', price: 100 },
+    { id: 'boy_student', icon: '👨‍🎓', name: 'Студент', price: 100 },
+    { id: 'gamer', icon: '🎧', name: 'Геймер', price: 100 },
+    { id: 'nerd', icon: '🤓', name: 'Умник', price: 100 },
+
+    // 🧢 СРЕДНИЕ / ПРОФЕССИИ (150 - 250)
+    { id: 'muslimah', icon: '🧕', name: 'Муслима', price: 150 },
+    { id: 'brother', icon: '🧔', name: 'Бородач', price: 150 },
+    { id: 'footballer', icon: '⚽', name: 'Футболист', price: 200 }, 
+    { id: 'boxer', icon: '🥊', name: 'Боксер', price: 200 },       
+    { id: 'doctor_w', icon: '👩‍⚕️', name: 'Врач ', price: 250 },
+    { id: 'doctor_m', icon: '👨‍⚕️', name: 'Врач ', price: 250 },
+    { id: 'police', icon: '👮‍♂️', name: 'Офицер', price: 250 },
+    { id: 'artist', icon: '👩‍🎨', name: 'Художница', price: 250 },
+
+    // 🔥 ЭПИЧЕСКИЕ (300 - 500)
+    { id: 'ghost', icon: '👻', name: 'Призрак', price: 300 },
+    { id: 'superman', icon: '🦸‍♂️', name: 'Супермен', price: 350 },
+    { id: 'supergirl', icon: '🦸‍♀️', name: 'Супергёрл', price: 350 },
+    { id: 'wizard', icon: '🧙‍♂️', name: 'Волшебник', price: 400 },
+    { id: 'fairy', icon: '🧚‍♀️', name: 'Фея', price: 400 },
+    { id: 'vampire_m', icon: '🧛‍♂️', name: 'Вампир', price: 450 },
+    { id: 'vampire_w', icon: '🧛‍♀️', name: 'Вампирша', price: 450 },
+    { id: 'astronaut', icon: '👨‍🚀', name: 'Космонавт', price: 500 },
+    { id: 'dragon', icon: '🐲', name: 'Дракон', price: 500 },
+
+    // 💎 ЭЛИТА (600+)
+    { id: 'king', icon: '👑', name: 'Король', price: 600 },
+    { id: 'queen', icon: '👸', name: 'Королева', price: 600 },
+    { id: 'genie', icon: '🧞‍♂️', name: 'Джинн', price: 800 },
+    { id: 'lion', icon: '🦁', name: 'Лев', price: 1000 },
+    { id: 'wolf', icon: '🐺', name: 'Волк', price: 1000 },
+    { id: 'diamond', icon: '💎', name: 'Магнат', price: 2000 }
 ];
 
-const LEAGUES = [{ min: 0, name: "🥉 Бронзовая Лига", color: "league-bronze" }, { min: 1000, name: "🥈 Серебряная Лига", color: "league-silver" }, { min: 5000, name: "🥇 Золотая Лига", color: "league-gold" }, { min: 15000, name: "💎 Алмазная Лига", color: "league-diamond" }, { min: 50000, name: "👑 Легендарная Лига", color: "league-legend" }];
+// ЛИГИ 
+const LEAGUES = [
+    { min: 0, name: "🥉 Бронзовая Лига", color: "league-bronze" },
+    { min: 1000, name: "🥈 Серебряная Лига", color: "league-silver" },
+    { min: 5000, name: "🥇 Золотая Лига", color: "league-gold" },
+    { min: 12000, name: "💠 Платиновая Лига", color: "league-platinum" },
+    { min: 25000, name: "💎 Алмазная Лига", color: "league-diamond" },
+    { min: 60000, name: "👑 Легендарная Лига", color: "league-legend" }
+];
+
+const NameGuard = {
+    // Список запрещенных корней (RU, UZ, EN)
+    // Мы ищем "корни", чтобы поймать слова типа "сук@", "сууука" и т.д.
+    blacklist: [
+        // 🇷🇺 RU
+        'хуй', 'х у й', 'пизд', 'ебал', 'еблан', 'мудак', 'ганд', 'шлюх', 'бля', 'сука', 'с у к а', 'жопа', 'трах',
+        // 🇺🇿 UZ
+        'qotoq', 'qo\'toq', 'sik', 's i k', 'jalab', 'j a l a b', 'om', 'gandon', 'kotag', 'k o t a g', 'am',
+        // 🇺🇸 EN
+        'fuck', 'shit', 'bitch', 'whore', 'dick', 'cock', 'pussy'
+    ],
+
+    check(name) {
+        // 1. Приводим к нижнему регистру
+        const lower = name.toLowerCase();
+        
+        // 2. Создаем "чистую" версию без символов и пробелов
+        // (чтобы поймать "с.у.к.а" или "х-у-й")
+        const clean = lower.replace(/[^a-zа-я0-9]/g, '');
+
+        // 3. Проверяем список
+        for (let badWord of this.blacklist) {
+            // Проверяем, содержится ли плохое слово внутри имени
+            if (lower.includes(badWord) || clean.includes(badWord)) {
+                return false; // Имя ПЛОХОЕ
+            }
+        }
+        return true; // Имя ХОРОШЕЕ
+    }
+};
 
 let DB = null; 
 const Data = {
@@ -1333,6 +1651,9 @@ const Data = {
             const loaded = JSON.parse(raw);
             if(loaded.user) { 
                 DB = loaded; 
+                if (!DB.user.trainerRecords) {const oldRec = DB.user.trainerRecord || 0;
+                    DB.user.trainerRecords = { easy: oldRec, medium: 0, hard: 0 };
+                }
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(DB.user.gender === undefined) DB.user.gender = 'male';
                 if(DB.user.dob === undefined) DB.user.dob = '';
@@ -1348,6 +1669,7 @@ const Data = {
                     this.syncWithCloud(userId);
                 }
             } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); }
+            
         } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
     },
     async syncWithCloud(userId) {
@@ -1606,12 +1928,27 @@ const Online = {
    ========================================== */
 const Auth = {
     users: [], currentUser: null,
-    avatars: ['👨‍🚀', '👩‍🚀', '👩‍🔬', '👨‍🔬', '🤖', '🦊', '🦉', '👩‍🏫', '👨‍🏫', '👩‍🎓'],
-    selectedAvatar: '😎', selectedGender: 'male',
-
+    avatars: ['😎', '👩‍🎓', '👨‍🎓', '👱‍♀️', '👨', '🧕', '🧔', '🐱', '🦊', '⚽'],
     init() { 
         const stored = localStorage.getItem('MathUsers'); 
-        if (stored) this.users = JSON.parse(stored); 
+        if (stored) {
+            try {
+                let rawUsers = JSON.parse(stored);
+                // 🔥 ИСПРАВЛЕНИЕ ОШИБКИ:
+                // Фильтруем список: оставляем только тех, у кого есть ID и Имя
+                this.users = rawUsers.filter(u => u && u.id && u.name);
+                
+                // Если нашлись "битые" пользователи, перезаписываем чистый список
+                if (this.users.length !== rawUsers.length) {
+                    console.log("Удалены поврежденные профили");
+                    localStorage.setItem('MathUsers', JSON.stringify(this.users));
+                }
+            } catch (e) {
+                console.error("Ошибка чтения пользователей", e);
+                this.users = [];
+            }
+        } 
+        
         this.renderUserList(); 
         this.renderAvatars(); 
         SoundSys.init(); 
@@ -1620,25 +1957,29 @@ const Auth = {
         MusicPlayer.init(); 
     },
 
-    // ОБНОВЛЕННЫЙ СПИСОК С КНОПКОЙ УДАЛЕНИЯ
     renderUserList() { 
         const list = document.getElementById('user-list'); 
+        if (!list) return; // Защита если элемента нет
+
         list.innerHTML = ''; 
         if (this.users.length === 0) { 
             list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>'; 
             return; 
         } 
+        
         this.users.forEach(u => { 
+            // 🔥 ЗАЩИТА ОТ ОШИБКИ SUBSTR:
+            // Если вдруг ID всё равно нет, используем заглушку, чтобы не зависло
+            const safeID = u.id ? u.id.toString().substr(0,8) : 'ERROR';
+
             const div = document.createElement('div'); 
             div.className = 'user-list-item'; 
             
-            // Основной блок (аватар + имя) - клик для входа
             const infoDiv = document.createElement('div');
             infoDiv.style.cssText = "display:flex; align-items:center; gap:15px; flex-grow:1;";
-            infoDiv.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${u.id.substr(0,8)}...</div></div>`;
+            infoDiv.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${safeID}...</div></div>`;
             infoDiv.onclick = () => this.login(u.id);
 
-            // Кнопка удаления
             const delBtn = document.createElement('button');
             delBtn.className = 'delete-user-btn';
             delBtn.innerHTML = '✕';
@@ -1650,33 +1991,26 @@ const Auth = {
         }); 
     },
 
-    // НОВАЯ ФУНКЦИЯ УДАЛЕНИЯ
     deleteUser(id, event) {
-        event.stopPropagation(); // Чтобы не сработал вход при нажатии на удаление
+        event.stopPropagation();
         if(!confirm("Точно удалить этот профиль? Он пропадет с телефона и из Топа!")) return;
         
-        // 1. Удаляем с телефона (список пользователей)
         this.users = this.users.filter(u => u.id !== id);
         localStorage.setItem('MathUsers', JSON.stringify(this.users));
-        
-        // 2. Удаляем с телефона (файл прогресса)
         localStorage.removeItem('MathData_' + id);
         
-        // 3. 👇 УДАЛЯЕМ ИЗ ОНЛАЙН-БАЗЫ (ТОПА) 👇
         if (window.DB_Online) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", id);
-            window.DB_Online.deleteDoc(docRef)
-                .then(() => App.toast("🗑️ Удалено из Топа и с телефона"))
-                .catch(err => console.error("Ошибка удаления из облака:", err));
-        } else {
-            App.toast("🗑️ Удалено с телефона");
+            window.DB_Online.deleteDoc(docRef).catch(err => console.error(err));
         }
         
         this.renderUserList();
+        App.toast("🗑️ Удалено");
     },
 
     renderAvatars() { 
-        document.getElementById('avatar-selector').innerHTML = this.avatars.map(a => 
+        const el = document.getElementById('avatar-selector');
+        if(el) el.innerHTML = this.avatars.map(a => 
             `<div class="avatar-option ${a===this.selectedAvatar?'selected':''}" onclick="Auth.selectAvatar('${a}')">${a}</div>`
         ).join(''); 
     },
@@ -1690,7 +2024,8 @@ const Auth = {
     setGender(g) {
         this.selectedGender = g;
         document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.gender-btn')[g==='male'?0:1].classList.add('active');
+        const btns = document.querySelectorAll('.gender-btn');
+        if(btns.length > 1) btns[g==='male'?0:1].classList.add('active');
     },
 
     showRegister() { 
@@ -1706,10 +2041,30 @@ const Auth = {
     },
 
     createAccount() {
+        // 1. ПРОВЕРКА ЛИМИТА (Максимум 3 аккаунта)
+        const MAX_ACCOUNTS = 2;
+        
+        if (this.users.length >= MAX_ACCOUNTS) {
+            App.toast(`⛔ Достигнут лимит: ${MAX_ACCOUNTS} профиля!`);
+            alert(`На этом устройстве уже создано ${MAX_ACCOUNTS} профиля.\n\nЧтобы создать новый, удалите один из старых (нажмите на крестик ✕ в списке).`);
+            return; // Останавливаем создание
+        }
+
         const inputField = document.getElementById('reg-name');
         const name = inputField.value.trim();
-        if (!name) return alert('Введите имя!');
+        
+        // 2. Проверка на пустое имя
+        if (!name) return App.toast('⚠️ Введите имя!');
+        // 3. --- 🛡️ ЗАЩИТА ОТ МАТА ---
+        if (!NameGuard.check(name)) {
+            alert("⛔️ Это имя запрещено политикой сообщества.\nПожалуйста, выберите вежливый никнейм.");
+            return;
+        }
+        // -------------------------
+        // 4. Проверка длины имени 
+        if (name.length > 12) return App.toast('⚠️ Имя слишком длинное (макс 12)');
 
+        // 5. Создание пользователя
         const user = {
             id: 'u' + Date.now(),
             name: name,
@@ -1720,16 +2075,22 @@ const Auth = {
         this.users.push(user);
         localStorage.setItem('MathUsers', JSON.stringify(this.users));
 
+        // Сразу сохраняем имя в облачную структуру
+        Data.load(user.id);
+        if(DB && DB.user) {
+            DB.user.name = name;
+            DB.user.avatar = this.selectedAvatar;
+            Data.save();
+        }
+
         this.login(user.id);
     },
-
     login(id) { 
         const user = this.users.find(u => u.id === id); 
         if (!user) return; 
         this.currentUser = user; 
         Data.load(user.id); 
         
-        // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ИМЯ В БАЗЕ ПРИ ВХОДЕ
         if(DB && DB.user) {
             DB.user.name = user.name;
             DB.user.avatar = user.avatar;
@@ -1766,56 +2127,207 @@ const Auth = {
 };
 
 const Timer = {
-    ref: null, sec: 0, active: false, lastActive: 0, sessionDuration: 0, sessionCoins: 0, maxSessionTime: 30 * 60, maxIdleTime: 15 * 60 * 1000,
+    timerId: null,          // ← Добавили поле для setTimeout
+    sec: 0,
+    active: false,
+    lastActive: 0,
+    sessionDuration: 0,
+    sessionCoins: 0,
+    maxSessionTime: 30 * 60,
+    maxIdleTime: 15 * 60 * 1000,
     wakeLock: null,
-    
+    useWakeLock: localStorage.getItem('useWakeLock') !== 'false', // ← Читаем из сохранения (по умолчанию true)
+
     async requestWakeLock() {
-        try { if ('wakeLock' in navigator) this.wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-    },
-    releaseWakeLock() {
-        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+        if (!this.useWakeLock) return; // ← Проверка — если выключено, ничего не делаем
+        try {
+            if ('wakeLock' in navigator) {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {}
     },
 
-    preStart() { if(this.active) return; this.start(); },
+    releaseWakeLock() {
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+        }
+    },
+
+    toggleWakeLock(enabled) {
+        this.useWakeLock = enabled;
+        localStorage.setItem('useWakeLock', enabled ? 'true' : 'false');
+        App.toast(enabled 
+            ? "Экран будет гореть во время учёбы" 
+            : "Экономим батарею — экран может гаснуть");
+    },
+
+    preStart() {
+        if (this.active) return;
+        this.start();
+    },
+
     start() {
-        this.active = true; this.lastActive = Date.now(); this.sessionDuration = 0; this.sessionCoins = 0; SoundSys.play('click');
+        this.active = true; 
+        this.lastActive = Date.now(); 
+        this.sessionDuration = 0; 
+        this.sessionCoins = 0; 
+        SoundSys.play('click');
         this.requestWakeLock();
         
+        // Слушаем активность, чтобы не сработал анти-афк
         window.onmousemove = window.onkeypress = () => { this.lastActive = Date.now(); };
+
+        // ЗАПУСК ТАЙМЕРА
         this.ref = setInterval(() => {
             const now = Date.now();
-            if (now - this.lastActive > this.maxIdleTime) { this.forcePause("🛑 Таймер остановлен: Нет активности 15 минут."); return; }
-            if (this.sessionDuration >= this.maxSessionTime) { this.forcePause("👮 Проверка реальностью! Решите пример."); MathGame.show(true); return; }
-            this.sec++; this.sessionDuration++; DB.user.totalSec++; DB.subjects[DB.user.subject].sec++;
-            if(this.sec % 600 === 0) { DB.user.coins++; this.sessionCoins++; SoundSys.play('coin'); const coinEl = document.getElementById('coin-display'); const rect = coinEl.getBoundingClientRect(); FX.floatText(rect.left, rect.top, "+1 💰"); Data.save(); App.updateUI(); } 
-            if(this.sec%60===0) Data.save(); App.updateUI();
-        }, 1000);
-        document.getElementById('btn-start').innerText = "🔥 ИДЕТ..."; document.getElementById('timer').style.color = "var(--primary)";
-    },
-    forcePause(reason) { this.stop(false); App.toast(reason); },
-    stop(manual=true) {
-        if(!this.active && manual) return;
-        clearInterval(this.ref); this.active = false; window.onmousemove = window.onkeypress = null; SoundSys.play('click');
-        this.releaseWakeLock();
-
-        if(manual && this.sec > 60) {
-            App.addXP(Math.floor(this.sec/60)*10);
             
-            // GOAL CHECK
+            // 1. Проверка: не ушел ли пользователь (15 мин бездействия)
+            if (now - this.lastActive > this.maxIdleTime) { 
+                this.forcePause("🛑 Таймер остановлен: Нет активности 15 минут."); 
+                return; 
+            }
+            
+            // 2. Проверка: слишком долгая сессия (30 мин)
+            if (this.sessionDuration >= this.maxSessionTime) { 
+                this.forcePause("👮 Проверка реальностью! Решите пример."); 
+                MathGame.show(true); 
+                return; 
+            }
+
+            // 3. Увеличиваем счетчики времени
+            this.sec++; 
+            this.sessionDuration++; 
+            DB.user.totalSec++; 
+            
+            // Безопасно увеличиваем время предмета
+            if (DB.subjects && DB.subjects[DB.user.subject]) {
+                DB.subjects[DB.user.subject].sec++;
+            }
+
+            // === 4. ОБНОВЛЕНИЕ ЭКРАНА (Обычный + Эко режим) ===
+            const timeString = new Date(this.sec * 1000).toISOString().substr(11, 8);
+            
+            // Обновляем обычный таймер
+            const timerEl = document.getElementById('timer');
+            if(timerEl) timerEl.innerText = timeString;
+            
+            // Обновляем черный Эко-экран
+            const ecoEl = document.getElementById('eco-timer-display');
+            if(ecoEl) ecoEl.innerText = timeString;
+            // =================================================
+
+            // 5. Награда монетками (каждые 10 минут = 600 сек)
+            if(this.sec % 600 === 0) { 
+                DB.user.coins++; 
+                this.sessionCoins++; 
+                SoundSys.play('coin'); 
+                
+                // Анимация монетки
+                const coinEl = document.getElementById('coin-display'); 
+                if(coinEl) {
+                    const rect = coinEl.getBoundingClientRect(); 
+                    FX.floatText(rect.left, rect.top, "+1 💰"); 
+                }
+                
+                Data.save(); 
+                App.updateUI(); 
+            } 
+
+            // 6. Сохранение данных (каждую минуту)
+            if(this.sec % 60 === 0) { 
+                Data.save(); 
+
+                AchievementSys.check(); 
+            }
+
+        }, 1000); // Интервал 1 секунда
+        
+        // Меняем кнопку и цвет таймера
+        document.getElementById('btn-start').innerText = "🔥 ИДЕТ..."; 
+        document.getElementById('timer').style.color = "var(--primary)";
+    },
+
+    forcePause(reason) {
+        this.stop(false);
+        App.toast(reason);
+    },
+
+    stop(manual = true) {
+        // 1. Если таймер уже остановлен, выходим
+        if (!this.active) {
+            return;
+        }
+
+        // 2. ОСТАНАВЛИВАЕМ ТАЙМЕР (самая важная часть)
+        if (this.ref) {
+            clearInterval(this.ref);
+            this.ref = null; // Очищаем ссылку на него
+        }
+
+        // 3. Меняем статус на "неактивен"
+        this.active = false;
+        
+        // Отключаем все "слушатели"
+        window.onmousemove = window.onkeypress = null;
+        this.releaseWakeLock();
+        SoundSys.play('click');
+
+        // 4. Если таймер работал больше минуты, начисляем XP и проверяем цели
+        if (manual && this.sec > 60) {
+            App.addXP(Math.floor(this.sec / 60) * 10);
+            
             const goal = document.getElementById('session-goal').value.trim();
-            if(goal && confirm(`Вы выполнили цель: "${goal}"?`)) {
+            if (goal && confirm(`Вы выполнили цель: "${goal}"?`)) {
                 App.addXP(50);
                 App.toast("🎯 Цель достигнута! +50 XP");
                 SoundSys.play('win');
             }
-            document.getElementById('session-goal').value = ""; // reset
+            document.getElementById('session-goal').value = "";
         }
         
-        const k = new Date().toISOString().split('T')[0]; DB.history[k] = (DB.history[k]||0) + this.sec; 
-        if(this.sessionDuration > 5) { const log = { date: new Date().toISOString(), subject: DB.subjects[DB.user.subject].name, sec: this.sessionDuration, coins: this.sessionCoins }; DB.sessions.unshift(log); if(DB.sessions.length > 50) DB.sessions.pop(); }
-        if(this.sessionDuration > 300) { const today = new Date().toISOString().split('T')[0]; const last = DB.user.lastStudyDate; if(last !== today) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().split('T')[0]; if(last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } DB.user.lastStudyDate = today; SoundSys.play('success'); FX.confetti(); } }
-        if(manual) this.sec=0;
-        document.getElementById('btn-start').innerText = "🚀 СТАРТ"; document.getElementById('timer').style.color = "var(--text)"; Data.save(); App.updateUI(); App.renderHistory(); 
+        // 5. Сохраняем статистику и стрики
+        const k = new Date().toISOString().split('T')[0]; 
+        DB.history[k] = (DB.history[k] || 0) + this.sec; 
+        
+        if (this.sessionDuration > 5) { 
+            const log = { date: new Date().toISOString(), subject: DB.subjects[DB.user.subject]?.name || 'Предмет', sec: this.sessionDuration, coins: this.sessionCoins }; 
+            DB.sessions.unshift(log); 
+            if (DB.sessions.length > 50) DB.sessions.pop(); 
+        }
+        
+        if (this.sessionDuration > 300) { 
+            const today = new Date().toISOString().split('T')[0]; 
+            const last = DB.user.lastStudyDate; 
+            if (last !== today) { 
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); 
+                const yesterdayStr = yesterday.toISOString().split('T')[0]; 
+                if (last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } 
+                else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } 
+                DB.user.lastStudyDate = today; 
+                SoundSys.play('success'); 
+                FX.confetti(); 
+            } 
+        }
+
+        // 6. СБРАСЫВАЕМ СЧЕТЧИК СЕКУНД
+        if (manual) {
+            this.sec = 0;
+        }
+
+        // 7. ОБНОВЛЯЕМ ИНТЕРФЕЙС, ЧТОБЫ ПОКАЗАТЬ ОСТАНОВКУ
+        document.getElementById('btn-start').innerText = "🚀 СТАРТ";
+        document.getElementById('timer').style.color = "var(--text)";
+        
+        // 8. ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДИСПЛЕЙ НА 00:00:00
+        const timeString = new Date(this.sec * 1000).toISOString().substr(11, 8);
+        const timerEl = document.getElementById('timer');
+        if(timerEl) timerEl.innerText = timeString;
+        
+        // 9. Сохраняем все изменения и обновляем остальной UI
+        Data.save(); 
+        App.updateUI(); 
+        App.renderHistory(); 
     }
 };
 
@@ -1823,19 +2335,88 @@ const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()
 
 const Trainer = {
     score: 0, time: 60, interval: null, ans: 0, difficulty: 'easy',
+    
+    // Переключение сложности и обновление рекорда на экране
     setDiff(diff, btn) {
         this.difficulty = diff;
+        
+        // Переключаем визуально кнопки
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        if(btn) btn.classList.add('active');
+        
+        // Показываем рекорд для ЭТОЙ сложности
+        this.updateRecordDisplay();
     },
-    init() { document.getElementById('trainer-menu').style.display = 'block'; document.getElementById('trainer-game').style.display = 'none'; document.getElementById('trainer-result').style.display = 'none'; document.getElementById('trainer-high-score').innerText = DB.user.trainerRecord || 0; },
+
+    updateRecordDisplay() {
+        const rec = DB.user.trainerRecords ? DB.user.trainerRecords[this.difficulty] : 0;
+        document.getElementById('trainer-high-score').innerText = rec;
+    },
+
+// Добавьте это внутрь объекта Trainer:
+    
+    toggleMinus() {
+        const input = document.getElementById('game-input');
+        let val = input.value;
+
+        // Если пусто, просто ставим минус
+        if (val === '') {
+            input.value = '-';
+        } 
+        // Если минус уже есть — убираем его
+        else if (val.startsWith('-')) {
+            input.value = val.substring(1);
+        } 
+        // Если минуса нет — добавляем
+        else {
+            input.value = '-' + val;
+        }
+
+        // Возвращаем фокус на поле, чтобы клавиатура не закрылась
+        input.focus();
+    },
+
+    init() { 
+        document.getElementById('trainer-menu').style.display = 'block'; 
+        document.getElementById('trainer-game').style.display = 'none'; 
+        document.getElementById('trainer-result').style.display = 'none'; 
+        
+        // По умолчанию ставим Easy и показываем его рекорд
+        this.difficulty = 'easy';
+        const btns = document.querySelectorAll('.diff-btn');
+        btns.forEach(b => b.classList.remove('active'));
+        if(btns[0]) btns[0].classList.add('active'); // Активируем кнопку Easy
+        
+        this.updateRecordDisplay();
+    },
+
     start() {
-        this.score = 0; this.time = 60; document.getElementById('trainer-menu').style.display = 'none'; document.getElementById('trainer-game').style.display = 'block';
-        document.getElementById('game-score').innerText = 0; document.getElementById('game-time').innerText = 60;
-        SoundSys.play('click'); this.nextProblem(); const input = document.getElementById('game-input'); input.value = ''; input.focus();
+        this.score = 0; 
+        this.time = 60; 
+        document.getElementById('trainer-menu').style.display = 'none'; 
+        document.getElementById('trainer-game').style.display = 'block';
+        document.getElementById('game-score').innerText = 0; 
+        document.getElementById('game-time').innerText = 60;
+        
+        SoundSys.play('click'); 
+        this.nextProblem(); 
+        
+        const input = document.getElementById('game-input'); 
+        input.value = ''; 
+        input.focus();
+        // Фикс для мобилок: фокус иногда сбивается, возвращаем
+        input.onclick = () => input.focus();
+
         input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
-        this.interval = setInterval(() => { this.time--; document.getElementById('game-time').innerText = this.time; if(this.time <= 0) this.end(); }, 1000);
+        
+        if(this.interval) clearInterval(this.interval);
+        this.interval = setInterval(() => { 
+            this.time--; 
+            document.getElementById('game-time').innerText = this.time; 
+            if(this.time <= 0) this.end(); 
+        }, 1000);
     },
+
     nextProblem() {
         const ops = this.difficulty === 'hard' ? ['+','-','*','/'] : (this.difficulty === 'medium' ? ['+','-','*'] : ['+','-']);
         const op = ops[Math.floor(Math.random() * ops.length)];
@@ -1864,36 +2445,130 @@ const Trainer = {
         if(op === '/') this.ans = a / b;
 
         let problemStr = `${a} ${op === '*' ? '×' : (op === '/' ? '÷' : op)} ${b}`;
-        document.getElementById('game-problem').innerText = problemStr; document.getElementById('game-input').value = '';
+        document.getElementById('game-problem').innerText = problemStr; 
+        document.getElementById('game-input').value = '';
     },
+
     check() {
-        const val = parseInt(document.getElementById('game-input').value); const inputEl = document.getElementById('game-input');
-        if(val === this.ans) {
-            this.score++; document.getElementById('game-score').innerText = this.score; SoundSys.play('success');
-            inputEl.style.borderColor = 'var(--primary)'; setTimeout(() => inputEl.style.borderColor = 'var(--bg)', 200);
-            
-            // Points based on diff
-            let pts = 10; if(this.difficulty==='medium') pts=20; if(this.difficulty==='hard') pts=30;
-            const rect = inputEl.getBoundingClientRect(); FX.floatText(rect.left + 50, rect.top - 30, `+${pts} XP`, "#6C63FF");
-            this.nextProblem();
-        } else { SoundSys.play('error'); inputEl.style.borderColor = 'red'; inputEl.value = ''; }
-    },
-    end() {
-        clearInterval(this.interval); document.getElementById('trainer-game').style.display = 'none'; document.getElementById('trainer-result').style.display = 'block';
+        const val = parseInt(document.getElementById('game-input').value); 
+        const inputEl = document.getElementById('game-input');
         
-        let mult = 10; if(this.difficulty==='medium') mult=20; if(this.difficulty==='hard') mult=30;
+        if(val === this.ans) {
+            this.score++; 
+            document.getElementById('game-score').innerText = this.score; 
+            SoundSys.play('success');
+            
+            inputEl.style.borderColor = 'var(--primary)'; 
+            setTimeout(() => inputEl.style.borderColor = 'var(--text-light)', 200);
+            
+            let pts = 10; 
+            if(this.difficulty==='medium') pts=20; 
+            if(this.difficulty==='hard') pts=30;
+            
+            const rect = inputEl.getBoundingClientRect(); 
+            FX.floatText(rect.left + 50, rect.top - 30, `+${pts} XP`, "#6C63FF");
+            this.nextProblem();
+        } else { 
+            SoundSys.play('error'); 
+            inputEl.style.borderColor = 'red'; 
+            inputEl.value = ''; 
+        }
+    },
+
+    end() {
+        clearInterval(this.interval); 
+        document.getElementById('trainer-game').style.display = 'none'; 
+        document.getElementById('trainer-result').style.display = 'block';
+        
+        let mult = 10; 
+        if(this.difficulty==='medium') mult=20; 
+        if(this.difficulty==='hard') mult=30;
+        
         const earnedXP = this.score * mult; 
         const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 5)); 
         
         App.addXP(earnedXP);
-        if(earnedCoins > 0) { DB.user.coins += earnedCoins; SoundSys.play('coin'); App.toast(`🪙 +${earnedCoins} 💰`); }
-        if(this.score > DB.user.trainerRecord) { DB.user.trainerRecord = this.score; SoundSys.play('win'); App.toast("🏆 Новый рекорд!"); FX.confetti(); }
-        Data.save(); App.updateUI();
-        document.getElementById('result-score').innerText = this.score; document.getElementById('result-xp').innerText = `+${earnedXP} XP`; document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
-    },
-    stop() { clearInterval(this.interval); this.init(); }
-};
+        if(earnedCoins > 0) { 
+            DB.user.coins += earnedCoins; 
+            SoundSys.play('coin'); 
+            App.toast(`🪙 +${earnedCoins} 💰`); 
+        }
 
+        // --- СОХРАНЕНИЕ ОТДЕЛЬНОГО РЕКОРДА ---
+        // Берем текущий рекорд для этой сложности
+        const currentRecord = DB.user.trainerRecords[this.difficulty];
+        
+        if(this.score > currentRecord) {
+            DB.user.trainerRecords[this.difficulty] = this.score;
+            SoundSys.play('win'); 
+            App.toast(`🏆 Новый рекорд (${this.difficulty}): ${this.score}!`); 
+            FX.confetti(); 
+        }
+        // -------------------------------------
+
+        Data.save(); 
+        App.updateUI();
+        
+        document.getElementById('result-score').innerText = this.score; 
+        document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
+        document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
+    }
+};
+const AchievementSys = {
+    check() {
+        if (!DB || !DB.achievements) return;
+        
+        // Если переменной "Всего XP за жизнь" нет, создаем её (на основе текущего опыта)
+        if (DB.user.lifetimeXP === undefined) {
+            DB.user.lifetimeXP = DB.user.xp; 
+        }
+
+        let changed = false;
+
+        DB.achievements.forEach(a => {
+            if (a.unlocked) return; // Если уже получено, пропускаем
+
+            let currentVal = 0;
+            let typeName = "";
+
+            // 1. Проверка времени (total)
+            if (a.type === 'total') {
+                currentVal = DB.user.totalSec;
+                typeName = "сек.";
+            }
+            // 2. Проверка уровня (lvl)
+            else if (a.type === 'lvl') {
+                currentVal = DB.user.level;
+                typeName = "ур.";
+            }
+            // 3. Проверка опыта (xp) - используем "XP за всю жизнь"
+            else if (a.type === 'xp') {
+                currentVal = DB.user.lifetimeXP;
+                typeName = "XP";
+            }
+
+            // Если условие выполнено — ОТКРЫВАЕМ!
+            if (currentVal >= a.max) {
+                a.unlocked = true;
+                changed = true;
+                
+                // Сообщение на экран
+                App.toast(`🏅 Достижение: ${a.title}`);
+                SoundSys.play('success');
+                FX.confetti();
+            }
+        });
+
+        if (changed) {
+            Data.save();
+            // Если мы сейчас на вкладке достижений, обновляем список
+            const achTab = document.getElementById('achievements');
+            if (achTab && achTab.classList.contains('active')) {
+                App.updateUI();
+            }
+        }
+    }
+};
 const App = {
     async init() { Auth.init(); },
     
@@ -1913,8 +2588,8 @@ const App = {
         SubjectSys.render();
         Trainer.init();
         this.renderHistory();
-        this.updateUI(); // чтобы классы применились
-        // Если есть графики — можно добавить App.renderStats();
+        this.updateUI();   
+        AchievementSys.check();
     },
 
 toggleDarkMode(enabled) {
@@ -1986,12 +2661,31 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
             }).join('');
         }
 
-        // МАГАЗИН АВАТАРОВ
+        // --- ВСТАВИТЬ ВНУТРЬ App.updateUI() ---
+
+        // МАГАЗИН АВАТАРОВ (Обновленный)
         const avatarList = document.getElementById('avatar-shop-list');
         if (avatarList) {
-            avatarList.innerHTML = AVATARS.map(a => {
-                const owned = DB.user.ownedAvatars.includes(a.id), active = DB.user.avatar === a.icon;
-                return `<div class="shop-item ${active?'active':''}" onclick="App.buyAvatar('${a.id}')"><div>${a.icon}</div>${owned?'':'<small>'+a.price+'💰</small>'}</div>`
+            avatarList.innerHTML = SHOP_AVATARS.map(a => {
+                // Проверяем, куплен ли аватар
+                const owned = DB.user.ownedAvatars.includes(a.id);
+                // Проверяем, надет ли он сейчас
+                const active = DB.user.avatar === a.icon;
+                
+                // Если денег хватает, подсвечиваем цену (класс affordable)
+                const canBuy = DB.user.coins >= a.price;
+                const priceClass = canBuy ? 'affordable' : '';
+                
+                // Формируем красивую карточку
+                return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div>
+                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>
+                    ${owned 
+                        ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' 
+                        : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`
+                    }
+                </div>`;
             }).join('');
         }
         
@@ -2042,22 +2736,68 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         } else { App.toast("Недостаточно монет"); }
     },
     buyAvatar(id) {
-        const a = AVATARS.find(x=>x.id===id);
-        if(DB.user.ownedAvatars.includes(id)) { 
-            DB.user.avatar=a.icon; Data.save(); App.updateUI(); 
-        } else if(DB.user.coins >= a.price && confirm(`Купить за ${a.price}?`)) {
-            DB.user.coins -= a.price; DB.user.ownedAvatars.push(id); DB.user.avatar=a.icon; Data.save(); App.updateUI(); SoundSys.play('success');
-        } else { App.toast("Недостаточно монет"); }
+        // Ищем аватар в новом списке
+        const a = SHOP_AVATARS.find(x => x.id === id);
+        if (!a) return; // Если не нашли (защита)
+
+        // Если уже куплен — просто надеваем
+        if (DB.user.ownedAvatars.includes(id)) { 
+            DB.user.avatar = a.icon; 
+            Data.save(); 
+            App.updateUI(); 
+            SoundSys.play('click');
+        } 
+        // Если не куплен — пробуем купить
+        else if (DB.user.coins >= a.price) {
+            if(confirm(`Купить "${a.name}" за ${a.price} монет?`)) {
+                DB.user.coins -= a.price; 
+                DB.user.ownedAvatars.push(id); 
+                DB.user.avatar = a.icon; 
+                Data.save(); 
+                App.updateUI(); 
+                SoundSys.play('success');
+                FX.confetti(); // Салют при покупке!
+            }
+        } else { 
+            App.toast("Недостаточно монет 💰"); 
+            SoundSys.play('error');
+        }
     },
     addXP(n) { 
-        DB.user.xp+=n; 
+        DB.user.xp += n; 
+        
+        // Проверка: Хватает ли опыта для следующего уровня?
         if(DB.user.xp >= DB.user.nextXp){
-            DB.user.level++; DB.user.xp=0; DB.user.nextXp=Math.floor(DB.user.nextXp*1.2); 
-            alert("LEVEL UP!"); FX.confetti();
+            DB.user.level++; 
+            
+            // Переносим остаток опыта на следующий уровень (честно)
+            // Например, надо 500, набрали 510 -> останется 10
+            DB.user.xp = DB.user.xp - DB.user.nextXp; 
+            
+            // Увеличиваем сложность следующего уровня на 20%
+            DB.user.nextXp = Math.floor(DB.user.nextXp * 1.2); 
+            
+            // --- НАГРАДА ---
+            const reward = 50; // Даем 50 монет
+            DB.user.coins += reward;
+
+            // --- ПОКАЗ ОКНА ---
+            document.getElementById('lvl-up-new-level').innerText = DB.user.level;
+            document.getElementById('levelup-modal').classList.add('show');
+            
+            // --- ЭФФЕКТЫ ---
+            FX.confetti(); // Салют
+            SoundSys.play('win'); // Звук победы
         } 
-        Data.save(); this.updateUI(); 
+        
+        Data.save(); 
+        this.updateUI(); 
+
+        AchievementSys.check();
+
     },
     switchTab(id, btn) {
+        // Стандартная логика переключения
         document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
         const sec = document.getElementById(id);
         if(sec) sec.classList.add('active');
@@ -2067,6 +2807,12 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
        
         if (id === 'stats') {
             this.renderStats();
+        }
+        // Отправляем данные в Яндекс Метрику
+        if (typeof ym !== 'undefined') {
+            ym(105919372, 'hit', '#' + id, {
+                title: id.toUpperCase() // Название страницы в отчете
+            });
         }
     },
     
@@ -2255,11 +3001,15 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
 
         }, 200); // задержка 200мс — чтобы canvas точно был видимым
     },
-    
-    toggleZen() { 
-        document.body.classList.toggle('zen-active'); 
-        const btn = document.getElementById('exit-zen-btn');
-        if(btn) btn.style.display = document.body.classList.contains('zen-active') ? 'inline-block' : 'none'; 
+    toggleEcoMode(enable) {
+        const overlay = document.getElementById('eco-overlay');
+        if (enable) {
+            overlay.classList.add('active');
+            App.toast("🔋 Экономия энергии включена. Нажми на экран, чтобы выйти.");
+            // Принудительно ставим яркость экрана на минимум (программно нельзя, но черный цвет помогает)
+        } else {
+            overlay.classList.remove('active');
+        }
     },
     toast(m) { 
         const container = document.getElementById('toast-container');
@@ -2269,7 +3019,8 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
             setTimeout(()=>t.classList.add('show'),10); 
             setTimeout(()=>{t.classList.remove('show');t.remove()},3000); 
         }
-    }    
+    }
+    
 };
 
 
@@ -2329,10 +3080,13 @@ const Transfer = {
 
                 DB = transferData.data;
 
-                // === ФИКС ИМЕНИ ===
                 // Если имя пустое или "Восстановленный" — спрашиваем у пользователя
                 if (!DB.user.name || DB.user.name === "Восстановленный") {
                     let newName = prompt("Имя не найдено в сохранении. Как назвать профиль?", "Игрок");
+                    if (newName && !NameGuard.check(newName)) {
+                        alert("⛔️ Такое имя нельзя использовать. Будет установлено имя 'Игрок'.");
+                        newName = "Игрок";
+                    }
                     DB.user.name = newName && newName.trim() ? newName : "Игрок";
                 }
                 
@@ -2375,17 +3129,66 @@ const Transfer = {
         });
     }
 };
+const InstallSys = {
+    // Проверяем, где мы: в браузере или в приложении
+    init() {
+        // Если это уже установленное приложение - скрываем кнопку
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        
+        if (!isStandalone) {
+            // Мы в браузере - показываем кнопку
+            const btn = document.getElementById('install-promo-card');
+            if (btn) btn.style.display = 'block';
+        }
+    },
 
-window.addEventListener('keydown', function(e) {
-    if(e.key === "Escape" && document.body.classList.contains('zen-active')) {
-        App.toggleZen();
+    // Запуск процесса "Умной установки"
+    startFlow() {
+        if (!Auth.currentUser) return App.toast("Сначала создайте профиль!");
+
+        // 1. Генерируем код (тот же принцип, что и раньше)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Без похожих символов (I, 1, 0, O)
+        let code = '';
+        for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+        // 2. Сохраняем имя и данные
+        DB.user.name = Auth.currentUser.name;
+        DB.user.avatar = Auth.currentUser.avatar;
+        DB.user.id = Auth.currentUser.id;
+        
+        App.toast("⏳ Подготовка данных...");
+
+        // 3. Отправляем в облако
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
+        window.DB_Online.setDoc(docRef, {
+            userId: Auth.currentUser.id,
+            data: DB,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
+        }).then(() => {
+            // 4. КОПИРУЕМ КОД АВТОМАТИЧЕСКИ
+            navigator.clipboard.writeText(code).then(() => {
+                // 5. Показываем инструкцию
+                alert(
+                    `✅ КОД СКОПИРОВАН: ${code}\n\n` +
+                    `1. Нажмите "Поделиться" -> "На экран домой"\n` +
+                    `2. Откройте новое приложение\n` +
+                    `3. Нажмите "📥 Восстановить" и вставьте этот код.`
+                );
+            }).catch(() => {
+                // Если авто-копирование не сработало
+                prompt("Скопируйте этот код, он нужен для входа в приложении:", code);
+            });
+        }).catch(e => {
+            App.toast("Ошибка сети. Попробуйте позже.");
+        });
     }
-});
-
+};
 /* === SPLASH SCREEN LOGIC === */
 window.onload = () => {
     // 1. Инициализируем приложение
     Auth.init();
+    InstallSys.init(); // <--- ДОБАВИТЬ ВОТ ЭТО
 
     // 2. Убираем сплэш-скрин через задержку (чтобы лого успело показаться)
     setTimeout(() => {
@@ -2723,6 +3526,20 @@ Transfer.pasteCode = function(code) {
         App.toast("❌ Ошибка чтения кода. Попробуйте скопировать заново.");
     }
 };
+
+
 </script>
+<!-- ECO MODE OVERLAY -->
+<div id="eco-overlay" onclick="App.toggleEcoMode(false)">
+    <div class="eco-floater">
+        <div id="eco-timer-display">00:00:00</div>
+        <div class="eco-text">
+            🔋 Режим энергосбережения<br>
+            Таймер работает<br>
+            Нажми, чтобы разбудить
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
