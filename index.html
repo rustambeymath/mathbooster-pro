@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MathBooster">
 
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap">
 <!-- Иконки -->
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -39,7 +40,7 @@
        });
        
     </script>
-<noscript><div><img src="https://mc.yandex.ru/watch/XXXXXXXX" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<noscript><div><img src="https://mc.yandex.ru/watch/105919372" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
     <!-- FIREBASE (База Данных) -->
     <script type="module">
@@ -502,6 +503,14 @@ body.zen-active #timer {
     max-width: calc(100vw - 40px);
 }
 
+/* Активная кнопка режима */
+.mode-btn.active {
+    border-color: var(--primary) !important;
+    background: rgba(108, 99, 255, 0.05) !important; /* Легкий фон */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transform: scale(1.02);
+}
+
 /* Уменьшаем шрифты на маленьких экранах */
 @media (max-width: 380px) {
     .timer-display { font-size: 60px; }
@@ -587,6 +596,22 @@ body.zen-active #timer {
     opacity: 0.3;
 }
 
+/* Фикс для тренажера в разных темах */
+.trainer-problem {
+    color: var(--primary); /* Всегда берет главный цвет темы (Красный в магме, Золотой в золоте) */
+    text-shadow: 2px 2px 0px var(--bg); /* Тень цвета фона делает текст читаемым везде */
+}
+
+/* Кнопки в тренажере */
+#sign-area .btn {
+    transition: transform 0.1s, background 0.2s;
+}
+#sign-area .btn:active {
+    transform: scale(0.9);
+    background: var(--primary) !important;
+    color: white !important;
+}
+
 /* Анимация движения, чтобы не выгорал экран */
 @keyframes drift {
     0% { transform: translate(0, 0); }
@@ -607,9 +632,13 @@ body.zen-active #timer {
     color: #1a1a1a; /* Очень темный серый, чтобы едва светился */
 }
 
+
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
+* {
+    font-family: "Segoe UI", Roboto, "Noto Color Emoji", sans-serif !important;
+}
     </style>
 </head>
 <body>
@@ -779,9 +808,12 @@ window.addEventListener('load', () => {
                 <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
                 
                 <div id="timer" class="timer-display">00:00:00</div>
-                <div style="font-size: 13px; color: var(--text-light); margin-bottom: 15px;">
-                    1 монета 💰 за каждые 10 минут
-                </div>
+                <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
+    1 монета 💰 за каждые 10 минут
+</div>
+<div style="font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 15px; opacity: 0.8;">
+    "Время — это материал, из которого сделана жизнь."
+</div>
                 
                 <!-- SESSION GOAL -->
                 <input type="text" id="session-goal" class="input-field" placeholder="🎯 Цель на сессию (опционально)..." style="text-align: center; font-size: 14px; padding: 10px;">
@@ -834,11 +866,17 @@ window.addEventListener('load', () => {
 
         <!-- Миссия -->
         <div class="card" style="margin-top: 20px;">
-            <h3>🎯 Наша миссия</h3>
+            <h3>⏳ Философия Времени</h3>
             <p style="color: var(--text-light); line-height: 1.6; margin-top: 10px;">
-                Учеба не должна быть скучной. Мы верим, что <b>геймификация</b> — это ключ к продуктивности. 
+                В жизни нет полоски опыта, как в играх. Ты учишься, но не видишь прогресса сразу. Это демотивирует.
                 <br><br>
-                MathBooster превращает часы за учебниками в увлекательную RPG-игру, где ты качаешь свой мозг так же, как персонажа в играх.
+                <b>Основная цель MathBooster</b> — сделать твои усилия видимыми.
+                <br><br>
+                Мы считаем каждую минуту, которую ты инвестировал в себя. 
+                <br>
+                <b>Чем больше часов ты потратил — тем больше твой "Опыт" и выше результат.</b>
+                <br>
+                Просто включи таймер и копи свои часы. Это твой главный капитал.
             </p>
         </div>
 
@@ -868,7 +906,7 @@ window.addEventListener('load', () => {
 
         <!-- Разработчик -->
         <div class="card" style="margin-top: 20px;">
-            <h3>👨‍💻 Разработчик</h3>
+            <h3>👨‍🏫 Разработчик</h3>
             <div style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
                 <div style="width: 60px; height: 60px; background: #eee; border-radius: 50%; font-size: 30px; display: flex; align-items: center; justify-content: center;">👨‍💻</div>
                 <div>
@@ -895,48 +933,88 @@ window.addEventListener('load', () => {
         </button>
     </section>
 
-    <!-- 2. TRAINER -->
+    <!-- 2. TRAINER (Меню с выбором + Завершить) -->
     <section id="trainer" class="section">
-        <div class="card" id="trainer-menu" style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🧠</div>
-            <h2>Математический Спринт</h2>
-            <p style="color: var(--text-light); margin: 10px 0 20px;">Реши как можно больше примеров за 60 секунд.</p>
+        
+        <!-- МЕНЮ -->
+        <div class="card" id="trainer-menu" style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 60px; margin-bottom: 10px;">🧠</div>
+            <h2 style="margin-bottom: 5px;">Тренажер</h2>
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">Настрой тренировку:</p>
             
+            <!-- 1. Выбор режима (теперь с подсветкой) -->
+            <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+                <button class="btn mode-btn active" onclick="Trainer.selectMode('standard', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
+                    <span style="font-size: 20px;">🔢</span> <b>Классика</b>
+                </button>
+                
+                <button class="btn mode-btn" onclick="Trainer.selectMode('sign', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
+                    <span style="font-size: 20px;">🧩</span> <b>Найди знак</b>
+                </button>
+                
+                <button class="btn mode-btn" onclick="Trainer.selectMode('square', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
+                    <span style="font-size: 20px;">🟥</span> <b>Квадраты</b>
+                </button>
+            </div>
+
+            <!-- 2. Сложность -->
+            <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-light);">СЛОЖНОСТЬ</div>
             <div class="diff-switch">
                 <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
             </div>
 
-            <div class="stat-pill" style="display: inline-block; margin-bottom: 30px;">
-                <span class="stat-label">Ваш Рекорд</span><br>
-                <span class="stat-val" style="font-size: 24px;" id="trainer-high-score">0</span>
+            <!-- 3. Рекорд (Динамический) -->
+            <div style="margin-top: 20px; display: flex; justify-content: center;">
+                <div style="background: var(--bg); padding: 10px 40px; border-radius: 20px; border: 2px solid var(--primary); box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                    <div style="font-size: 10px; text-transform: uppercase; color: var(--text-light); font-weight: bold; margin-bottom: 5px;">
+                        Ваш Рекорд (<span id="record-mode-label">Классика</span>)
+                    </div>
+                    <div style="font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1;" id="trainer-high-score">0</div>
+                </div>
             </div>
-            <br>
-            <button class="btn btn-primary" style="font-size: 20px; padding: 15px 40px;" onclick="Trainer.start()">Начать Игру 🚀</button>
+
+            <!-- 4. Кнопка СТАРТ -->
+            <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 25px; padding: 18px; font-size: 20px; width: 100%; box-shadow: 0 10px 20px rgba(108, 99, 255, 0.3);">
+                🚀 ПОГНАЛИ!
+            </button>
         </div>
 
+        <!-- ИГРОВОЙ ЭКРАН -->
         <div class="card" id="trainer-game" style="display: none; text-align: center;">
             <div class="trainer-stats">
                 <div>⏳ <span id="game-time">60</span>s</div>
                 <div>✅ <span id="game-score">0</span></div>
             </div>
-            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>           
-            <!-- Контейнер для ввода и кнопки минуса -->
-<div style="display: flex; gap: 10px; justify-content: center; align-items: center; max-width: 300px; margin: 0 auto;">
-    
-    <!-- Поле ввода (изменили тип на tel для лучшей клавиатуры) -->
-    <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="margin-bottom: 0;">
-    
-    <!-- Кнопка +/- -->
-    <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px; border-width: 2px;" title="Поставить минус">+/-</button>
 
-</div>
+            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>
 
-<div style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Нажми Enter чтобы ответить</div>
-            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
+            <!-- ВВОД ОТВЕТА -->
+            <div id="input-area">
+                <div style="display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 20px auto;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="flex: 1; margin-bottom: 0;">
+                        <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px; color: var(--text); border-color: var(--text-light);" title="Минус">+/-</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="Trainer.check()" style="font-size: 18px; padding: 14px;">Ответить ➜</button>
+                </div>
+                <div style="font-size: 12px; color: var(--text-light); margin-top: 10px;">Нажми Enter на клавиатуре</div>
+            </div>
+
+            <!-- КНОПКИ ЗНАКОВ -->
+            <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 300px; margin: 20px auto;">
+                <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">+</button>
+                <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">−</button>
+                <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">×</button>
+                <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">÷</button>
+            </div>
+
+            <!-- 👇 ЗАМЕНИЛИ "СДАТЬСЯ" НА "ЗАВЕРШИТЬ" 👇 -->
+            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">🏁 Завершить</button>
         </div>
 
+        <!-- РЕЗУЛЬТАТ -->
         <div class="card" id="trainer-result" style="display: none; text-align: center;">
             <h2>Время вышло! 🏁</h2>
             <div style="margin: 30px 0;">
@@ -944,14 +1022,10 @@ window.addEventListener('load', () => {
                 <div style="font-size: 48px; font-weight: bold; color: var(--primary);" id="result-score">0</div>
             </div>
             <div class="grid" style="margin-bottom: 20px;">
-                <div class="stat-pill">
-                    <div class="stat-val" id="result-xp">+0 XP</div>
-                </div>
-                <div class="stat-pill">
-                    <div class="stat-val" id="result-coins">+0 💰</div>
-                </div>
+                <div class="stat-pill"><div class="stat-val" id="result-xp">+0 XP</div></div>
+                <div class="stat-pill"><div class="stat-val" id="result-coins">+0 💰</div></div>
             </div>
-            <button class="btn btn-primary" onclick="Trainer.init()">Сыграть еще раз</button>
+            <button class="btn btn-primary" onclick="Trainer.init()">В меню</button>
         </div>
     </section>
 
@@ -1090,7 +1164,7 @@ window.addEventListener('load', () => {
 </div>
         
 <div class="card">
-    <h3>⚙️ Опции и перенос прогресса</h3>
+    <h3>⚙️ Опции</h3>
     
     <!-- Звуковые эффекты -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
@@ -1098,72 +1172,44 @@ window.addEventListener('load', () => {
         <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
     </div>
     
-<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
-    <span>🌙 Тёмный режим</span>
-    <input type="checkbox" id="dark-toggle" onchange="App.toggleDarkMode(this.checked)" style="transform: scale(1.5);">
-</div>
+    <!-- Темный режим -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+        <span>🌙 Тёмный режим</span>
+        <input type="checkbox" id="dark-toggle" onchange="App.toggleDarkMode(this.checked)" style="transform: scale(1.5);">
+    </div>
 
     <!-- Управление предметами -->
-    <div style="margin-bottom: 20px;">
-    <h4 style="margin-bottom: 10px;">📚 Мои предметы</h4>
-    <div id="my-subjects-list" class="subject-manage-grid"></div>
+    <div style="margin-bottom: 20px; margin-top: 20px;">
+        <h4 style="margin-bottom: 10px;">📚 Мои предметы</h4>
+        <div id="my-subjects-list" class="subject-manage-grid"></div>
 
-    <h4 style="margin-top: 30px; margin-bottom: 10px;">Доступные для добавления</h4>
-    <div id="available-subjects-list" class="subject-manage-grid"></div>
-</div>
-
-<div class="preset-grid" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
-    <div class="subject-item" onclick="moveFromPreset('📖', 'Литература')">
-        <div class="icon">📖</div>
-        <div class="name">Литература</div>
+        <h4 style="margin-top: 30px; margin-bottom: 10px;">Доступные для добавления</h4>
+        <div id="available-subjects-list" class="subject-manage-grid"></div>
     </div>
 
-    <div class="subject-item" onclick="moveFromPreset('⚛️', 'Физика')">
-        <div class="icon">⚛️</div>
-        <div class="name">Физика</div>
+    <!-- Пресеты предметов -->
+    <div class="preset-grid" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
+        <div class="subject-item" onclick="moveFromPreset('📖', 'Литература')"><div class="icon">📖</div><div class="name">Литература</div></div>
+        <div class="subject-item" onclick="moveFromPreset('⚛️', 'Физика')"><div class="icon">⚛️</div><div class="name">Физика</div></div>
+        <div class="subject-item" onclick="moveFromPreset('🧪', 'Химия')"><div class="icon">🧪</div><div class="name">Химия</div></div>
+        <div class="subject-item" onclick="moveFromPreset('🧬', 'Биология')"><div class="icon">🧬</div><div class="name">Биология</div></div>
+        <div class="subject-item" onclick="moveFromPreset('🏺', 'История')"><div class="icon">🏺</div><div class="name">История</div></div>
+        <div class="subject-item" onclick="moveFromPreset('🌐', 'Иностранный язык')"><div class="icon">🌐</div><div class="name">Ин. язык</div></div>
     </div>
-
-    <div class="subject-item" onclick="moveFromPreset('🧪', 'Химия')">
-        <div class="icon">🧪</div>
-        <div class="name">Химия</div>
-    </div>
-
-    <div class="subject-item" onclick="moveFromPreset('🧬', 'Биология')">
-        <div class="icon">🧬</div>
-        <div class="name">Биология</div>
-    </div>
-
-    <div class="subject-item" onclick="moveFromPreset('🏺', 'История')">
-        <div class="icon">🏺</div>
-        <div class="name">История</div>
-    </div>
-
-    <div class="subject-item" onclick="moveFromPreset('🌐', 'Иностранный язык')">
-        <div class="icon">🌐</div>
-        <div class="name">Иностранный язык</div>
-    </div>
-</div>
     
-    <!-- Новый чистый раздел переноса -->
+    <!-- ЭКСПОРТ (Только создание кода) -->
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
-    <h4 style="margin-bottom: 15px;">📦 Перенос прогресса</h4>
-    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
-        <button class="btn btn-primary" onclick="Transfer.generateTransferID()">
+        <h4 style="margin-bottom: 15px;">📤 Сохранить прогресс в облако</h4>
+        <button class="btn btn-primary" onclick="Transfer.generateTransferID()" style="width: 100%;">
             Создать код переноса (8 символов)
         </button>
-        <button class="btn btn-outline" onclick="Transfer.transferByID()">
-            Ввести код с другого устройства
-        </button>
+        <p style="font-size: 12px; color: var(--text-light); margin-top: 10px; text-align: center;">
+            Нажмите это, если хотите перенести этот аккаунт <b>НА ДРУГОЙ</b> телефон.<br>
+            Ввод кода доступен только на главном экране входа.
+        </p>
     </div>
-    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px; text-align: center;">
-        Код действует 24 часа. Скопируйте и введите на новом устройстве.
-    </p>
-</div>
     
-    <!-- Сброс -->
-    <button class="btn btn-outline" style="margin-top: 40px; border-color: #FF7675; color: #FF7675;" onclick="Auth.resetData()">
-        🗑️ Сбросить прогресс
-    </button>
+    <!-- Кнопка сброса УДАЛЕНА -->
 </div>
     </section>
     
@@ -1181,8 +1227,10 @@ window.addEventListener('load', () => {
             <div class="profile-img" id="profile-avatar-box" style="width: 80px; height: 80px; margin: 0 auto; font-size: 40px; border-width: 6px;">
                 <div id="profile-avatar-big">😎</div>
             </div>
-            <h2 style="margin-top: 10px;" id="profile-name-big">Игрок</h2>
-            <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>
+<div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:10px;">
+    <h2 id="profile-name-big" style="margin:0;">Игрок</h2>
+    <button onclick="App.changeNickname()" style="background:none; border:none; font-size:18px; cursor:pointer; opacity:0.6;">✏️</button>
+</div>            <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>
             
             <div class="stats-row">
                 <div class="stat-pill"><div class="stat-val" id="prof-lvl">1</div><div class="stat-label">Уровень</div></div>
@@ -1331,8 +1379,7 @@ window.addEventListener('load', () => {
     <div class="modal-content" style="text-align: center; background: linear-gradient(135deg, #FFD700, #FFA500); color: #2B3674; border: 4px solid white; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); max-width: 320px; padding: 30px 20px;">
         
         <!-- Иконка вылетает сверху -->
-        <div style="font-size: 80px; margin-top: -60px; margin-bottom: 10px; text-shadow: 0 5px 10px rgba(0,0,0,0.2); animation: bounce 2s infinite;">🆙</div>
-        
+<div style="font-size: 80px; margin-top: -60px; margin-bottom: 10px; text-shadow: 0 5px 10px rgba(0,0,0,0.2); animation: bounce 2s infinite;">🚀</div>        
         <h2 style="font-weight: 900; font-size: 32px; text-transform: uppercase; margin: 0;">Level Up!</h2>
         
         <div style="font-size: 16px; font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
@@ -1348,6 +1395,43 @@ window.addEventListener('load', () => {
         <button class="btn" onclick="document.getElementById('levelup-modal').classList.remove('show')" style="background: #2B3674; color: white; width: 100%; font-weight: bold; box-shadow: 0 5px 15px rgba(43, 54, 116, 0.4);">
             Круто! 🚀
         </button>
+    </div>
+</div>
+<!-- INSTALL INSTRUCTION MODAL -->
+<div id="install-modal" class="modal" style="z-index: 15000;">
+    <div class="modal-content" style="text-align: left; max-width: 340px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 50px; margin-bottom: 10px;">📲</div>
+            <h3 style="margin: 0;">Как установить?</h3>
+            <p style="font-size: 12px; color: var(--success); margin-top: 5px; font-weight: bold;">✅ Код восстановления скопирован!</p>
+        </div>
+
+        <!-- Инструкция для iPhone (iOS) -->
+        <div id="ios-instruction" style="display: none; background: #F2F2F7; padding: 15px; border-radius: 15px; color: black;">
+            <div style="font-weight: bold; margin-bottom: 10px; color: #007AFF;">🍎 Для iPhone (Safari):</div>
+            <div style="font-size: 13px; line-height: 1.6;">
+                1. Нажми кнопку <b>"Поделиться"</b> <span style="font-size: 18px;">⎋</span> внизу экрана.<br>
+                2. Прокрути список вниз.<br>
+                3. Нажми <b>"На экран «Домой»"</b> <span style="font-size: 16px;">➕</span>.<br>
+                4. Нажми "Добавить".
+            </div>
+        </div>
+
+        <!-- Инструкция для Android -->
+        <div id="android-instruction" style="display: none; background: #F1F8E9; padding: 15px; border-radius: 15px; color: black;">
+            <div style="font-weight: bold; margin-bottom: 10px; color: #4CAF50;">🤖 Для Android (Chrome):</div>
+            <div style="font-size: 13px; line-height: 1.6;">
+                1. Нажми <b>три точки</b> <span style="font-size: 18px;">⋮</span> в правом верхнем углу.<br>
+                2. Выбери <b>"Установить приложение"</b> или <b>"Добавить на гл. экран"</b>.<br>
+                3. Нажми "Установить".
+            </div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--text-light); margin-top: 20px; text-align: center;">
+            После установки откройте приложение и нажмите кнопку <b>"📥 У меня есть код"</b>.
+        </div>
+
+        <button class="btn btn-primary" onclick="document.getElementById('install-modal').classList.remove('show')" style="margin-top: 15px; width: 100%;">Понятно</button>
     </div>
 </div>
 <!-- TERMS MODAL (Пользовательское соглашение) -->
@@ -1397,8 +1481,10 @@ window.addEventListener('load', () => {
     </div>
 </div>
 <div id="toast-container"></div>
-
 <script>
+
+
+
 /* ==========================================
    0. FX SYSTEM
    ========================================== */
@@ -1610,6 +1696,12 @@ const LEAGUES = [
     { min: 60000, name: "👑 Легендарная Лига", color: "league-legend" }
 ];
 
+// 🇺🇿 ГЛАВНАЯ ФУНКЦИЯ ВРЕМЕНИ
+// Возвращает дату в формате "ГГГГ-ММ-ДД" по Ташкенту
+const getUZDate = (dateObj = new Date()) => {
+    return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
+};
+
 const NameGuard = {
     // Список запрещенных корней (RU, UZ, EN)
     // Мы ищем "корни", чтобы поймать слова типа "сук@", "сууука" и т.д.
@@ -1651,8 +1743,24 @@ const Data = {
             const loaded = JSON.parse(raw);
             if(loaded.user) { 
                 DB = loaded; 
-                if (!DB.user.trainerRecords) {const oldRec = DB.user.trainerRecord || 0;
-                    DB.user.trainerRecords = { easy: oldRec, medium: 0, hard: 0 };
+                // 1. Если записей о рекордах вообще нет
+                if (!DB.user.trainerRecords) {
+                    const oldRec = DB.user.trainerRecord || 0; // Берем совсем старый рекорд
+                    DB.user.trainerRecords = {
+                        standard: { easy: oldRec, medium: 0, hard: 0 },
+                        sign:     { easy: 0, medium: 0, hard: 0 },
+                        square:   { easy: 0, medium: 0, hard: 0 }
+                    };
+                } 
+                // 2. Если есть записи старого формата (просто easy, medium...)
+                // Мы переносим их в режим "standard"
+                else if (typeof DB.user.trainerRecords.easy === 'number') {
+                    const old = DB.user.trainerRecords;
+                    DB.user.trainerRecords = {
+                        standard: { easy: old.easy, medium: old.medium, hard: old.hard },
+                        sign:     { easy: 0, medium: 0, hard: 0 },
+                        square:   { easy: 0, medium: 0, hard: 0 }
+                    };
                 }
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(DB.user.gender === undefined) DB.user.gender = 'male';
@@ -1799,20 +1907,43 @@ const SubjectSys = {
 // --- DAILY REWARD SYSTEM ---
 const DailySys = {
     rewards: [10, 20, 30, 40, 50, 75, 100],
-    check() {
-        const today = new Date().toISOString().split('T')[0]; const last = DB.user.lastDailyClaim;
-        if (last !== today) { if (last) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().split('T')[0]; if (last !== yesterdayStr) DB.user.dailyStreak = 0; } this.showModal(); }
+        check() {
+        const today = getUZDate(); 
+        const last = DB.user.lastDailyClaim;
+        
+        if (last !== today) { 
+            if (last) { 
+                const d = new Date();
+                d.setDate(d.getDate() - 1);
+                const yesterdayStr = getUZDate(d);
+        
+                if (last !== yesterdayStr) DB.user.dailyStreak = 0; 
+            } 
+            this.showModal(); 
+        }
     },
+
     showModal() {
         const modal = document.getElementById('daily-modal'); const grid = document.getElementById('daily-grid'); const currentDayIndex = DB.user.dailyStreak % 7;
         grid.innerHTML = this.rewards.map((r, i) => { let cls = 'daily-day'; if (i < currentDayIndex) cls += ' claimed'; if (i === currentDayIndex) cls += ' active'; return `<div class="${cls}"><div class="daily-coin">💰</div><div>${r}</div></div>`; }).join('');
         document.getElementById('daily-reward-amount').innerText = this.rewards[currentDayIndex]; modal.classList.add('show'); FX.confetti(); SoundSys.play('win');
     },
     claim() {
-        const currentDayIndex = DB.user.dailyStreak % 7; const reward = this.rewards[currentDayIndex];
-        DB.user.coins += reward; DB.user.dailyStreak++; DB.user.lastDailyClaim = new Date().toISOString().split('T')[0];
+        const currentDayIndex = DB.user.dailyStreak % 7; 
+        const reward = this.rewards[currentDayIndex];
+        
+        DB.user.coins += reward; 
+        DB.user.dailyStreak++; 
+        
+        DB.user.lastDailyClaim = getUZDate();
+        
         if (currentDayIndex === 6) { App.addXP(500); App.toast("🎉 Неделя пройдена! +500 XP"); FX.confetti(); }
-        Data.save(); App.updateUI(); document.getElementById('daily-modal').classList.remove('show'); SoundSys.play('coin'); App.toast(`Получено: ${reward} монет!`);
+        
+        Data.save(); 
+        App.updateUI(); 
+        document.getElementById('daily-modal').classList.remove('show'); 
+        SoundSys.play('coin'); 
+        App.toast(`Получено: ${reward} монет!`);
     }
 };
 
@@ -1836,9 +1967,35 @@ const Donation = {
         const code = c.trim().toUpperCase();
         if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) return App.toast("Этот код уже использован!");
         
+        // 💰 СПИСОК КОДОВ И НАГРАД 💰
         const rewards = { 
-            "START":{c:100,msg:"Бонус новичка!"}, 
-             
+            // // --- ТАРИФ "СТАРТ" (5 000 сум -> 300 монет) ---
+            // "START":      { c: 300, msg: "Удачный старт! 🚀" },
+            // "COFFEE":     { c: 300, msg: "Спасибо! ☕️ (Тариф 5k)" },
+            // "UZ_5000":    { c: 300, msg: "Оплата 5.000 сум принята! ✅" },
+
+            // // --- ТАРИФ "СТУДЕНТ" (15 000 сум -> 1 000 монет) ---
+            // "PRO123":        { c: 1000, msg: "Теперь ты PRO! Хватит на Золотую тему 🥇" },
+            // "GOLD123":       { c: 1000, msg: "Золотой запас пополнен! 💰" },
+            // "CLICK_15":   { c: 1000, msg: "Оплата через Click принята! ✅" },
+            // "PAYME_15":   { c: 1000, msg: "Оплата через Payme принята! ✅" },
+
+            // // --- ТАРИФ "МАГНАТ" (35 000 сум -> 3 000 монет) ---
+            // "MAGNAT123":     { c: 3000, msg: "Серьезный баланс для серьезных дел 💼" },
+            // "RICH123":       { c: 3000, msg: "Ничего себе! Спасибо за поддержку 💎" },
+            // "BIG_BRAIN":  { c: 3000, msg: "Инвестиция в знания! 🧠" },
+
+            // // --- ТАРИФ "ЛЕГЕНДА" (50 000 сум -> 5 000 монет) ---
+            // "LEGEND123":     { c: 5000, msg: "ТЫ — ЛЕГЕНДА! Огромное спасибо 👑" },
+            // "KING123":       { c: 5000, msg: "Королевская казна пополнена! 🏰" },
+            // "SPONSOR123":    { c: 5000, msg: "Генеральный спонсор MathBooster 🤝" },
+            // "UZ_POWER123":   { c: 5000, msg: "O'zbekiston kuch! 🇺🇿💪" },
+
+            // // --- СПЕЦИАЛЬНЫЕ / ДЛЯ ДРУЗЕЙ ---
+            // "ADMIN_708":  { c: 10000, msg: "Режим разработчика активирован ⚡️" }, // Для тебя
+            // "BRO":        { c: 500, msg: "Подарок для брата/друга 🤜🤛" },
+            // "SORRY":      { c: 200, msg: "Извини за баг! Вот компенсация 🔧" },
+            // "WELCOME":    { c: 100, msg: "Бонус новичка! Добро пожаловать" }
         };
         
         if(rewards[code]) {
@@ -1955,40 +2112,56 @@ const Auth = {
         MusicPlayer.init(); 
     },
 
-    renderUserList() { 
-        const list = document.getElementById('user-list'); 
-        if (!list) return; // Защита если элемента нет
+    renderUserList() {
+    const list = document.getElementById('user-list');
+    if (!list) return;
 
-        list.innerHTML = ''; 
-        if (this.users.length === 0) { 
-            list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>'; 
-            return; 
-        } 
-        
-        this.users.forEach(u => { 
-            // 🔥 ЗАЩИТА ОТ ОШИБКИ SUBSTR:
-            // Если вдруг ID всё равно нет, используем заглушку, чтобы не зависло
-            const safeID = u.id ? u.id.toString().substr(0,8) : 'ERROR';
+    list.innerHTML = '';
 
-            const div = document.createElement('div'); 
-            div.className = 'user-list-item'; 
-            
-            const infoDiv = document.createElement('div');
-            infoDiv.style.cssText = "display:flex; align-items:center; gap:15px; flex-grow:1;";
-            infoDiv.innerHTML = `<div class="user-avatar">${u.avatar}</div><div><div style="font-weight:bold">${u.name}</div><div style="font-size:12px; color:var(--text-light)">ID: ${safeID}...</div></div>`;
-            infoDiv.onclick = () => this.login(u.id);
+    if (this.users.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет профилей. Создайте первый!</div>';
+        return;
+    }
 
-            const delBtn = document.createElement('button');
-            delBtn.className = 'delete-user-btn';
-            delBtn.innerHTML = '✕';
-            delBtn.onclick = (e) => this.deleteUser(u.id, e);
+    // 🔥 Фильтруем и чистим битые записи прямо здесь
+    this.users = this.users.filter(u => u && u.id && u.name && typeof u.id === 'string');
 
-            div.appendChild(infoDiv);
-            div.appendChild(delBtn);
-            list.appendChild(div); 
-        }); 
-    },
+    this.users.forEach(u => {
+        // Безопасный ID
+        const safeID = u.id ? u.id.toString().slice(0,8) + '...' : 'нет ID';
 
+        const div = document.createElement('div');
+        div.className = 'user-list-item';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = "display:flex; align-items:center; gap:15px; flex-grow:1;";
+        infoDiv.innerHTML = `
+            <div class="user-avatar">${u.avatar || '😎'}</div>
+            <div>
+                <div style="font-weight:bold">${u.name || 'Без имени'}</div>
+                <div style="font-size:12px; color:var(--text-light)">ID: ${safeID}</div>
+            </div>`;
+
+        infoDiv.onclick = () => this.login(u.id);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-user-btn';
+        delBtn.innerHTML = '✕';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.deleteUser(u.id, e);
+        };
+
+        div.appendChild(infoDiv);
+        div.appendChild(delBtn);
+        list.appendChild(div);
+    });
+
+    // Если после чистки список пуст — покажем сообщение
+    if (this.users.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Все профили повреждены. Создайте новый!</div>';
+    }
+},
     deleteUser(id, event) {
         event.stopPropagation();
         if(!confirm("Точно удалить этот профиль? Он пропадет с телефона и из Топа!")) return;
@@ -2080,8 +2253,12 @@ const Auth = {
             DB.user.avatar = this.selectedAvatar;
             Data.save();
         }
-
-        this.login(user.id);
+this.login(user.id);
+        
+        // 🔥 ЗАПУСКАЕМ ОБУЧЕНИЕ ДЛЯ НОВИЧКА
+        setTimeout(() => {
+            Tutorial.start();
+        }, 800); // Небольшая задержка, чтобы интерфейс успел прогрузиться
     },
     login(id) { 
         const user = this.users.find(u => u.id === id); 
@@ -2121,6 +2298,29 @@ const Auth = {
             alert("Данные сброшены.");
             location.reload();
         }
+    }
+};
+
+const Tutorial = {
+    start() {
+        document.getElementById('tutorial-modal').classList.add('show');
+    },
+
+    next(slideNum) {
+        // Скрываем все слайды
+        document.querySelectorAll('.tutorial-slide').forEach(el => el.style.display = 'none');
+        // Показываем нужный с анимацией
+        const slide = document.getElementById('tut-' + slideNum);
+        if(slide) {
+            slide.style.display = 'block';
+            slide.style.animation = 'fadeIn 0.5s';
+        }
+    },
+
+    close() {
+        document.getElementById('tutorial-modal').classList.remove('show');
+        FX.confetti(); // Праздничный салют для старта
+        SoundSys.play('success');
     }
 };
 
@@ -2285,7 +2485,7 @@ const Timer = {
         }
         
         // 5. Сохраняем статистику и стрики
-        const k = new Date().toISOString().split('T')[0]; 
+        const k = getUZDate(); 
         DB.history[k] = (DB.history[k] || 0) + this.sec; 
         
         if (this.sessionDuration > 5) { 
@@ -2295,13 +2495,17 @@ const Timer = {
         }
         
         if (this.sessionDuration > 300) { 
-            const today = new Date().toISOString().split('T')[0]; 
+            const today = getUZDate(); 
             const last = DB.user.lastStudyDate; 
+            
             if (last !== today) { 
-                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); 
-                const yesterdayStr = yesterday.toISOString().split('T')[0]; 
+                const d = new Date(); 
+                d.setDate(d.getDate() - 1); 
+                const yesterdayStr = getUZDate(d); 
+                
                 if (last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } 
                 else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } 
+                
                 DB.user.lastStudyDate = today; 
                 SoundSys.play('success'); 
                 FX.confetti(); 
@@ -2332,45 +2536,55 @@ const Timer = {
 const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
 
 const Trainer = {
-    score: 0, time: 60, interval: null, ans: 0, difficulty: 'easy',
-    
-    // Переключение сложности и обновление рекорда на экране
+    score: 0, time: 60, interval: null, 
+    ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard', // По умолчанию стандарт
+
+    // 1. Выбор режима (Кнопки 1, 2, 3)
+    selectMode(mode, btn) {
+        this.mode = mode;
+        
+        // Визуально переключаем кнопки
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        
+        // Обновляем текст рекорда
+        this.updateMenuRecordDisplay();
+    },
+
+    // 2. Выбор сложности (Легко, Средне, Сложно)
     setDiff(diff, btn) {
         this.difficulty = diff;
-        
-        // Переключаем визуально кнопки
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
         if(btn) btn.classList.add('active');
         
-        // Показываем рекорд для ЭТОЙ сложности
-        this.updateRecordDisplay();
+        // Обновляем текст рекорда
+        this.updateMenuRecordDisplay();
     },
 
-    updateRecordDisplay() {
-        const rec = DB.user.trainerRecords ? DB.user.trainerRecords[this.difficulty] : 0;
-        document.getElementById('trainer-high-score').innerText = rec;
+    // 3. Обновление цифры рекорда в меню
+    updateMenuRecordDisplay() {
+        const labelNames = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Квадраты' };
+        
+        // Защита: проверяем, есть ли данные
+        if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
+            const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
+            
+            // Обновляем цифру
+            const scoreEl = document.getElementById('trainer-high-score');
+            if(scoreEl) scoreEl.innerText = rec;
+
+            // Обновляем подпись "Рекорд (Классика)"
+            const labelEl = document.getElementById('record-mode-label');
+            if(labelEl) labelEl.innerText = labelNames[this.mode];
+        }
     },
 
-// Добавьте это внутрь объекта Trainer:
-    
     toggleMinus() {
         const input = document.getElementById('game-input');
         let val = input.value;
-
-        // Если пусто, просто ставим минус
-        if (val === '') {
-            input.value = '-';
-        } 
-        // Если минус уже есть — убираем его
-        else if (val.startsWith('-')) {
-            input.value = val.substring(1);
-        } 
-        // Если минуса нет — добавляем
-        else {
-            input.value = '-' + val;
-        }
-
-        // Возвращаем фокус на поле, чтобы клавиатура не закрылась
+        if (val === '') input.value = '-';
+        else if (val.startsWith('-')) input.value = val.substring(1);
+        else input.value = '-' + val;
         input.focus();
     },
 
@@ -2379,33 +2593,39 @@ const Trainer = {
         document.getElementById('trainer-game').style.display = 'none'; 
         document.getElementById('trainer-result').style.display = 'none'; 
         
-        // По умолчанию ставим Easy и показываем его рекорд
-        this.difficulty = 'easy';
-        const btns = document.querySelectorAll('.diff-btn');
-        btns.forEach(b => b.classList.remove('active'));
-        if(btns[0]) btns[0].classList.add('active'); // Активируем кнопку Easy
-        
-        this.updateRecordDisplay();
+        // При входе обновляем рекорд для текущего выбранного режима
+        this.updateMenuRecordDisplay();
     },
 
+    // 4. СТАРТ ИГРЫ (Теперь без параметров, берет текущий this.mode)
     start() {
         this.score = 0; 
         this.time = 60; 
+        
         document.getElementById('trainer-menu').style.display = 'none'; 
         document.getElementById('trainer-game').style.display = 'block';
         document.getElementById('game-score').innerText = 0; 
         document.getElementById('game-time').innerText = 60;
+
+        // Настройка интерфейса под режим
+        const inputArea = document.getElementById('input-area');
+        const signArea = document.getElementById('sign-area');
+
+        if (this.mode === 'sign') {
+            inputArea.style.display = 'none';
+            signArea.style.display = 'grid';
+        } else {
+            inputArea.style.display = 'block';
+            signArea.style.display = 'none';
+            const input = document.getElementById('game-input'); 
+            input.value = ''; 
+            input.focus();
+            input.onclick = () => input.focus();
+            input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
+        }
         
         SoundSys.play('click'); 
         this.nextProblem(); 
-        
-        const input = document.getElementById('game-input'); 
-        input.value = ''; 
-        input.focus();
-        // Фикс для мобилок: фокус иногда сбивается, возвращаем
-        input.onclick = () => input.focus();
-
-        input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
         
         if(this.interval) clearInterval(this.interval);
         this.interval = setInterval(() => { 
@@ -2416,61 +2636,182 @@ const Trainer = {
     },
 
     nextProblem() {
-        const ops = this.difficulty === 'hard' ? ['+','-','*','/'] : (this.difficulty === 'medium' ? ['+','-','*'] : ['+','-']);
-        const op = ops[Math.floor(Math.random() * ops.length)];
-        
-        let range = 10;
-        if(this.difficulty === 'medium') range = 50;
-        if(this.difficulty === 'hard') range = 100;
-        
-        let a, b;
-        
-        if (op === '*') {
-            let multRange = this.difficulty === 'hard' ? 20 : 10;
-            a = Math.floor(Math.random() * multRange) + 2; 
-            b = Math.floor(Math.random() * multRange) + 2;
-        } else if (op === '/') {
-             b = Math.floor(Math.random() * 10) + 2;
-             a = b * (Math.floor(Math.random() * 10) + 2);
-        } else {
-            a = Math.floor(Math.random() * range) + 1;
-            b = Math.floor(Math.random() * range) + 1;
+        // --- 1. РЕЖИМ: НАЙДИ ЗНАК 🧩 ---
+        if (this.mode === 'sign') {
+            const ops = ['+', '-', '*', '/'];
+            const availableOps = this.difficulty === 'easy' ? ['+', '-', '*'] : ops;
+            
+            this.correctSign = availableOps[Math.floor(Math.random() * availableOps.length)];
+            let a, b, res;
+            
+            // Настройки чисел для знаков
+            let range = this.difficulty === 'easy' ? 10 : 20;
+
+            if (this.correctSign === '/') {
+                b = Math.floor(Math.random() * 10) + 2; 
+                res = Math.floor(Math.random() * 10) + 2;
+                a = b * res; 
+            } else if (this.correctSign === '*') {
+                a = Math.floor(Math.random() * 10) + 2;
+                b = Math.floor(Math.random() * 10) + 2;
+                res = a * b;
+            } else {
+                a = Math.floor(Math.random() * range) + 2;
+                b = Math.floor(Math.random() * range) + 2;
+                if (this.correctSign === '+') res = a + b;
+                else res = a - b;
+            }
+            document.getElementById('game-problem').innerText = `${a} ? ${b} = ${res}`;
         }
 
-        if(op === '+') this.ans = a + b; 
-        if(op === '-') this.ans = a - b; 
-        if(op === '*') this.ans = a * b;
-        if(op === '/') this.ans = a / b;
+        // --- 2. РЕЖИМ: КВАДРАТЫ 🟥 ---
+        else if (this.mode === 'square') {
+            const isRoot = Math.random() > 0.5; 
+            let maxBase = this.difficulty === 'easy' ? 10 : (this.difficulty === 'medium' ? 20 : 32);
+            let base = Math.floor(Math.random() * (maxBase - 2)) + 2; 
+            let square = base * base;
 
-        let problemStr = `${a} ${op === '*' ? '×' : (op === '/' ? '÷' : op)} ${b}`;
-        document.getElementById('game-problem').innerText = problemStr; 
-        document.getElementById('game-input').value = '';
+            if (isRoot) {
+                document.getElementById('game-problem').innerText = `√${square}`;
+                this.ans = base;
+            } else {
+                document.getElementById('game-problem').innerHTML = `${base}²`;
+                this.ans = square;
+            }
+            document.getElementById('game-input').value = '';
+        }
+
+        // --- 3. РЕЖИМ: КЛАССИКА 🔢 ---
+        else {
+            // ЛЕГКО и СРЕДНЕ (Только положительные числа)
+            if (this.difficulty !== 'hard') {
+                let range = this.difficulty === 'easy' ? 20 : 50;
+                let multRange = this.difficulty === 'easy' ? 5 : 10;
+                let ops = this.difficulty === 'easy' ? ['+', '-'] : ['+', '-', '*'];
+                
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                let a, b;
+
+                if (op === '*') {
+                    a = Math.floor(Math.random() * multRange) + 2; 
+                    b = Math.floor(Math.random() * multRange) + 2;
+                } else {
+                    a = Math.floor(Math.random() * range) + 2;
+                    b = Math.floor(Math.random() * range) + 2;
+                }
+
+                if(op === '+') this.ans = a + b; 
+                if(op === '-') this.ans = a - b; 
+                if(op === '*') this.ans = a * b;
+
+                // Отображение
+                let displayOp = op === '*' ? '×' : (op === '-' ? '−' : '+');
+                document.getElementById('game-problem').innerText = `${a} ${displayOp} ${b}`; 
+            }
+            
+            // 🔥 СЛОЖНО (ОТРИЦАТЕЛЬНЫЕ ЧИСЛА) 🔥
+            else {
+                const ops = ['+', '-', '*', '/'];
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                
+                // Генерируем модули чисел (не слишком большие, чтобы не взрывать мозг)
+                // Для сложения до 30, для умножения до 12
+                let limit = (op === '*' || op === '/') ? 12 : 30;
+                
+                let absA = Math.floor(Math.random() * limit) + 1;
+                let absB = Math.floor(Math.random() * limit) + 1;
+
+                // Случайно делаем числа отрицательными (50% шанс)
+                // Math.random() < 0.5 ? -1 : 1  создает либо минус, либо плюс
+                let signA = Math.random() < 0.5 ? -1 : 1; 
+                let signB = Math.random() < 0.5 ? -1 : 1;
+
+                // Если деление - подгоняем числа
+                if (op === '/') {
+                    let res = Math.floor(Math.random() * 10) + 1; // Ответ
+                    // Знак ответа тоже может быть минусом
+                    let signRes = Math.random() < 0.5 ? -1 : 1;
+                    
+                    // Пересчитываем B и A
+                    absB = Math.floor(Math.random() * 10) + 2;
+                    let bVal = absB * signB;
+                    let resVal = res * signRes;
+                    
+                    var a = bVal * resVal; // Делимое
+                    var b = bVal;          // Делитель
+                } else {
+                    var a = absA * signA;
+                    var b = absB * signB;
+                }
+
+                // Считаем ответ
+                if (op === '+') this.ans = a + b;
+                if (op === '-') this.ans = a - b;
+                if (op === '*') this.ans = a * b;
+                if (op === '/') this.ans = a / b;
+
+                // ФОРМАТИРОВАНИЕ ДЛЯ ЭКРАНА
+                // Если второе число отрицательное, берем его в скобки: 5 + (-3)
+                let displayB = b < 0 ? `(${b})` : b;
+                let displayA = a; // Первое число можно без скобок, даже если минус: -5 + 3
+
+                let displayOp = op;
+                if (op === '*') displayOp = '×';
+                if (op === '/') displayOp = '÷';
+                if (op === '-') displayOp = '−'; // Жирный минус для знака операции
+
+                document.getElementById('game-problem').innerText = `${displayA} ${displayOp} ${displayB}`;
+            }
+            
+            document.getElementById('game-input').value = '';
+        }
     },
 
     check() {
-        const val = parseInt(document.getElementById('game-input').value); 
         const inputEl = document.getElementById('game-input');
-        
-        if(val === this.ans) {
-            this.score++; 
-            document.getElementById('game-score').innerText = this.score; 
-            SoundSys.play('success');
-            
-            inputEl.style.borderColor = 'var(--primary)'; 
-            setTimeout(() => inputEl.style.borderColor = 'var(--text-light)', 200);
-            
-            let pts = 10; 
-            if(this.difficulty==='medium') pts=20; 
-            if(this.difficulty==='hard') pts=30;
-            
-            const rect = inputEl.getBoundingClientRect(); 
-            FX.floatText(rect.left + 50, rect.top - 30, `+${pts} XP`, "#6C63FF");
-            this.nextProblem();
-        } else { 
-            SoundSys.play('error'); 
-            inputEl.style.borderColor = 'red'; 
-            inputEl.value = ''; 
+        const val = parseInt(inputEl.value); 
+        if(val === this.ans) this.success(inputEl);
+        else this.fail(inputEl);
+    },
+
+    checkSign(sign) {
+        if(sign === this.correctSign) {
+            const area = document.getElementById('sign-area');
+            this.success(area);
+        } else {
+            SoundSys.play('error');
         }
+    },
+
+    success(el) {
+        this.score++; 
+        document.getElementById('game-score').innerText = this.score; 
+        SoundSys.play('success');
+        
+        el.style.borderColor = 'var(--primary)'; 
+        if(this.mode === 'sign') el.style.background = 'rgba(0, 255, 0, 0.1)';
+        
+        setTimeout(() => { 
+            el.style.borderColor = 'var(--text-light)'; 
+            el.style.background = '';
+        }, 200);
+        
+        let pts = 10;
+        if(this.difficulty === 'medium') pts = 15;
+        if(this.difficulty === 'hard') pts = 25;
+
+        if (el && el.getBoundingClientRect) {
+            const rect = el.getBoundingClientRect(); 
+            FX.floatText(rect.left + rect.width/2, rect.top, `+${pts} XP`, "#6C63FF");
+        }
+        
+        this.nextProblem();
+    },
+
+    fail(el) {
+        SoundSys.play('error'); 
+        el.style.borderColor = 'red'; 
+        if(el.tagName === 'INPUT') el.value = ''; 
     },
 
     end() {
@@ -2478,12 +2819,12 @@ const Trainer = {
         document.getElementById('trainer-game').style.display = 'none'; 
         document.getElementById('trainer-result').style.display = 'block';
         
-        let mult = 10; 
-        if(this.difficulty==='medium') mult=20; 
-        if(this.difficulty==='hard') mult=30;
-        
+        let mult = 10;
+        if(this.difficulty === 'medium') mult = 15;
+        if(this.difficulty === 'hard') mult = 25;
+
         const earnedXP = this.score * mult; 
-        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 5)); 
+        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 4)); 
         
         App.addXP(earnedXP);
         if(earnedCoins > 0) { 
@@ -2492,17 +2833,19 @@ const Trainer = {
             App.toast(`🪙 +${earnedCoins} 💰`); 
         }
 
-        // --- СОХРАНЕНИЕ ОТДЕЛЬНОГО РЕКОРДА ---
-        // Берем текущий рекорд для этой сложности
-        const currentRecord = DB.user.trainerRecords[this.difficulty];
-        
-        if(this.score > currentRecord) {
-            DB.user.trainerRecords[this.difficulty] = this.score;
+        // --- СОХРАНЕНИЕ РЕКОРДА ---
+        if (!DB.user.trainerRecords[this.mode]) {
+            DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
+        }
+
+        const oldRec = DB.user.trainerRecords[this.mode][this.difficulty];
+
+        if(this.score > oldRec) {
+            DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
             SoundSys.play('win'); 
-            App.toast(`🏆 Новый рекорд (${this.difficulty}): ${this.score}!`); 
+            App.toast(`🏆 Новый рекорд!`); 
             FX.confetti(); 
         }
-        // -------------------------------------
 
         Data.save(); 
         App.updateUI();
@@ -2512,6 +2855,7 @@ const Trainer = {
         document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
     }
 };
+
 const AchievementSys = {
     check() {
         if (!DB || !DB.achievements) return;
@@ -2579,7 +2923,57 @@ const App = {
             console.warn(`Элемент с id="${id}" не найден — но это не критично`);
         }
     },
-    
+    changeNickname() {
+        const COST = 500;
+        
+        if (DB.user.coins < COST) {
+            return App.toast(`❌ Нужно ${COST} монет (у вас ${DB.user.coins})`);
+        }
+
+        const newName = prompt(`Смена ника стоит ${COST} монет.\nВведите новое имя:`, DB.user.name);
+        
+        if (!newName) return;
+        const cleanName = newName.trim();
+
+        if (cleanName.length === 0) return App.toast("Имя не может быть пустым");
+        if (cleanName.length > 12) return App.toast("Максимум 12 символов");
+        if (cleanName === DB.user.name) return;
+
+        if (!NameGuard.check(cleanName)) {
+            return alert("⛔️ Это имя запрещено политикой сообщества.");
+        }
+
+        if (confirm(`Сменить имя на "${cleanName}" за ${COST} монет?`)) {
+            // 1. Списываем монеты и меняем имя в текущей сессии
+            DB.user.coins -= COST;
+            DB.user.name = cleanName;
+            Data.save(); // Сохраняем прогресс
+
+            // 2. 🔥 ВАЖНО: Обновляем имя в Списке Пользователей (экран входа)
+            try {
+                let users = JSON.parse(localStorage.getItem('MathUsers') || '[]');
+                const index = users.findIndex(u => u.id === Auth.currentUser.id);
+                
+                if (index !== -1) {
+                    users[index].name = cleanName; // Меняем имя в списке
+                    localStorage.setItem('MathUsers', JSON.stringify(users)); // Сохраняем список
+                    
+                    // Обновляем текущие переменные Auth
+                    Auth.users = users;
+                    Auth.currentUser.name = cleanName;
+                }
+            } catch (e) {
+                console.error("Ошибка обновления списка пользователей", e);
+            }
+
+            // 3. Обновляем интерфейс
+            this.updateUI();
+            
+            SoundSys.play('coin');
+            App.toast("✅ Никнейм успешно изменен!");
+        }
+    },
+
     initAfterLogin() {
         this.updateUI();
         this.renderSubjects();
@@ -2884,120 +3278,172 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         }
     },
 
-            renderStats() {
-        // Даём время, чтобы вкладка стала видимой и canvas появился в DOM
+    renderStats() {
+        // 1. ВЫЧИСЛЕНИЕ (ПО ТАШКЕНТУ)
+        const today = new Date();
+        let weekSec = 0;
+        let monthSec = 0;
+
+        for (let i = 0; i < 30; i++) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            
+            // Используем нашу функцию для получения ключа
+            const key = getUZDate(d); 
+            
+            const seconds = DB.history[key] || 0;
+            monthSec += seconds; 
+            if (i < 7) weekSec += seconds; 
+        }
+
+
+        // Вспомогательная функция для перевода секунд в "1ч 30м"
+        const fmtTime = (s) => {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            if (h > 0) return `${h}ч ${m}м`;
+            return `${m}м`;
+        };
+
+        // Вспомогательная: примерный XP (10 XP за минуту)
+        // Точный XP за прошлые дни мы не храним, поэтому считаем по формуле
+        const estXP = (s) => Math.floor(s / 60) * 10;
+
+        // Обновляем текст в HTML
+        this.setText('stat-week-time', fmtTime(weekSec));
+        this.setText('stat-week-xp', `~${estXP(weekSec)} XP`); // Знак ~, т.к. это примерно
+        
+        this.setText('stat-month-time', fmtTime(monthSec));
+        this.setText('stat-month-xp', `~${estXP(monthSec)} XP`);
+
+        // Общее время и XP (берем реальные данные)
+        // Используем lifetimeXP если есть, иначе обычный xp
+        const totalXP = DB.user.lifetimeXP || DB.user.xp; 
+        this.setText('stat-total-time', fmtTime(DB.user.totalSec));
+        this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
+
+
+        // 2. ГРАФИКИ (Оставляем как было, но с задержкой для отрисовки)
         setTimeout(() => {
-            // Пирог предметов
+            // --- PIE CHART (Предметы) ---
             const subjectCtx = document.getElementById('subjectChart');
             if (subjectCtx) {
-                // Проверяем, существует ли чарт и можно ли его уничтожить
-                if (window.subjectChart && typeof window.subjectChart.destroy === 'function') {
-                    window.subjectChart.destroy();
-                }
+                if (window.subjectChart instanceof Chart) window.subjectChart.destroy();
 
                 const labels = [];
                 const data = [];
-                const colors = ['#6C63FF', '#00E0D0', '#FF8F66', '#556B2F', '#D60270', '#FF7675', '#00d26a', '#FFD700'];
+                // Цвета для предметов
+                const colors = ['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#D60270', '#556B2F', '#FF8F66'];
 
                 if (DB.subjects) {
                     Object.values(DB.subjects).forEach(s => {
                         if (s.sec > 0) {
                             labels.push(s.name);
-                            data.push(Math.round(s.sec / 60));
+                            data.push(Math.round(s.sec / 60)); // Минуты
                         }
                     });
                 }
 
+                // Если данных нет, рисуем пустой круг
+                const finalData = data.length ? data : [1];
+                const finalColors = data.length ? colors : ['#E0E0E0'];
+                const finalLabels = data.length ? labels : ['Нет данных'];
+
                 window.subjectChart = new Chart(subjectCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: labels.length ? labels : ['Нет данных'],
+                        labels: finalLabels,
                         datasets: [{
-                            data: data.length ? data : [1],
-                            backgroundColor: colors,
-                            borderWidth: 3,
-                            borderColor: 'var(--bg)'
+                            data: finalData,
+                            backgroundColor: finalColors,
+                            borderWidth: 0
                         }]
                     },
                     options: {
                         responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
                     }
                 });
             }
 
-            // Бар-чарт недели
+            // --- BAR CHART (Неделя) ---
             const weekCtx = document.getElementById('weekChart');
             if (weekCtx) {
-                if (window.weekChart && typeof window.weekChart.destroy === 'function') {
-                    window.weekChart.destroy();
-                }
+                if (window.weekChart instanceof Chart) window.weekChart.destroy();
 
-                const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+                const days = [];
                 const data = [];
-                for (let i = 0; i < 7; i++) {
+                
+                for (let i = 6; i >= 0; i--) {
                     const d = new Date();
-                    d.setDate(d.getDate() - d.getDay() + 1 + i);
-                    const key = d.toISOString().split('T')[0];
-                    data.push(Math.round(((DB.history && DB.history[key]) || 0) / 3600 * 10) / 10);
+                    d.setDate(today.getDate() - i);
+                    
+                    const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+                    days.push(dayNames[d.getDay()]);
+                    
+                    // Ключ по Ташкенту
+                    const key = getUZDate(d); 
+                    
+                    const hours = ((DB.history && DB.history[key]) || 0) / 3600;
+                    data.push(hours.toFixed(1));
                 }
-
+                
                 window.weekChart = new Chart(weekCtx, {
                     type: 'bar',
                     data: {
                         labels: days,
                         datasets: [{
-                            label: 'Часы учёбы',
+                            label: 'Часы',
                             data: data,
-                            backgroundColor: 'var(--primary)',
-                            borderRadius: 8
+                            backgroundColor: '#6C63FF',
+                            borderRadius: 5
                         }]
                     },
                     options: {
                         responsive: true,
-                        scales: { y: { beginAtZero: true } }
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: { legend: { display: false } }
                     }
                 });
             }
 
-                           // Активность — heatmap за 30 дней (квадратики)
-        const heatmap = document.getElementById('heatmap');
-        if (heatmap) {
-            const today = new Date();
-            const start = new Date(today);
-            start.setDate(today.getDate() - 29); // 30 дней назад
+            // --- HEATMAP (Активность) ---
+            const heatmap = document.getElementById('heatmap');
+            if (heatmap) {
+                const start = new Date(today);
+                start.setDate(today.getDate() - 29); // 30 дней назад
 
-            // День недели: понедельник = 0
-            const firstDayOffset = start.getDay() === 0 ? 6 : start.getDay() - 1;
+                let html = '';
+                for (let i = 0; i < 30; i++) {
+                    const date = new Date(start);
+                    date.setDate(start.getDate() + i);
+                    const key = date.toISOString().split('T')[0];
+                    
+                    const sec = (DB.history && DB.history[key]) || 0;
+                    const minutes = Math.round(sec / 60);
+                    
+                    // Цвет зависит от активности
+                    let color = 'var(--bg)'; // Пусто (серый)
+                    if (minutes > 0) color = '#c6e48b';   // Мало
+                    if (minutes > 20) color = '#7bc96f';  // Норм
+                    if (minutes > 60) color = '#239a3b';  // Много
+                    if (minutes > 120) color = '#196127'; // Монстр
 
-            let html = '';
-            // Добавляем пустые клетки для выравнивания
-            for (let i = 0; i < firstDayOffset; i++) {
-                html += '<div style="background:var(--bg); border-radius:4px; aspect-ratio:1/1;"></div>';
+                    // Рамка для "сегодня"
+                    const isToday = i === 29 ? 'border: 1px solid var(--text);' : '';
+
+                    html += `<div title="${date.toLocaleDateString()}: ${minutes} мин" 
+                                  style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
+                }
+                heatmap.innerHTML = html;
             }
 
-            for (let i = 0; i < 30; i++) {
-                const date = new Date(start);
-                date.setDate(start.getDate() + i);
-                const key = date.toISOString().split('T')[0];
-                const sec = (DB.history && DB.history[key]) || 0;
-                const minutes = Math.round(sec / 60);
-                const intensity = sec === 0 ? 0 : Math.min(4, Math.ceil(minutes / 30)); // каждые 30 мин = уровень
-
-                const colors = ['var(--bg)', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
-                const title = minutes > 0 ? `${minutes} мин — ${date.toLocaleDateString('ru-RU')}` : 'Нет активности';
-
-                html += `<div title="${title}" style="background:${colors[intensity]}; border-radius:4px; aspect-ratio:1/1; display:flex; align-items:flex-end; justify-content:center; padding-bottom:2px; font-size:9px; color:var(--text); font-weight:bold;">
-                    ${minutes > 0 ? minutes : ''}
-                </div>`;
-            }
-
-            heatmap.innerHTML = html;
-        }
-
-        }, 200); // задержка 200мс — чтобы canvas точно был видимым
+        }, 100); 
     },
     toggleEcoMode(enable) {
         const overlay = document.getElementById('eco-overlay');
@@ -3130,7 +3576,7 @@ const Transfer = {
 const InstallSys = {
     // Проверяем, где мы: в браузере или в приложении
     init() {
-        // Если это уже установленное приложение - скрываем кнопку
+        // Если это уже установленное приложение - скрываем кнопку установки
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         
         if (!isStandalone) {
@@ -3140,21 +3586,21 @@ const InstallSys = {
         }
     },
 
-    // Запуск процесса "Умной установки"
+    // Запуск процесса
     startFlow() {
         if (!Auth.currentUser) return App.toast("Сначала создайте профиль!");
 
-        // 1. Генерируем код (тот же принцип, что и раньше)
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Без похожих символов (I, 1, 0, O)
+        // 1. Генерируем код
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
         for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
 
-        // 2. Сохраняем имя и данные
+        // 2. Сохраняем данные
         DB.user.name = Auth.currentUser.name;
         DB.user.avatar = Auth.currentUser.avatar;
         DB.user.id = Auth.currentUser.id;
         
-        App.toast("⏳ Подготовка данных...");
+        App.toast("⏳ Сохранение данных...");
 
         // 3. Отправляем в облако
         const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
@@ -3164,22 +3610,40 @@ const InstallSys = {
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
         }).then(() => {
-            // 4. КОПИРУЕМ КОД АВТОМАТИЧЕСКИ
+            // 4. КОПИРУЕМ КОД
             navigator.clipboard.writeText(code).then(() => {
-                // 5. Показываем инструкцию
-                alert(
-                    `✅ КОД СКОПИРОВАН: ${code}\n\n` +
-                    `1. Нажмите "Поделиться" -> "На экран домой"\n` +
-                    `2. Откройте новое приложение\n` +
-                    `3. Нажмите "📥 Восстановить" и вставьте этот код.`
-                );
+                this.showInstruction();
             }).catch(() => {
-                // Если авто-копирование не сработало
-                prompt("Скопируйте этот код, он нужен для входа в приложении:", code);
+                // Если авто-копирование не сработало (редко)
+                prompt("Скопируйте код вручную:", code);
+                this.showInstruction();
             });
         }).catch(e => {
+            console.error(e);
             App.toast("Ошибка сети. Попробуйте позже.");
         });
+    },
+
+    // ФУНКЦИЯ ПОКАЗА ИНСТРУКЦИИ
+    showInstruction() {
+        const modal = document.getElementById('install-modal');
+        const iosBlock = document.getElementById('ios-instruction');
+        const androidBlock = document.getElementById('android-instruction');
+
+        // Определяем устройство
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        if (isIOS) {
+            iosBlock.style.display = 'block';
+            androidBlock.style.display = 'none';
+        } else {
+            // Для всех остальных считаем что это Android/PC
+            iosBlock.style.display = 'none';
+            androidBlock.style.display = 'block';
+        }
+
+        modal.classList.add('show');
+        FX.confetti(); // Праздник, что код скопирован
     }
 };
 /* === SPLASH SCREEN LOGIC === */
@@ -3538,8 +4002,49 @@ Transfer.pasteCode = function(code) {
         </div>
     </div>
 </div>
+
+<!-- TUTORIAL MODAL (Обучение для новичков) -->
+<div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.95);">
+    <div class="modal-content" style="text-align: center; max-width: 340px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px;">
+        
+        <!-- Слайд 1: Философия -->
+        <div class="tutorial-slide" id="tut-1">
+            <div style="font-size: 60px; margin-bottom: 20px;">⏳</div>
+            <h2 style="margin-bottom: 15px;">Время = Опыт</h2>
+            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                В жизни нет полоски прогресса, и это демотивирует. <br>
+                <b>MathBooster исправит это.</b><br><br>
+                Мы будем считать каждый час, который ты инвестировал в свои знания.
+            </p>
+            <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Понятно 👇</button>
+        </div>
+
+        <!-- Слайд 2: Механика -->
+        <div class="tutorial-slide" id="tut-2" style="display: none;">
+            <div style="font-size: 60px; margin-bottom: 20px;">⏱️</div>
+            <h2 style="margin-bottom: 15px;">Как это работает?</h2>
+            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                1. Садишься за уроки — <b>включай таймер</b>.<br>
+                2. Твое время превращается в <b>XP</b> (Опыт) и <b>Coins</b> (Монеты).<br>
+                3. Чем больше учишься, тем выше твой Ранг.
+            </p>
+            <button class="btn btn-primary" onclick="Tutorial.next(3)" style="width: 100%;">Дальше 👇</button>
+        </div>
+
+        <!-- Слайд 3: Мотивация -->
+        <div class="tutorial-slide" id="tut-3" style="display: none;">
+            <div style="font-size: 60px; margin-bottom: 20px;">🏆</div>
+            <h2 style="margin-bottom: 15px;">Стань Легендой</h2>
+            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                Трать монеты на крутые темы и аватары.<br>
+                Соревнуйся с друзьями.<br>
+                Докажи, что ты самый продуктивный!
+            </p>
+            <button class="btn btn-primary" onclick="Tutorial.close()" style="width: 100%; background: #00d26a; box-shadow: 0 5px 15px rgba(0, 210, 106, 0.4);">Начать путь 🚀</button>
+        </div>
+
+    </div>
+</div>
 </body>
 </html>
-
-
 
