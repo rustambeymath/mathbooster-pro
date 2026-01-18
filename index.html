@@ -5,20 +5,6 @@
     <!-- Адаптация под мобильные устройства и iPhone (челка) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
-
-    <link rel="manifest" href="data:application/manifest+json,{
-  &quot;name&quot;: &quot;MathBooster PRO&quot;,
-  &quot;short_name&quot;: &quot;MathBooster&quot;,
-  &quot;start_url&quot;: &quot;/&quot;,
-  &quot;display&quot;: &quot;standalone&quot;,
-  &quot;background_color&quot;: &quot;#F4F7FE&quot;,
-  &quot;theme_color&quot;: &quot;#6C63FF&quot;,
-  &quot;orientation&quot;: &quot;portrait&quot;,
-  &quot;icons&quot;: [
-    {&quot;src&quot;: &quot;icon-192.png&quot;, &quot;sizes&quot;: &quot;192x192&quot;, &quot;type&quot;: &quot;image/png&quot;},
-    {&quot;src&quot;: &quot;icon-512.png&quot;, &quot;sizes&quot;: &quot;512x512&quot;, &quot;type&quot;: &quot;image/png&quot;}
-  ]
-}">
     <!-- PWA настройки -->
 <link id="manifest-link" rel="manifest" href="">
 <meta name="theme-color" content="#6C63FF">
@@ -968,46 +954,79 @@ window.addEventListener('load', () => {
     </section>
 
     <!-- 2. TRAINER (Меню с выбором + Завершить) -->
+<!-- 2. TRAINER (Мульти-режим) -->
     <section id="trainer" class="section">
-        <div class="card" id="trainer-menu" style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🧠</div>
-            <h2>Математический Спринт</h2>
-            <p style="color: var(--text-light); margin: 10px 0 20px;">Реши как можно больше примеров за 60 секунд.</p>
+        
+        <!-- МЕНЮ -->
+        <div class="card" id="trainer-menu" style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 60px; margin-bottom: 10px;">🧠</div>
+            <h2 style="margin-bottom: 5px;">Тренажер</h2>
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">Выбери режим:</p>
             
+            <!-- Выбор режима -->
+            <div style="display: grid; gap: 10px; margin-bottom: 25px;">
+                <button class="btn mode-btn active" onclick="Trainer.selectMode('standard', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
+                    <span style="font-size: 20px;">🔢</span> <b>Классика</b>
+                </button>
+                
+                <button class="btn mode-btn" onclick="Trainer.selectMode('sign', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
+                    <span style="font-size: 20px;">🧩</span> <b>Найди знак</b>
+                </button>
+                
+                <button class="btn mode-btn" onclick="Trainer.selectMode('square', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
+                    <span style="font-size: 20px;">🟥</span> <b>Квадраты</b>
+                </button>
+            </div>
+
+            <!-- Сложность -->
+            <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-light);">СЛОЖНОСТЬ</div>
             <div class="diff-switch">
                 <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
             </div>
 
-            <div class="stat-pill" style="display: inline-block; margin-bottom: 30px;">
-                <span class="stat-label">Ваш Рекорд</span><br>
-                <span class="stat-val" style="font-size: 24px;" id="trainer-high-score">0</span>
+            <!-- Рекорд -->
+            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--bg);">
+                <div style="font-size: 11px; color: var(--text-light); margin-bottom: 5px;">
+                    Рекорд (<span id="record-mode-label">Классика</span>)
+                </div>
+                <div style="font-size: 32px; font-weight: 800; color: var(--primary);" id="trainer-high-score">0</div>
             </div>
-            <br>
-            <button class="btn btn-primary" style="font-size: 20px; padding: 15px 40px;" onclick="Trainer.start()">Начать Игру 🚀</button>
+
+            <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 20px; width: 100%; padding: 15px; font-size: 18px;">🚀 СТАРТ</button>
         </div>
 
+        <!-- ИГРА -->
         <div class="card" id="trainer-game" style="display: none; text-align: center;">
             <div class="trainer-stats">
                 <div>⏳ <span id="game-time">60</span>s</div>
                 <div>✅ <span id="game-score">0</span></div>
             </div>
-            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 + 2</div>
-            
-            <!-- Поле ввода с кнопкой +/- -->
-            <div style="display: flex; gap: 10px; justify-content: center; align-items: center; max-width: 300px; margin: 20px auto;">
-                <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="margin-bottom: 0;">
-                <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px;">+/-</button>
+
+            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>
+
+            <!-- ВВОД ЧИСЕЛ (Для Классики и Квадратов) -->
+            <div id="input-area">
+                <div style="display: flex; gap: 10px; justify-content: center; align-items: center; max-width: 320px; margin: 20px auto;">
+                    <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="margin-bottom: 0;">
+                    <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px;" title="Минус">+/-</button>
+                </div>
+                <button class="btn btn-primary" onclick="Trainer.check()" style="margin-top: 15px; width: 100%;">Ответить ➜</button>
             </div>
 
-            <div style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Нажми Enter или кнопку справа</div>
-            
-            <!-- Кнопка ответа для удобства -->
-            <button class="btn btn-primary" onclick="Trainer.check()" style="margin-top: 10px;">Ответить</button>
-            <button class="btn btn-outline" style="margin-top: 10px;" onclick="Trainer.end()">Закончить</button>
+            <!-- КНОПКИ ЗНАКОВ (Для Найди знак) -->
+            <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 300px; margin: 20px auto;">
+                <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">+</button>
+                <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">−</button>
+                <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">×</button>
+                <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">÷</button>
+            </div>
+
+            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">🏁 Завершить</button>
         </div>
 
+        <!-- РЕЗУЛЬТАТ -->
         <div class="card" id="trainer-result" style="display: none; text-align: center;">
             <h2>Время вышло! 🏁</h2>
             <div style="margin: 30px 0;">
@@ -1018,7 +1037,7 @@ window.addEventListener('load', () => {
                 <div class="stat-pill"><div class="stat-val" id="result-xp">+0 XP</div></div>
                 <div class="stat-pill"><div class="stat-val" id="result-coins">+0 💰</div></div>
             </div>
-            <button class="btn btn-primary" onclick="Trainer.init()">Сыграть еще раз</button>
+            <button class="btn btn-primary" onclick="Trainer.init()">В меню</button>
         </div>
     </section>
 
@@ -1588,10 +1607,29 @@ const SoundSys = {
    1. DATA & CONFIG
    ========================================= */
 const GenAch = () => {
-    const list = []; let id = 1; const add = (title, desc, max, icon, type, sub=null) => list.push({id: id++, title, desc, max, icon, type, sub, unlocked:false});
-    add("Первый шаг", "1 минута учебы", 60, "🌱", "total"); add("Разминка", "15 минут", 900, "🤸", "total"); add("Час силы", "1 час", 3600, "🕐", "total"); add("Спринтер", "5 часов", 18000, "🏃", "total"); add("Марафонец", "10 часов", 36000, "👟", "total"); add("Сутки", "24 часа", 86400, "🌙", "total"); add("Неделя", "50 часов", 180000, "📆", "total"); add("Профи", "100 часов", 360000, "🎓", "total"); add("Эксперт", "250 часов", 900000, "💼", "total"); add("Гуру", "500 часов", 1800000, "🧘", "total"); add("Мудрец", "1000 часов", 3600000, "🧙‍♂️", "total"); add("Легенда", "2000 часов", 7200000, "👑", "total"); add("Титан", "5000 часов", 18000000, "🗿", "total"); add("Вечность", "10000 часов", 36000000, "⚡", "total");
-    [2, 5, 10, 15, 20, 30, 40, 50, 75, 100].forEach(l => add(`Уровень ${l}`, `Достигни ${l} уровня`, l, "🆙", "lvl"));
-    add("Начало пути", "Заработай 100 XP", 100, "⭐", "xp"); add("Опытный", "Заработай 1000 XP", 1000, "🌟", "xp"); add("Машина XP", "Заработай 10.000 XP", 10000, "🤖", "xp"); add("Миллионер", "Заработай 1.000.000 XP", 1000000, "💎", "xp");
+    const list = []; 
+    let id = 1; 
+    const add = (title, desc, max, icon, type, sub=null) => list.push({id: id++, title, desc, max, icon, type, sub, unlocked:false});
+    add("Первый шаг", "1 минута учебы", 60, "🌱", "total"); 
+    add("Разминка", "15 минут", 900, "🤸", "total"); 
+    add("Час силы", "1 час", 3600, "🕐", "total"); 
+    add("Спринтер", "5 часов", 18000, "🏃", "total"); 
+    add("Марафонец", "10 часов", 36000, "👟", "total"); 
+    add("Сутки", "24 часа", 86400, "🌙", "total"); 
+    add("Неделя", "50 часов", 180000, "📆", "total"); 
+    add("Профи", "100 часов", 360000, "🎓", "total"); 
+    add("Эксперт", "250 часов", 900000, "💼", "total"); 
+    add("Гуру", "500 часов", 1800000, "🧘", "total"); 
+    add("Мудрец", "1000 часов", 3600000, "🧙‍♂️", "total"); 
+    add("Легенда", "2000 часов", 7200000, "👑", "total"); 
+    add("Титан", "5000 часов", 18000000, "🗿", "total"); 
+    add("Вечность", "10000 часов", 36000000, "⚡", "total");
+    [2, 5, 10, 15, 20, 30, 40, 50, 75, 100].forEach(l => 
+    add(`Уровень ${l}`, `Достигни ${l} уровня`, l, "🆙", "lvl"));
+    add("Начало пути", "Заработай 100 XP", 100, "⭐", "xp"); 
+    add("Опытный", "Заработай 1000 XP", 1000, "🌟", "xp"); 
+    add("Машина XP", "Заработай 10.000 XP", 10000, "🤖", "xp"); 
+    add("Миллионер", "Заработай 1.000.000 XP", 1000000, "💎", "xp");
     return list;
 };
 
@@ -1606,10 +1644,12 @@ const DefaultDB = {
         dailyStreak: 0, lastDailyClaim: null, 
         ownedThemes: ['standard'], ownedAvatars: [], 
         
-        // 👇 ВОТ ЗДЕСЬ БЫЛА ОШИБКА. ТЕПЕРЬ ТУТ ПРАВИЛЬНАЯ СТРУКТУРА:
-                trainerRecords: { easy: 0, medium: 0, hard: 0 },
-
-        // -----------------------------------------------------------
+        // Внутри DefaultDB.user:
+        trainerRecords: {
+            standard: { easy: 0, medium: 0, hard: 0 },
+            sign:     { easy: 0, medium: 0, hard: 0 },
+            square:   { easy: 0, medium: 0, hard: 0 }
+        },
         
         usedCodes: [],
         lifetimeXP: 0
@@ -1771,26 +1811,24 @@ const Data = {
             let loaded;
             try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
 
-            if(loaded && loaded.user) { 
+            if(loaded.user) { 
                 DB = loaded; 
                 
-                // === 🔥 ЛЕЧЕНИЕ СТРУКТУРЫ (FIX) ===
-                // Если рекордов нет вообще ИЛИ они в старом формате
-                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
-                    
-                    // Спасаем старый рекорд, если он есть
-                    let oldRec = 0;
-                    if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
-                        oldRec = DB.user.trainerRecords.easy;
-                    }
-
-                    // Перезаписываем на новую структуру
-                    DB.user.trainerRecords = {
-                        standard: { easy: oldRec, medium: 0, hard: 0 },
-                        sign:     { easy: 0, medium: 0, hard: 0 },
-                        square:   { easy: 0, medium: 0, hard: 0 }
-                    };
+                // === 🔥 ЛЕЧЕНИЕ СТРУКТУРЫ (Версия 2.0) ===
+            if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
+                let oldRec = 0;
+                if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
+                    oldRec = DB.user.trainerRecords.easy;
                 }
+                DB.user.trainerRecords = {
+                    standard: { easy: oldRec, medium: 0, hard: 0 },
+                    sign:     { easy: 0, medium: 0, hard: 0 },
+                    square:   { easy: 0, medium: 0, hard: 0 }
+                };
+            }
+            // Защита: если вдруг какого-то режима не хватает
+            if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
+            if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
                 // ===================================
 
                 // Прочие проверки (защита от undefined)
@@ -2566,20 +2604,35 @@ const Timer = {
 const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
 
 const Trainer = {
-    score: 0, time: 60, interval: null, ans: 0, difficulty: 'easy',
+    score: 0, time: 60, interval: null, 
+    ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard',
 
+    // 1. Выбор режима
+    selectMode(mode, btn) {
+        this.mode = mode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        this.updateMenuRecordDisplay();
+    },
+
+    // 2. Выбор сложности
     setDiff(diff, btn) {
         this.difficulty = diff;
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.updateRecordDisplay();
+        if(btn) btn.classList.add('active');
+        this.updateMenuRecordDisplay();
     },
 
-    updateRecordDisplay() {
-        // Простая проверка рекорда
-        const rec = (DB.user.trainerRecords && DB.user.trainerRecords[this.difficulty]) ? DB.user.trainerRecords[this.difficulty] : 0;
-        const el = document.getElementById('trainer-high-score');
-        if(el) el.innerText = rec;
+    updateMenuRecordDisplay() {
+        const labels = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Квадраты' };
+        // Защита от сбоев
+        if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
+            const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
+            const el = document.getElementById('trainer-high-score');
+            if(el) el.innerText = rec;
+            const lbl = document.getElementById('record-mode-label');
+            if(lbl) lbl.innerText = labels[this.mode];
+        }
     },
 
     toggleMinus() {
@@ -2595,22 +2648,36 @@ const Trainer = {
         document.getElementById('trainer-menu').style.display = 'block'; 
         document.getElementById('trainer-game').style.display = 'none'; 
         document.getElementById('trainer-result').style.display = 'none'; 
-        this.updateRecordDisplay();
+        this.updateMenuRecordDisplay();
     },
 
     start() {
-        this.score = 0; this.time = 60; 
+        this.score = 0; 
+        this.time = 60; 
+        
         document.getElementById('trainer-menu').style.display = 'none'; 
         document.getElementById('trainer-game').style.display = 'block';
         document.getElementById('game-score').innerText = 0; 
         document.getElementById('game-time').innerText = 60;
+
+        // Переключаем экраны (Ввод цифр / Кнопки знаков)
+        const inputArea = document.getElementById('input-area');
+        const signArea = document.getElementById('sign-area');
+
+        if (this.mode === 'sign') {
+            inputArea.style.display = 'none';
+            signArea.style.display = 'grid';
+        } else {
+            inputArea.style.display = 'block';
+            signArea.style.display = 'none';
+            const input = document.getElementById('game-input'); 
+            input.value = ''; input.focus();
+            input.onclick = () => input.focus();
+            input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
+        }
         
         SoundSys.play('click'); 
         this.nextProblem(); 
-        const input = document.getElementById('game-input'); 
-        input.value = ''; input.focus();
-        input.onclick = () => input.focus();
-        input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
         
         if(this.interval) clearInterval(this.interval);
         this.interval = setInterval(() => { 
@@ -2621,59 +2688,141 @@ const Trainer = {
     },
 
     nextProblem() {
-        let range, multRange;
-        // Баланс сложности (оставляем хороший, который мы настроили)
-        if (this.difficulty === 'easy') { range = 20; multRange = 5; }
-        else if (this.difficulty === 'medium') { range = 50; multRange = 10; }
-        else { range = 100; multRange = 12; } // Hard
+        // --- 1. РЕЖИМ: НАЙДИ ЗНАК 🧩 ---
+        if (this.mode === 'sign') {
+            const ops = ['+', '-', '*', '/'];
+            const availableOps = this.difficulty === 'easy' ? ['+', '-', '*'] : ops;
+            this.correctSign = availableOps[Math.floor(Math.random() * availableOps.length)];
+            
+            let a, b, res;
+            let range = this.difficulty === 'easy' ? 10 : 20;
 
-        let ops = ['+', '-'];
-        if (this.difficulty !== 'easy') ops.push('*');
-        if (this.difficulty === 'hard') ops.push('/');
-        
-        const op = ops[Math.floor(Math.random() * ops.length)];
-        let a, b;
-
-        if (op === '*') {
-            a = Math.floor(Math.random() * multRange) + 2; 
-            b = Math.floor(Math.random() * multRange) + 2;
-        } else if (op === '/') {
-             b = Math.floor(Math.random() * 10) + 2;
-             a = b * (Math.floor(Math.random() * 10) + 2);
-        } else {
-            a = Math.floor(Math.random() * range) + 2;
-            b = Math.floor(Math.random() * range) + 2;
+            if (this.correctSign === '/') {
+                b = Math.floor(Math.random() * 10) + 2; 
+                res = Math.floor(Math.random() * 10) + 2;
+                a = b * res; 
+            } else if (this.correctSign === '*') {
+                a = Math.floor(Math.random() * 10) + 2;
+                b = Math.floor(Math.random() * 10) + 2;
+                res = a * b;
+            } else {
+                a = Math.floor(Math.random() * range) + 2;
+                b = Math.floor(Math.random() * range) + 2;
+                if (this.correctSign === '+') res = a + b; else res = a - b;
+            }
+            document.getElementById('game-problem').innerText = `${a} ? ${b} = ${res}`;
         }
 
-        if(op === '+') this.ans = a + b; 
-        if(op === '-') this.ans = a - b; 
-        if(op === '*') this.ans = a * b;
-        if(op === '/') this.ans = a / b;
+        // --- 2. РЕЖИМ: КВАДРАТЫ 🟥 ---
+        else if (this.mode === 'square') {
+            const isRoot = Math.random() > 0.5; 
+            let maxBase = this.difficulty === 'easy' ? 10 : (this.difficulty === 'medium' ? 20 : 30);
+            let base = Math.floor(Math.random() * (maxBase - 2)) + 2; 
+            let square = base * base;
 
-        let displayOp = op === '*' ? '×' : (op === '/' ? '÷' : (op === '-' ? '−' : '+'));
-        document.getElementById('game-problem').innerText = `${a} ${displayOp} ${b}`; 
-        document.getElementById('game-input').value = '';
+            if (isRoot) {
+                document.getElementById('game-problem').innerText = `√${square}`;
+                this.ans = base;
+            } else {
+                document.getElementById('game-problem').innerHTML = `${base}²`;
+                this.ans = square;
+            }
+            document.getElementById('game-input').value = '';
+        }
+
+        // --- 3. РЕЖИМ: КЛАССИКА 🔢 ---
+        else {
+            // Легко/Средне
+            if (this.difficulty !== 'hard') {
+                let range = this.difficulty === 'easy' ? 20 : 50;
+                let multRange = this.difficulty === 'easy' ? 5 : 10;
+                let ops = this.difficulty === 'easy' ? ['+', '-'] : ['+', '-', '*'];
+                
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                let a, b;
+
+                if (op === '*') {
+                    a = Math.floor(Math.random() * multRange) + 2; 
+                    b = Math.floor(Math.random() * multRange) + 2;
+                } else {
+                    a = Math.floor(Math.random() * range) + 2;
+                    b = Math.floor(Math.random() * range) + 2;
+                }
+
+                if(op === '+') this.ans = a + b; 
+                if(op === '-') this.ans = a - b; 
+                if(op === '*') this.ans = a * b;
+
+                let displayOp = op === '*' ? '×' : (op === '-' ? '−' : '+');
+                document.getElementById('game-problem').innerText = `${a} ${displayOp} ${b}`; 
+            }
+            // Сложно (с отрицательными и делением)
+            else {
+                const ops = ['+', '-', '*', '/'];
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                let limit = (op === '*' || op === '/') ? 12 : 30;
+                let absA = Math.floor(Math.random() * limit) + 1;
+                let absB = Math.floor(Math.random() * limit) + 1;
+                let signA = Math.random() < 0.5 ? -1 : 1; 
+                let signB = Math.random() < 0.5 ? -1 : 1;
+
+                if (op === '/') {
+                    let res = Math.floor(Math.random() * 10) + 1;
+                    let signRes = Math.random() < 0.5 ? -1 : 1;
+                    absB = Math.floor(Math.random() * 10) + 2;
+                    let bVal = absB * signB;
+                    let resVal = res * signRes;
+                    var a = bVal * resVal; var b = bVal;
+                } else {
+                    var a = absA * signA; var b = absB * signB;
+                }
+
+                if (op === '+') this.ans = a + b;
+                if (op === '-') this.ans = a - b;
+                if (op === '*') this.ans = a * b;
+                if (op === '/') this.ans = a / b;
+
+                let displayB = b < 0 ? `(${b})` : b;
+                let displayOp = op === '*' ? '×' : (op === '/' ? '÷' : (op === '-' ? '−' : '+'));
+                document.getElementById('game-problem').innerText = `${a} ${displayOp} ${displayB}`;
+            }
+            document.getElementById('game-input').value = '';
+        }
     },
 
     check() {
         const inputEl = document.getElementById('game-input');
         const val = parseInt(inputEl.value); 
-        if(val === this.ans) {
-            this.score++; 
-            document.getElementById('game-score').innerText = this.score; 
-            SoundSys.play('success');
-            
-            inputEl.style.borderColor = 'var(--primary)'; 
-            setTimeout(() => inputEl.style.borderColor = 'var(--text-light)', 200);
-            
-            const rect = inputEl.getBoundingClientRect(); 
-            FX.floatText(rect.left + 50, rect.top - 30, `+XP`, "#6C63FF");
-            this.nextProblem();
-        } else { 
-            SoundSys.play('error'); 
-            inputEl.style.borderColor = 'red'; 
-            inputEl.value = ''; 
+        if(val === this.ans) this.success(inputEl);
+        else this.fail(inputEl);
+    },
+
+    checkSign(sign) {
+        if(sign === this.correctSign) {
+            const area = document.getElementById('sign-area');
+            this.success(area);
+        } else {
+            SoundSys.play('error');
         }
+    },
+
+    success(el) {
+        this.score++; 
+        document.getElementById('game-score').innerText = this.score; 
+        SoundSys.play('success');
+        el.style.borderColor = 'var(--primary)'; 
+        if(this.mode === 'sign') el.style.background = 'rgba(0, 255, 0, 0.1)';
+        setTimeout(() => { el.style.borderColor = 'var(--text-light)'; el.style.background = ''; }, 200);
+        
+        const rect = el.getBoundingClientRect(); 
+        FX.floatText(rect.left + rect.width/2, rect.top, `+XP`, "#6C63FF");
+        this.nextProblem();
+    },
+
+    fail(el) {
+        SoundSys.play('error'); 
+        el.style.borderColor = 'red'; 
+        if(el.tagName === 'INPUT') el.value = ''; 
     },
 
     end() {
@@ -2682,11 +2831,11 @@ const Trainer = {
         document.getElementById('trainer-result').style.display = 'block';
         
         let mult = 10;
-        if(this.difficulty === 'medium') mult = 20; 
-        if(this.difficulty === 'hard') mult = 30;
-        
+        if(this.difficulty === 'medium') mult = 15;
+        if(this.difficulty === 'hard') mult = 25;
+
         const earnedXP = this.score * mult; 
-        const earnedCoins = Math.floor(this.score / 5); 
+        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 4)); 
         
         App.addXP(earnedXP);
         if(earnedCoins > 0) { 
@@ -2695,18 +2844,16 @@ const Trainer = {
             App.toast(`🪙 +${earnedCoins} 💰`); 
         }
 
-        // Сохраняем рекорд (в простую структуру)
-        if (!DB.user.trainerRecords) DB.user.trainerRecords = { easy:0, medium:0, hard:0 };
-        // Если вдруг там сложная структура, берем из нее или сбрасываем
-        if (typeof DB.user.trainerRecords.easy === 'undefined') DB.user.trainerRecords = { easy:0, medium:0, hard:0 };
-
-        if(this.score > DB.user.trainerRecords[this.difficulty]) {
-            DB.user.trainerRecords[this.difficulty] = this.score;
+        // Сохранение рекорда (Безопасное)
+        if (!DB.user.trainerRecords[this.mode]) DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
+        
+        if(this.score > DB.user.trainerRecords[this.mode][this.difficulty]) {
+            DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
             SoundSys.play('win'); 
             App.toast("🏆 Новый рекорд!"); 
             FX.confetti(); 
         }
-        
+
         Data.save(); App.updateUI();
         document.getElementById('result-score').innerText = this.score; 
         document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
@@ -2879,6 +3026,52 @@ const App = {
         const xpBar = document.getElementById('prof-xp-bar');
         if(xpBar) xpBar.style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
         this.setText('xp-progress-text', `${DB.user.xp} / ${DB.user.nextXp} XP`);
+        
+        const achEl = document.getElementById('ach-list');
+        if (achEl) {
+            // 1. АВТО-ЛЕЧЕНИЕ: Если список пуст, создаем его заново
+            if (!DB.achievements || DB.achievements.length === 0) {
+                console.log("♻️ Восстановление наград...");
+                DB.achievements = GenAch();
+                Data.save();
+            }
+
+            // 2. ОТРИСОВКА
+            achEl.innerHTML = DB.achievements.map(a => {
+                let currentVal = 0;
+                
+                // Считаем прогресс
+                if (a.type === 'total') currentVal = DB.user.totalSec;
+                else if (a.type === 'lvl') currentVal = DB.user.level;
+                else if (a.type === 'xp') currentVal = DB.user.lifetimeXP || DB.user.xp;
+
+                // Считаем проценты
+                const pct = Math.min(100, (currentVal / a.max) * 100);
+                const isUnlocked = pct >= 100;
+
+                // Цвета и иконки
+                const statusClass = isUnlocked ? 'unlocked' : '';
+                const icon = isUnlocked ? '✅' : a.icon;
+                const barColor = isUnlocked ? '#00d26a' : 'var(--primary)';
+
+                return `
+                <div class="ach-row ${statusClass}">
+                    <div class="ach-icon">${icon}</div>
+                    <div class="ach-info">
+                        <div class="ach-title">
+                            <span>${a.title}</span>
+                        </div>
+                        <div class="ach-desc">${a.desc}</div>
+                        <div class="ach-bar-bg">
+                            <div class="ach-bar-fill" style="width:${pct}%; background:${barColor}"></div>
+                        </div>
+                        <div style="font-size:10px; color:var(--text-light); text-align:right; margin-top:2px;">
+                            ${Math.floor(currentVal)} / ${a.max}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
     },
 
     buyTheme(id) {
