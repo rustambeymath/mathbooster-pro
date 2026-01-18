@@ -29,6 +29,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"><meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MathBooster">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap">
 <!-- Иконки -->
@@ -195,18 +196,25 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         }
         
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            transition: 0.3s; 
-            min-height: 100vh; 
-            overflow-x: hidden; 
-            user-select: none;
-            -webkit-user-select: none;
-            /* Отступы для навигации и челки */
-            padding-top: calc(var(--safe-top) + 10px);
-            padding-bottom: calc(90px + var(--safe-bottom)); 
-        }
+    font-family: 'Inter', -apple-system, sans-serif !important; 
+    background: var(--bg); 
+    color: var(--text); 
+    transition: 0.3s; 
+    min-height: 100vh;
+    
+    /* 👇 ФИКС ДЛЯ IPHONE (Шрифты станут четкими) */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    
+    padding-top: calc(var(--safe-top) + 10px);
+    padding-bottom: calc(90px + var(--safe-bottom)); 
+}
+
+/* Фикс для кнопок и полей ввода, чтобы они наследовали шрифт */
+button, input, textarea, select {
+    font-family: 'Inter', -apple-system, sans-serif !important;
+}
 
         .container { 
             max-width: 1000px; 
@@ -3045,22 +3053,17 @@ const App = {
     },
 
     initAfterLogin() {
-        // 1. Сначала просто обновляем тексты (быстро)
         this.updateUI();
         
-        // 2. Через полсекунды грузим тяжелые списки (Тренажер, Предметы)
+        // Грузим ТОЛЬКО главную страницу (легко для процессора)
         setTimeout(() => {
             this.renderSubjects();
-            SubjectSys.render();
-            Trainer.init();
         }, 100);
 
-        // 3. Еще через полсекунды грузим историю и достижения
-        setTimeout(() => {
-            this.renderHistory();
-            AchievementSys.check(); // Проверка достижений
-        }, 500);
+        DailySys.check();
     },
+    
+
 
 
 toggleDarkMode(enabled) {
@@ -3268,7 +3271,7 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
 
     },
     switchTab(id, btn) {
-        // Стандартная логика переключения
+        // Переключаем вкладки (визуально)
         document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
         const sec = document.getElementById(id);
         if(sec) sec.classList.add('active');
@@ -3276,16 +3279,37 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
         if(btn) btn.classList.add('active');
        
-        if (id === 'stats') {
-            this.renderStats();
+        // 🔥 ЛЕНИВАЯ ЗАГРУЗКА (Грузим контент только сейчас)
+        
+        if (id === 'dashboard') {
+            // Если вернулись на главную - обновляем предметы
+            setTimeout(() => this.renderSubjects(), 50); 
         }
-        // Отправляем данные в Яндекс Метрику
+        
+        if (id === 'trainer') {
+            // Грузим тренажер только при открытии
+            setTimeout(() => Trainer.init(), 50);
+        }
+        
+        if (id === 'stats') {
+            // Грузим тяжелые графики только при открытии
+            setTimeout(() => {
+                this.renderHistory();
+                this.renderStats();
+            }, 50);
+        }
+        
+        if (id === 'shop') {
+            // Обновляем магазин
+            this.updateUI(); 
+        }
+
+        // Метрика
         if (typeof ym !== 'undefined') {
-            ym(105919372, 'hit', '#' + id, {
-                title: id.toUpperCase() // Название страницы в отчете
-            });
+            ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
         }
     },
+
     
     renderStats(){
         const ctx = document.getElementById('weekChart');
