@@ -3059,7 +3059,10 @@ const App = {
 
     updateUI() {
         if(!DB) return;
-        document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        if (document.body.className !== newClass) {
+            document.body.className = newClass;
+        }
         
         const toggle = document.getElementById('dark-toggle');
         if (toggle) toggle.checked = DB.user.darkMode;
@@ -3166,16 +3169,20 @@ const App = {
         if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
     },
     
-    renderStats(){
+    renderStats() {
         const statsSection = document.getElementById('stats');
-        if (!statsSection.classList.contains('active')) return; 
+        // Если вкладка закрыта или не активна - сразу выходим, экономим память
+        if (!statsSection || !statsSection.classList.contains('active')) return; 
 
-        // Вычисление статистики
+        // 1. Текстовая статистика (легкая)
         const today = new Date();
         let weekSec = 0, monthSec = 0;
+        
+        // Оптимизированный цикл (без создания лишних объектов Date)
+        const currentTimestamp = today.getTime();
         for (let i = 0; i < 30; i++) {
-            const d = new Date(); d.setDate(today.getDate() - i);
-            const key = getUZDate(d);
+            const loopDate = new Date(currentTimestamp - (i * 86400000));
+            const key = getUZDate(loopDate);
             const seconds = DB.history[key] || 0;
             monthSec += seconds;
             if (i < 7) weekSec += seconds; 
@@ -3196,43 +3203,63 @@ const App = {
         this.setText('stat-total-time', fmtTime(DB.user.totalSec));
         this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
-        // Графики (с задержкой)
-        setTimeout(() => {
+        // 2. Графики (Рисуем только через requestAnimationFrame)
+        requestAnimationFrame(() => {
+            // PIE CHART
             const subjectCtx = document.getElementById('subjectChart');
             if (subjectCtx) {
-                if (window.subjectChart instanceof Chart) window.subjectChart.destroy();
+                if (window.subjectChart instanceof Chart) {
+                    window.subjectChart.destroy();
+                    window.subjectChart = null;
+                }
                 const labels = [], data = [];
                 const colors = ['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#D60270', '#556B2F', '#FF8F66'];
                 if (DB.subjects) Object.values(DB.subjects).forEach(s => { if (s.sec > 0) { labels.push(s.name); data.push(Math.round(s.sec / 60)); }});
+                
                 window.subjectChart = new Chart(subjectCtx, {
                     type: 'doughnut',
                     data: { labels: labels.length ? labels : ['Нет'], datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#eee'], borderWidth: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        animation: false, // 🔥 ОТКЛЮЧАЕМ АНИМАЦИЮ ГРАФИКА ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
+                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } 
+                    }
                 });
             }
 
+            // BAR CHART
             const weekCtx = document.getElementById('weekChart');
             if (weekCtx) {
-                if (window.weekChart instanceof Chart) window.weekChart.destroy();
+                if (window.weekChart instanceof Chart) {
+                    window.weekChart.destroy();
+                    window.weekChart = null;
+                }
                 const days = [], data = [];
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date(); d.setDate(today.getDate() - i);
+                    const d = new Date(currentTimestamp - (i * 86400000));
                     days.push(['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]);
                     data.push(((DB.history && DB.history[getUZDate(d)]) || 0) / 3600);
                 }
                 window.weekChart = new Chart(weekCtx, {
                     type: 'bar',
                     data: { labels: days, datasets: [{ label: 'Часы', data: data, backgroundColor: '#6C63FF', borderRadius: 4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid:{display:false} }, x:{grid:{display:false}} }, plugins:{legend:{display:false}} }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        animation: false, // 🔥 ОТКЛЮЧАЕМ АНИМАЦИЮ
+                        scales: { y: { beginAtZero: true, grid:{display:false} }, x:{grid:{display:false}} }, 
+                        plugins:{legend:{display:false}} 
+                    }
                 });
             }
             
+            // HEATMAP (Генерируем HTML строку, это быстро)
             const heatmap = document.getElementById('heatmap');
             if (heatmap) {
-                const start = new Date(today); start.setDate(today.getDate() - 29);
                 let html = '';
                 for (let i = 0; i < 30; i++) {
-                    const date = new Date(start); date.setDate(start.getDate() + i);
+                    const date = new Date(currentTimestamp - ((29-i) * 86400000));
                     const sec = (DB.history && DB.history[getUZDate(date)]) || 0;
                     const minutes = Math.round(sec / 60);
                     let color = 'var(--bg)';
@@ -3243,7 +3270,7 @@ const App = {
                 }
                 heatmap.innerHTML = html;
             }
-        }, 100);
+        });
     },
 
     renderSubjects() {
