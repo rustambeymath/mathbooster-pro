@@ -1702,6 +1702,7 @@ const getUZDate = (dateObj = new Date()) => {
     return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
 };
 
+
 const NameGuard = {
     // Список запрещенных корней (RU, UZ, EN)
     // Мы ищем "корни", чтобы поймать слова типа "сук@", "сууука" и т.д.
@@ -1736,31 +1737,53 @@ const NameGuard = {
 let DB = null; 
 const Data = {
     currentKey: null,
-    initNewData(userId) { const newDB = JSON.parse(JSON.stringify(DefaultDB)); newDB.achievements = GenAch(); localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); },
+    
+    initNewData(userId) { 
+        const newDB = JSON.parse(JSON.stringify(DefaultDB)); 
+        newDB.achievements = GenAch(); 
+        
+        // Сразу создаем правильную структуру рекордов
+        newDB.user.trainerRecords = {
+            standard: { easy: 0, medium: 0, hard: 0 },
+            sign:     { easy: 0, medium: 0, hard: 0 },
+            square:   { easy: 0, medium: 0, hard: 0 }
+        };
+        
+        localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
+    },
+
     load(userId) { 
-        this.currentKey = 'MathData_' + userId; const raw = localStorage.getItem(this.currentKey); 
+        this.currentKey = 'MathData_' + userId; 
+        const raw = localStorage.getItem(this.currentKey); 
+        
         if (raw) { 
             const loaded = JSON.parse(raw);
             if(loaded.user) { 
                 DB = loaded; 
                 
-                // --- 🔥 ИСПРАВЛЕННАЯ МИГРАЦИЯ РЕКОРДОВ 🔥 ---
-                // Если нет рекордов или они в старом формате
-                if (!DB.user.trainerRecords || typeof DB.user.trainerRecords.easy === 'number') {
-                    // Сохраняем старый рекорд, если есть
+                // === 🔥 ЛЕЧЕНИЕ ДАННЫХ (FIX CRASH) 🔥 ===
+                // Если рекордов нет ИЛИ они в старом формате (где нет 'standard')
+                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
+                    
+                    // Пытаемся спасти старый рекорд
                     let oldRec = 0;
-                    if (DB.user.trainerRecords && DB.user.trainerRecords.easy) oldRec = DB.user.trainerRecords.easy;
-                    else if (DB.user.trainerRecord) oldRec = DB.user.trainerRecord;
+                    if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
+                        oldRec = DB.user.trainerRecords.easy; // Берем из старой структуры
+                    } else if (DB.user.trainerRecord) {
+                        oldRec = DB.user.trainerRecord; // Берем из древней структуры
+                    }
 
-                    // Создаем НОВУЮ структуру для 3-х режимов
+                    // Перезаписываем на НОВУЮ структуру
                     DB.user.trainerRecords = {
                         standard: { easy: oldRec, medium: 0, hard: 0 },
                         sign:     { easy: 0, medium: 0, hard: 0 },
                         square:   { easy: 0, medium: 0, hard: 0 }
                     };
+                    console.log("♻️ Рекорды обновлены до версии 2.0");
                 }
-                // ---------------------------------------------
+                // ==========================================
 
+                // Остальные проверки на пустоту
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(DB.user.gender === undefined) DB.user.gender = 'male';
                 if(DB.user.dob === undefined) DB.user.dob = '';
@@ -1776,17 +1799,15 @@ const Data = {
                     this.syncWithCloud(userId);
                 }
             } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); }
-            
         } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
     },
-    
+
     async syncWithCloud(userId) {
         try {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
             const docSnap = await window.DB_Online.getDoc(docRef);
             if(docSnap.exists()) {
                 const cloudData = docSnap.data();
-                // Basic conflict resolution: take cloud if more playtime
                 if(cloudData.user.totalSec > DB.user.totalSec) {
                     DB = cloudData;
                     this.save();
@@ -1794,20 +1815,18 @@ const Data = {
             }
         } catch(e) {}
     },
-        save() {
+
+    save() {
         if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
         
-        // Облачная синхронизация — теперь с именем!
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-            
-            // Явно берём актуальное имя из Auth
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
 
             window.DB_Online.setDoc(docRef, {
                 user: {
                     ...DB.user,
-                    name: currentName,  // ←←← всегда актуальное имя
+                    name: currentName,
                     avatar: DB.user.avatar || "😎",
                     level: DB.user.level || 1,
                     xp: DB.user.xp || 0
