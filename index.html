@@ -5,12 +5,28 @@
     <!-- Адаптация под мобильные устройства и iPhone (челка) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
-    
+
+    <link rel="manifest" href="data:application/manifest+json,{
+  &quot;name&quot;: &quot;MathBooster PRO&quot;,
+  &quot;short_name&quot;: &quot;MathBooster&quot;,
+  &quot;start_url&quot;: &quot;/&quot;,
+  &quot;display&quot;: &quot;standalone&quot;,
+  &quot;background_color&quot;: &quot;#F4F7FE&quot;,
+  &quot;theme_color&quot;: &quot;#6C63FF&quot;,
+  &quot;orientation&quot;: &quot;portrait&quot;,
+  &quot;icons&quot;: [
+    {&quot;src&quot;: &quot;icon-192.png&quot;, &quot;sizes&quot;: &quot;192x192&quot;, &quot;type&quot;: &quot;image/png&quot;},
+    {&quot;src&quot;: &quot;icon-512.png&quot;, &quot;sizes&quot;: &quot;512x512&quot;, &quot;type&quot;: &quot;image/png&quot;}
+  ]
+}">
     <!-- PWA настройки -->
 <link id="manifest-link" rel="manifest" href="">
 <meta name="theme-color" content="#6C63FF">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<!-- Отключаем автоматическое масштабирование и убираем адресную строку -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"><meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MathBooster">
 
@@ -691,6 +707,22 @@ body.zen-active #timer {
 </style>
 
 <script>
+// Жёсткая очистка кэша и перезапуск PWA (только для iOS)
+if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    // Очищаем кэш Service Worker
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            keys.forEach(key => caches.delete(key));
+        });
+    }
+    // Принудительный рефреш manifest
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+            regs.forEach(reg => reg.unregister());
+        });
+    }
+}
+
 // Плавное исчезновение splash через 1.8 секунды после загрузки
 window.addEventListener('load', () => {
     setTimeout(() => {
@@ -2120,33 +2152,35 @@ const Online = {
 const Auth = {
     users: [], currentUser: null,
     avatars: ['😎', '👩‍🎓', '👨‍🎓', '👱‍♀️', '👨', '🧕', '🧔', '🐱', '🦊', '⚽'],
-    init() { 
-        const stored = localStorage.getItem('MathUsers'); 
-        if (stored) {
-            try {
-                let rawUsers = JSON.parse(stored);
-                // 🔥 ИСПРАВЛЕНИЕ ОШИБКИ:
-                // Фильтруем список: оставляем только тех, у кого есть ID и Имя
-                this.users = rawUsers.filter(u => u && u.id && u.name);
-                
-                // Если нашлись "битые" пользователи, перезаписываем чистый список
-                if (this.users.length !== rawUsers.length) {
-                    console.log("Удалены поврежденные профили");
-                    localStorage.setItem('MathUsers', JSON.stringify(this.users));
-                }
-            } catch (e) {
-                console.error("Ошибка чтения пользователей", e);
-                this.users = [];
+    init() {
+    let stored = localStorage.getItem('MathUsers');
+    this.users = [];
+    
+    if (stored) {
+        try {
+            const raw = JSON.parse(stored);
+            this.users = Array.isArray(raw) 
+                ? raw.filter(u => u && typeof u === 'object' && u.id && typeof u.id === 'string' && u.name)
+                : [];
+            
+            // Если после фильтра пусто — чистим localStorage
+            if (this.users.length === 0 && raw.length > 0) {
+                localStorage.removeItem('MathUsers');
+                console.log('Очищен битый MathUsers');
             }
-        } 
-        
-        this.renderUserList(); 
-        this.renderAvatars(); 
-        SoundSys.init(); 
-        Whiteboard.init(); 
-        PWA.init(); 
-        MusicPlayer.init(); 
-    },
+        } catch (e) {
+            console.error('Битый MathUsers — удаляем', e);
+            localStorage.removeItem('MathUsers');
+        }
+    }
+
+    this.renderUserList();
+    this.renderAvatars();
+    SoundSys.init();
+    Whiteboard.init();
+    PWA.init();
+    MusicPlayer.init();
+},
 
     renderUserList() {
     const list = document.getElementById('user-list');
