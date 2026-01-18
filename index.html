@@ -1752,13 +1752,14 @@ const LEAGUES = [
 
 // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
 const getUZDate = (dateObj = new Date()) => {
-    // Получаем время в UTC
+    // 1. Получаем время UTC
     const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
-    // Добавляем 5 часов (Ташкент)
+    // 2. Добавляем 5 часов (Ташкент)
     const uzTime = new Date(utc + (3600000 * 5));
-    // Возвращаем в формате YYYY-MM-DD
+    // 3. Возвращаем YYYY-MM-DD
     return uzTime.toISOString().slice(0, 10);
 };
+
 
 
 
@@ -2643,15 +2644,11 @@ const Trainer = {
     updateMenuRecordDisplay() {
         const labelNames = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Квадраты' };
         
-        // Защита: проверяем, есть ли данные
+        // 🛑 БЕЗОПАСНАЯ ПРОВЕРКА (Чтобы не было краша)
         if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
             const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
-            
-            // Обновляем цифру
             const scoreEl = document.getElementById('trainer-high-score');
             if(scoreEl) scoreEl.innerText = rec;
-
-            // Обновляем подпись "Рекорд (Классика)"
             const labelEl = document.getElementById('record-mode-label');
             if(labelEl) labelEl.innerText = labelNames[this.mode];
         }
@@ -2992,87 +2989,69 @@ const AchievementSys = {
 const App = {
     async init() { Auth.init(); },
     
-    // БЕЗОПАСНАЯ ФУНКЦИЯ (Защита от твоей ошибки)
-       setText(id, text) {
+    setText(id, text) {
         const el = document.getElementById(id);
-        if (el) {
-            el.innerText = text;
-        } else {
-            console.warn(`Элемент с id="${id}" не найден — но это не критично`);
-        }
+        if (el) el.innerText = text;
     },
+
+    // 🔥 ИСПРАВЛЕНИЕ ЗАВИСАНИЯ ПРИ ВХОДЕ 🔥
+    initAfterLogin() {
+        // 1. Сначала обновляем только шапку (Имя, Монеты) - это мгновенно
+        this.updateUI();
+        
+        // 2. Даем телефону 100мс передохнуть, потом грузим Тренажер и Предметы
+        setTimeout(() => {
+            this.renderSubjects();
+            SubjectSys.render();
+            if (window.Trainer) Trainer.init();
+        }, 100);
+
+        // 3. Еще через 300мс проверяем бонусы и историю
+        setTimeout(() => {
+            this.renderHistory();
+            DailySys.check(); 
+            AchievementSys.check();
+        }, 400);
+    },
+
     changeNickname() {
         const COST = 500;
-        
-        if (DB.user.coins < COST) {
-            return App.toast(`❌ Нужно ${COST} монет (у вас ${DB.user.coins})`);
-        }
+        if (DB.user.coins < COST) return App.toast(`❌ Нужно ${COST} монет`);
 
         const newName = prompt(`Смена ника стоит ${COST} монет.\nВведите новое имя:`, DB.user.name);
-        
         if (!newName) return;
         const cleanName = newName.trim();
 
-        if (cleanName.length === 0) return App.toast("Имя не может быть пустым");
-        if (cleanName.length > 12) return App.toast("Максимум 12 символов");
-        if (cleanName === DB.user.name) return;
+        if (cleanName.length === 0 || cleanName.length > 12) return App.toast("Имя от 1 до 12 символов");
+        if (!NameGuard.check(cleanName)) return alert("⛔️ Имя запрещено.");
 
-        if (!NameGuard.check(cleanName)) {
-            return alert("⛔️ Это имя запрещено политикой сообщества.");
-        }
-
-        if (confirm(`Сменить имя на "${cleanName}" за ${COST} монет?`)) {
-            // 1. Списываем монеты и меняем имя в текущей сессии
+        if (confirm(`Сменить на "${cleanName}" за ${COST} монет?`)) {
             DB.user.coins -= COST;
             DB.user.name = cleanName;
-            Data.save(); // Сохраняем прогресс
+            Data.save();
 
-            // 2. 🔥 ВАЖНО: Обновляем имя в Списке Пользователей (экран входа)
+            // Обновляем список на входе
             try {
                 let users = JSON.parse(localStorage.getItem('MathUsers') || '[]');
                 const index = users.findIndex(u => u.id === Auth.currentUser.id);
-                
                 if (index !== -1) {
-                    users[index].name = cleanName; // Меняем имя в списке
-                    localStorage.setItem('MathUsers', JSON.stringify(users)); // Сохраняем список
-                    
-                    // Обновляем текущие переменные Auth
+                    users[index].name = cleanName;
+                    localStorage.setItem('MathUsers', JSON.stringify(users));
                     Auth.users = users;
                     Auth.currentUser.name = cleanName;
                 }
-            } catch (e) {
-                console.error("Ошибка обновления списка пользователей", e);
-            }
+            } catch(e){}
 
-            // 3. Обновляем интерфейс
             this.updateUI();
-            
             SoundSys.play('coin');
-            App.toast("✅ Никнейм успешно изменен!");
+            App.toast("✅ Никнейм изменен!");
         }
     },
 
-    initAfterLogin() {
-        this.updateUI();
-        
-        // Грузим ТОЛЬКО главную страницу (легко для процессора)
-        setTimeout(() => {
-            this.renderSubjects();
-        }, 100);
-
-        DailySys.check();
-    },
-    
-
-
-
-toggleDarkMode(enabled) {
+    toggleDarkMode(enabled) {
         DB.user.darkMode = enabled;
-        if (enabled) {
-            document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
-        }
+        if (enabled) document.body.classList.add('dark-mode');
+        else document.body.classList.remove('dark-mode');
         localStorage.setItem('darkMode', enabled);
         Data.save();
         this.updateUI();
@@ -3080,114 +3059,30 @@ toggleDarkMode(enabled) {
 
     updateUI() {
         if(!DB) return;
-document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
-        // Восстановление переключателя
+        document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        
         const toggle = document.getElementById('dark-toggle');
         if (toggle) toggle.checked = DB.user.darkMode;
-
-        // Полный список предметов, который мы хотим видеть
-        const newSubjects = {
-            algebra: {name:'Алгебра', icon:'✖️', sec:0},
-            geometry: {name:'Геометрия', icon:'📐', sec:0},
-            calculus: {name:'Мат. анализ', icon:'∫', sec:0},
-            arithmetic: {name:'Арифметика', icon:'🔢', sec:0},
-            combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
-            statistics: {name:'Статистика', icon:'📊', sec:0},
-            trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
-            stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
-        };
-        let changed = false;
-        for (let key in newSubjects) {
-            if (!DB.subjects[key]) {
-                DB.subjects[key] = newSubjects[key];
-                changed = true;
-            }
-        }
-        if (changed) Data.save();
-
 
         this.setText('coin-display', DB.user.coins);
         this.setText('streak-display', DB.user.streak);
         this.setText('header-name', DB.user.name || 'Игрок');
         this.setText('header-avatar', DB.user.avatar || '😎');
-
-document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        this.setText('profile-name-big', DB.user.name || 'Игрок');
+        this.setText('profile-avatar-big', DB.user.avatar || '😎');
 
         // Лиги
         let cl = LEAGUES[0]; 
         for(let l of LEAGUES) { if(DB.user.xp >= l.min) cl = l; }
-        
         this.setText('header-league', cl.name);
         this.setText('profile-league-big', cl.name);
         
         const headerBox = document.getElementById('header-avatar-box');
         if(headerBox) headerBox.className = `profile-img ${cl.color}`;
-        
         const pb = document.getElementById('profile-avatar-box');
         if(pb) pb.className = `profile-img ${cl.color}`;
 
-        // МАГАЗИН ТЕМ
-        const themeList = document.getElementById('theme-list');
-        if (themeList) {
-            themeList.innerHTML = THEMES.map(t => {
-                const owned = DB.user.ownedThemes.includes(t.id), active = DB.user.theme === t.id;
-                return `<div class="shop-item ${active?'active':''}" onclick="App.buyTheme('${t.id}')"><div>${t.icon}</div><div>${t.name}</div>${owned?'':'<small>'+t.price+'💰</small>'}</div>`
-            }).join('');
-        }
-
-        // --- ВСТАВИТЬ ВНУТРЬ App.updateUI() ---
-
-        // МАГАЗИН АВАТАРОВ (Обновленный)
-        const avatarList = document.getElementById('avatar-shop-list');
-        if (avatarList) {
-            avatarList.innerHTML = SHOP_AVATARS.map(a => {
-                // Проверяем, куплен ли аватар
-                const owned = DB.user.ownedAvatars.includes(a.id);
-                // Проверяем, надет ли он сейчас
-                const active = DB.user.avatar === a.icon;
-                
-                // Если денег хватает, подсвечиваем цену (класс affordable)
-                const canBuy = DB.user.coins >= a.price;
-                const priceClass = canBuy ? 'affordable' : '';
-                
-                // Формируем красивую карточку
-                return `
-                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')">
-                    <div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div>
-                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>
-                    ${owned 
-                        ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' 
-                        : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`
-                    }
-                </div>`;
-            }).join('');
-        }
-        
-        // ДОСТИЖЕНИЯ
-        const achList = document.getElementById('ach-list');
-        if (achList && DB.achievements) {
-            achList.innerHTML = DB.achievements.map(a => {
-                let currentVal = 0;
-                if (a.type === 'total') currentVal = DB.user.totalSec;
-                else if (a.type === 'lvl') currentVal = DB.user.level;
-                else if (a.type === 'xp') currentVal = DB.user.xp;
-
-                const pct = Math.min(100, (currentVal / a.max) * 100);
-                const unlocked = pct >= 100;
-
-                return `<div class="ach-row ${unlocked ? 'unlocked' : ''}">
-                    <div class="ach-icon">${unlocked ? '✅' : a.icon}</div>
-                    <div class="ach-info">
-                        <div class="ach-title">${a.title}</div>
-                        <div class="ach-desc">${a.desc}</div>
-                        <div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%"></div></div>
-                        <small>${currentVal} / ${a.max}</small>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        // СТАТИСТИКА
+        // Статистика
         const h = (DB.user.totalSec/3600).toFixed(1);
         this.setText('timer', new Date(Timer.sec * 1000).toISOString().substr(11, 8));
         this.setText('stat-total-time', h + 'ч');
@@ -3197,7 +3092,6 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         
         const xpBar = document.getElementById('prof-xp-bar');
         if(xpBar) xpBar.style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
-        
         this.setText('xp-progress-text', `${DB.user.xp} / ${DB.user.nextXp} XP`);
     },
 
@@ -3209,69 +3103,39 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
             DB.user.coins -= t.price; DB.user.ownedThemes.push(id); DB.user.theme=id; Data.save(); App.updateUI(); SoundSys.play('success');
         } else { App.toast("Недостаточно монет"); }
     },
-    buyAvatar(id) {
-        // Ищем аватар в новом списке
-        const a = SHOP_AVATARS.find(x => x.id === id);
-        if (!a) return; // Если не нашли (защита)
 
-        // Если уже куплен — просто надеваем
+    buyAvatar(id) {
+        const a = SHOP_AVATARS.find(x => x.id === id);
+        if (!a) return;
         if (DB.user.ownedAvatars.includes(id)) { 
-            DB.user.avatar = a.icon; 
-            Data.save(); 
-            App.updateUI(); 
-            SoundSys.play('click');
-        } 
-        // Если не куплен — пробуем купить
-        else if (DB.user.coins >= a.price) {
+            DB.user.avatar = a.icon; Data.save(); App.updateUI(); SoundSys.play('click');
+        } else if (DB.user.coins >= a.price) {
             if(confirm(`Купить "${a.name}" за ${a.price} монет?`)) {
-                DB.user.coins -= a.price; 
-                DB.user.ownedAvatars.push(id); 
-                DB.user.avatar = a.icon; 
-                Data.save(); 
-                App.updateUI(); 
-                SoundSys.play('success');
-                FX.confetti(); // Салют при покупке!
+                DB.user.coins -= a.price; DB.user.ownedAvatars.push(id); DB.user.avatar = a.icon; 
+                Data.save(); App.updateUI(); SoundSys.play('success'); FX.confetti();
             }
-        } else { 
-            App.toast("Недостаточно монет 💰"); 
-            SoundSys.play('error');
-        }
+        } else { App.toast("Недостаточно монет 💰"); SoundSys.play('error'); }
     },
+
     addXP(n) { 
         DB.user.xp += n; 
-        
-        // Проверка: Хватает ли опыта для следующего уровня?
+        if (!DB.user.lifetimeXP) DB.user.lifetimeXP = 0;
+        DB.user.lifetimeXP += n;
+
         if(DB.user.xp >= DB.user.nextXp){
             DB.user.level++; 
-            
-            // Переносим остаток опыта на следующий уровень (честно)
-            // Например, надо 500, набрали 510 -> останется 10
             DB.user.xp = DB.user.xp - DB.user.nextXp; 
-            
-            // Увеличиваем сложность следующего уровня на 20%
             DB.user.nextXp = Math.floor(DB.user.nextXp * 1.2); 
-            
-            // --- НАГРАДА ---
-            const reward = 50; // Даем 50 монет
-            DB.user.coins += reward;
+            DB.user.coins += 50;
 
-            // --- ПОКАЗ ОКНА ---
             document.getElementById('lvl-up-new-level').innerText = DB.user.level;
             document.getElementById('levelup-modal').classList.add('show');
-            
-            // --- ЭФФЕКТЫ ---
-            FX.confetti(); // Салют
-            SoundSys.play('win'); // Звук победы
+            FX.confetti(); SoundSys.play('win'); 
         } 
-        
-        Data.save(); 
-        this.updateUI(); 
-
-        AchievementSys.check();
-
+        Data.save(); this.updateUI(); AchievementSys.check();
     },
+
     switchTab(id, btn) {
-        // Переключаем вкладки (визуально)
         document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
         const sec = document.getElementById(id);
         if(sec) sec.classList.add('active');
@@ -3279,291 +3143,142 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
         if(btn) btn.classList.add('active');
        
-        // 🔥 ЛЕНИВАЯ ЗАГРУЗКА (Грузим контент только сейчас)
-        
-        if (id === 'dashboard') {
-            // Если вернулись на главную - обновляем предметы
-            setTimeout(() => this.renderSubjects(), 50); 
-        }
-        
-        if (id === 'trainer') {
-            // Грузим тренажер только при открытии
-            setTimeout(() => Trainer.init(), 50);
-        }
-        
-        if (id === 'stats') {
-            // Грузим тяжелые графики только при открытии
-            setTimeout(() => {
-                this.renderHistory();
-                this.renderStats();
-            }, 50);
-        }
-        
+        // 🔥 ЛЕНИВАЯ ЗАГРУЗКА (Разгружает CPU)
+        if (id === 'dashboard') setTimeout(() => this.renderSubjects(), 50); 
+        if (id === 'trainer') setTimeout(() => Trainer.init(), 50);
+        if (id === 'stats') setTimeout(() => { this.renderHistory(); this.renderStats(); }, 50);
         if (id === 'shop') {
-            // Обновляем магазин
-            this.updateUI(); 
+            // Рисуем магазин только когда открыли
+            const themeList = document.getElementById('theme-list');
+            if (themeList) themeList.innerHTML = THEMES.map(t => {
+                const owned = DB.user.ownedThemes.includes(t.id), active = DB.user.theme === t.id;
+                return `<div class="shop-item ${active?'active':''}" onclick="App.buyTheme('${t.id}')"><div>${t.icon}</div><div>${t.name}</div>${owned?'':'<small>'+t.price+'💰</small>'}</div>`
+            }).join('');
+            
+            const avatarList = document.getElementById('avatar-shop-list');
+            if (avatarList) avatarList.innerHTML = SHOP_AVATARS.map(a => {
+                const owned = DB.user.ownedAvatars.includes(a.id), active = DB.user.avatar === a.icon;
+                const priceClass = (DB.user.coins >= a.price) ? 'affordable' : '';
+                return `<div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')"><div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div><div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>${owned ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`}</div>`;
+            }).join('');
         }
 
-        // Метрика
-        if (typeof ym !== 'undefined') {
-            ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
-        }
+        if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
     },
-
     
     renderStats(){
-        const ctx = document.getElementById('weekChart');
-        if(window.myChart) window.myChart.destroy();
-        // Проверка существования канваса
-        if (ctx) {
-            window.myChart = new Chart(ctx, {type:'bar', data:{labels:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], datasets:[{label:'Часы',data:[0,0,0,0,0,0,0],backgroundColor:'#6C63FF'}]}});
-        }
-    },
-       renderSubjects() {
-        const grid = document.getElementById('subjects-grid');
-        if (!grid || !DB || !DB.subjects) return;
-
-        grid.innerHTML = Object.keys(DB.subjects).map(k => {
-            const s = DB.subjects[k];
-            const isActive = DB.user.subject === k;
-            return `
-                <div onclick="App.selectSubject('${k}')"
-                     class="card"
-                     style="padding:15px; text-align:center; cursor:pointer; 
-                            ${isActive ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.1);' : 'border:2px solid transparent;'}">
-                    <div style="font-size:24px">${s.icon}</div>
-                    <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
-                </div>`;
-        }).join('');
-        
-        // Обновляем заголовок на дашборде
-        const currentSub = DB.subjects[DB.user.subject];
-        if (currentSub && document.getElementById('subject-title')) {
-            document.getElementById('subject-title').innerText = currentSub.name;
-        }
-    },
-
-    selectSubject(key) {
-        if (DB.subjects[key]) {
-            DB.user.subject = key;
-            Data.save();
-            this.renderSubjects();
-            this.updateUI();
-            App.toast("Предмет: " + DB.subjects[key].name);
-        }
-    },
-
-        renderHistory() {
-        // Эта функция обновляет журнал занятий в разделе "Статистика"
-        const logContainer = document.getElementById('session-log');
-        if (!logContainer || !DB || !DB.sessions) return;
-
-        logContainer.innerHTML = '';
-        DB.sessions.forEach(s => {
-            const row = document.createElement('div');
-            row.className = 'session-row';
-            row.innerHTML = `
-                <div class="session-info">
-                    <div>${s.subject}</div>
-                    <div class="session-date">${new Date(s.date).toLocaleDateString('ru-RU')}</div>
-                </div>
-                <div>
-                    <span style="color:var(--text-light);">${Math.floor(s.sec/60)} мин</span>
-                    ${s.coins > 0 ? `<span class="session-coins">+${s.coins} 💰</span>` : ''}
-                </div>
-            `;
-            logContainer.appendChild(row);
-        });
-
-        // Если сессий нет — покажем сообщение
-        if (DB.sessions.length === 0) {
-            logContainer.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет записей</div>';
-        }
-    },
-
-renderStats() {
-        // 🛑 ЗАЩИТА: Если вкладка Статистики скрыта — НЕ РИСУЕМ графики!
-        // Это спасет iPhone от перегрева и вылета
         const statsSection = document.getElementById('stats');
-        if (!statsSection.classList.contains('active')) {
-            return; 
-        }
-        // 1. ВЫЧИСЛЕНИЕ (ПО ТАШКЕНТУ)
-        const today = new Date();
-        let weekSec = 0;
-        let monthSec = 0;
+        if (!statsSection.classList.contains('active')) return; 
 
+        // Вычисление статистики
+        const today = new Date();
+        let weekSec = 0, monthSec = 0;
         for (let i = 0; i < 30; i++) {
-            const d = new Date();
-            d.setDate(today.getDate() - i);
-            
-            // Используем нашу функцию для получения ключа
-            const key = getUZDate(d); 
-            
+            const d = new Date(); d.setDate(today.getDate() - i);
+            const key = getUZDate(d);
             const seconds = DB.history[key] || 0;
-            monthSec += seconds; 
+            monthSec += seconds;
             if (i < 7) weekSec += seconds; 
         }
 
-
-        // Вспомогательная функция для перевода секунд в "1ч 30м"
         const fmtTime = (s) => {
-            const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            if (h > 0) return `${h}ч ${m}м`;
-            return `${m}м`;
+            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+            return h > 0 ? `${h}ч ${m}м` : `${m}м`;
         };
-
-        // Вспомогательная: примерный XP (10 XP за минуту)
-        // Точный XP за прошлые дни мы не храним, поэтому считаем по формуле
         const estXP = (s) => Math.floor(s / 60) * 10;
 
-        // Обновляем текст в HTML
         this.setText('stat-week-time', fmtTime(weekSec));
-        this.setText('stat-week-xp', `~${estXP(weekSec)} XP`); // Знак ~, т.к. это примерно
-        
+        this.setText('stat-week-xp', `~${estXP(weekSec)} XP`);
         this.setText('stat-month-time', fmtTime(monthSec));
         this.setText('stat-month-xp', `~${estXP(monthSec)} XP`);
-
-        // Общее время и XP (берем реальные данные)
-        // Используем lifetimeXP если есть, иначе обычный xp
+        
         const totalXP = DB.user.lifetimeXP || DB.user.xp; 
         this.setText('stat-total-time', fmtTime(DB.user.totalSec));
         this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
-
-        // 2. ГРАФИКИ (Оставляем как было, но с задержкой для отрисовки)
+        // Графики (с задержкой)
         setTimeout(() => {
-            // --- PIE CHART (Предметы) ---
             const subjectCtx = document.getElementById('subjectChart');
             if (subjectCtx) {
                 if (window.subjectChart instanceof Chart) window.subjectChart.destroy();
-
-                const labels = [];
-                const data = [];
-                // Цвета для предметов
+                const labels = [], data = [];
                 const colors = ['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#D60270', '#556B2F', '#FF8F66'];
-
-                if (DB.subjects) {
-                    Object.values(DB.subjects).forEach(s => {
-                        if (s.sec > 0) {
-                            labels.push(s.name);
-                            data.push(Math.round(s.sec / 60)); // Минуты
-                        }
-                    });
-                }
-
-                // Если данных нет, рисуем пустой круг
-                const finalData = data.length ? data : [1];
-                const finalColors = data.length ? colors : ['#E0E0E0'];
-                const finalLabels = data.length ? labels : ['Нет данных'];
-
+                if (DB.subjects) Object.values(DB.subjects).forEach(s => { if (s.sec > 0) { labels.push(s.name); data.push(Math.round(s.sec / 60)); }});
                 window.subjectChart = new Chart(subjectCtx, {
                     type: 'doughnut',
-                    data: {
-                        labels: finalLabels,
-                        datasets: [{
-                            data: finalData,
-                            backgroundColor: finalColors,
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
-                    }
+                    data: { labels: labels.length ? labels : ['Нет'], datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#eee'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
                 });
             }
 
-            // --- BAR CHART (Неделя) ---
             const weekCtx = document.getElementById('weekChart');
             if (weekCtx) {
                 if (window.weekChart instanceof Chart) window.weekChart.destroy();
-
-                const days = [];
-                const data = [];
-                
+                const days = [], data = [];
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(today.getDate() - i);
-                    
-                    const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-                    days.push(dayNames[d.getDay()]);
-                    
-                    // Ключ по Ташкенту
-                    const key = getUZDate(d); 
-                    
-                    const hours = ((DB.history && DB.history[key]) || 0) / 3600;
-                    data.push(hours.toFixed(1));
+                    const d = new Date(); d.setDate(today.getDate() - i);
+                    days.push(['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]);
+                    data.push(((DB.history && DB.history[getUZDate(d)]) || 0) / 3600);
                 }
-                
                 window.weekChart = new Chart(weekCtx, {
                     type: 'bar',
-                    data: {
-                        labels: days,
-                        datasets: [{
-                            label: 'Часы',
-                            data: data,
-                            backgroundColor: '#6C63FF',
-                            borderRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { 
-                            y: { beginAtZero: true, grid: { display: false } },
-                            x: { grid: { display: false } }
-                        },
-                        plugins: { legend: { display: false } }
-                    }
+                    data: { labels: days, datasets: [{ label: 'Часы', data: data, backgroundColor: '#6C63FF', borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid:{display:false} }, x:{grid:{display:false}} }, plugins:{legend:{display:false}} }
                 });
             }
-
-            // --- HEATMAP (Активность) ---
+            
             const heatmap = document.getElementById('heatmap');
             if (heatmap) {
-                const start = new Date(today);
-                start.setDate(today.getDate() - 29); // 30 дней назад
-
+                const start = new Date(today); start.setDate(today.getDate() - 29);
                 let html = '';
                 for (let i = 0; i < 30; i++) {
-                    const date = new Date(start);
-                    date.setDate(start.getDate() + i);
-                    const key = date.toISOString().split('T')[0];
-                    
-                    const sec = (DB.history && DB.history[key]) || 0;
+                    const date = new Date(start); date.setDate(start.getDate() + i);
+                    const sec = (DB.history && DB.history[getUZDate(date)]) || 0;
                     const minutes = Math.round(sec / 60);
-                    
-                    // Цвет зависит от активности
-                    let color = 'var(--bg)'; // Пусто (серый)
-                    if (minutes > 0) color = '#c6e48b';   // Мало
-                    if (minutes > 20) color = '#7bc96f';  // Норм
-                    if (minutes > 60) color = '#239a3b';  // Много
-                    if (minutes > 120) color = '#196127'; // Монстр
-
-                    // Рамка для "сегодня"
+                    let color = 'var(--bg)';
+                    if (minutes > 0) color = '#c6e48b'; if (minutes > 20) color = '#7bc96f'; 
+                    if (minutes > 60) color = '#239a3b'; if (minutes > 120) color = '#196127';
                     const isToday = i === 29 ? 'border: 1px solid var(--text);' : '';
-
-                    html += `<div title="${date.toLocaleDateString()}: ${minutes} мин" 
-                                  style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
+                    html += `<div title="${minutes} мин" style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
                 }
                 heatmap.innerHTML = html;
             }
-
-        }, 100); 
+        }, 100);
     },
+
+    renderSubjects() {
+        const grid = document.getElementById('subjects-grid');
+        if (!grid || !DB || !DB.subjects) return;
+        grid.innerHTML = Object.keys(DB.subjects).map(k => {
+            const s = DB.subjects[k];
+            const isActive = DB.user.subject === k;
+            return `<div onclick="App.selectSubject('${k}')" class="card" style="padding:15px; text-align:center; cursor:pointer; ${isActive ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.1);' : 'border:2px solid transparent;'}"><div style="font-size:24px">${s.icon}</div><div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div></div>`;
+        }).join('');
+        const currentSub = DB.subjects[DB.user.subject];
+        if (currentSub && document.getElementById('subject-title')) document.getElementById('subject-title').innerText = currentSub.name;
+    },
+
+    selectSubject(key) {
+        if (DB.subjects[key]) { DB.user.subject = key; Data.save(); this.renderSubjects(); this.updateUI(); App.toast("Предмет: " + DB.subjects[key].name); }
+    },
+
+    renderHistory() {
+        const logContainer = document.getElementById('session-log');
+        if (!logContainer || !DB || !DB.sessions) return;
+        logContainer.innerHTML = DB.sessions.length === 0 ? '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет записей</div>' : '';
+        DB.sessions.forEach(s => {
+            const row = document.createElement('div'); row.className = 'session-row';
+            row.innerHTML = `<div class="session-info"><div>${s.subject}</div><div class="session-date">${new Date(s.date).toLocaleDateString('ru-RU')}</div></div><div><span style="color:var(--text-light);">${Math.floor(s.sec/60)} мин</span>${s.coins > 0 ? `<span class="session-coins">+${s.coins} 💰</span>` : ''}</div>`;
+            logContainer.appendChild(row);
+        });
+    },
+
     toggleEcoMode(enable) {
         const overlay = document.getElementById('eco-overlay');
-        if (enable) {
-            overlay.classList.add('active');
-            App.toast("🔋 Экономия энергии включена. Нажми на экран, чтобы выйти.");
-            // Принудительно ставим яркость экрана на минимум (программно нельзя, но черный цвет помогает)
-        } else {
-            overlay.classList.remove('active');
-        }
+        if (enable) { overlay.classList.add('active'); App.toast("🔋 Эко-режим вкл."); } 
+        else { overlay.classList.remove('active'); }
     },
+
     toast(m) { 
         const container = document.getElementById('toast-container');
         if (container) {
@@ -3573,8 +3288,8 @@ renderStats() {
             setTimeout(()=>{t.classList.remove('show');t.remove()},3000); 
         }
     }
-    
 };
+
 
 
 
