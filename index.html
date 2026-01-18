@@ -1743,25 +1743,24 @@ const Data = {
             const loaded = JSON.parse(raw);
             if(loaded.user) { 
                 DB = loaded; 
-                // 1. Если записей о рекордах вообще нет
-                if (!DB.user.trainerRecords) {
-                    const oldRec = DB.user.trainerRecord || 0; // Берем совсем старый рекорд
+                
+                // --- 🔥 ИСПРАВЛЕННАЯ МИГРАЦИЯ РЕКОРДОВ 🔥 ---
+                // Если нет рекордов или они в старом формате
+                if (!DB.user.trainerRecords || typeof DB.user.trainerRecords.easy === 'number') {
+                    // Сохраняем старый рекорд, если есть
+                    let oldRec = 0;
+                    if (DB.user.trainerRecords && DB.user.trainerRecords.easy) oldRec = DB.user.trainerRecords.easy;
+                    else if (DB.user.trainerRecord) oldRec = DB.user.trainerRecord;
+
+                    // Создаем НОВУЮ структуру для 3-х режимов
                     DB.user.trainerRecords = {
                         standard: { easy: oldRec, medium: 0, hard: 0 },
                         sign:     { easy: 0, medium: 0, hard: 0 },
                         square:   { easy: 0, medium: 0, hard: 0 }
                     };
-                } 
-                // 2. Если есть записи старого формата (просто easy, medium...)
-                // Мы переносим их в режим "standard"
-                else if (typeof DB.user.trainerRecords.easy === 'number') {
-                    const old = DB.user.trainerRecords;
-                    DB.user.trainerRecords = {
-                        standard: { easy: old.easy, medium: old.medium, hard: old.hard },
-                        sign:     { easy: 0, medium: 0, hard: 0 },
-                        square:   { easy: 0, medium: 0, hard: 0 }
-                    };
                 }
+                // ---------------------------------------------
+
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(DB.user.gender === undefined) DB.user.gender = 'male';
                 if(DB.user.dob === undefined) DB.user.dob = '';
@@ -1780,6 +1779,7 @@ const Data = {
             
         } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
     },
+    
     async syncWithCloud(userId) {
         try {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
