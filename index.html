@@ -1604,15 +1604,31 @@ const GenAch = () => {
 const DefaultDB = { 
     user: { 
         darkMode: false,
-        xp:0, level:1, nextXp:500, totalSec:0, subject:'algebra', theme:'standard', 
-        avatar:'😎', gender:'male', coins:0, streak:0, lastStudyDate:null, 
-        dailyStreak:0, lastDailyClaim:null, ownedThemes:['standard'], ownedAvatars:[], 
-        trainerRecord:0, usedCodes:[] 
+        xp: 0, 
+        level: 1, 
+        nextXp: 500, 
+        totalSec: 0, 
+        subject: 'algebra', 
+        theme: 'standard', 
+        avatar: '😎', 
+        gender: 'male', 
+        coins: 0, 
+        streak: 0, 
+        lastStudyDate: null, 
+        dailyStreak: 0, 
+        lastDailyClaim: null, 
+        ownedThemes: ['standard'], 
+        ownedAvatars: [], 
+        // 👇 Сразу создаем правильную структуру для Тренажера 2.0
+        trainerRecords: {
+            standard: { easy: 0, medium: 0, hard: 0 },
+            sign:     { easy: 0, medium: 0, hard: 0 },
+            square:   { easy: 0, medium: 0, hard: 0 }
+        },
+        usedCodes: [],
+        lifetimeXP: 0 // Для достижений
     }, 
-    settings: { sfx:true }, 
-
-    
-    // 👇 ВОТ ЗДЕСЬ МЫ ДОБАВИЛИ ВСЕ НОВЫЕ ПРЕДМЕТЫ 👇
+    settings: { sfx: true }, 
     subjects: { 
         algebra: {name:'Алгебра', icon:'✖️', sec:0}, 
         geometry: {name:'Геометрия', icon:'📐', sec:0},
@@ -1621,9 +1637,11 @@ const DefaultDB = {
         combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
         statistics: {name:'Статистика', icon:'📊', sec:0},
         trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
-        stereometry: {name:'Стереометрияя', icon:'🧊', sec:0}
+        stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
     }, 
-    history:{}, sessions:[], achievements:[] 
+    history: {}, 
+    sessions: [], 
+    achievements: [] 
 };
 
 
