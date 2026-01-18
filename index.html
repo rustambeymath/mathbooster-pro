@@ -1712,8 +1712,14 @@ const LEAGUES = [
 
 // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
 const getUZDate = (dateObj = new Date()) => {
-    return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
+    // Получаем время в UTC
+    const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
+    // Добавляем 5 часов (Ташкент)
+    const uzTime = new Date(utc + (3600000 * 5));
+    // Возвращаем в формате YYYY-MM-DD
+    return uzTime.toISOString().slice(0, 10);
 };
+
 
 
 const NameGuard = {
@@ -3005,14 +3011,23 @@ const App = {
     },
 
     initAfterLogin() {
+        // 1. Сначала просто обновляем тексты (быстро)
         this.updateUI();
-        this.renderSubjects();
-        SubjectSys.render();
-        Trainer.init();
-        this.renderHistory();
-        this.updateUI();   
-        AchievementSys.check();
+        
+        // 2. Через полсекунды грузим тяжелые списки (Тренажер, Предметы)
+        setTimeout(() => {
+            this.renderSubjects();
+            SubjectSys.render();
+            Trainer.init();
+        }, 100);
+
+        // 3. Еще через полсекунды грузим историю и достижения
+        setTimeout(() => {
+            this.renderHistory();
+            AchievementSys.check(); // Проверка достижений
+        }, 500);
     },
+
 
 toggleDarkMode(enabled) {
         DB.user.darkMode = enabled;
@@ -3308,7 +3323,13 @@ document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mod
         }
     },
 
-    renderStats() {
+renderStats() {
+        // 🛑 ЗАЩИТА: Если вкладка Статистики скрыта — НЕ РИСУЕМ графики!
+        // Это спасет iPhone от перегрева и вылета
+        const statsSection = document.getElementById('stats');
+        if (!statsSection.classList.contains('active')) {
+            return; 
+        }
         // 1. ВЫЧИСЛЕНИЕ (ПО ТАШКЕНТУ)
         const today = new Date();
         let weekSec = 0;
