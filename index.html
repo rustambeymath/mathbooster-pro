@@ -1604,31 +1604,28 @@ const GenAch = () => {
 const DefaultDB = { 
     user: { 
         darkMode: false,
-        xp: 0, 
-        level: 1, 
-        nextXp: 500, 
-        totalSec: 0, 
-        subject: 'algebra', 
-        theme: 'standard', 
-        avatar: '😎', 
-        gender: 'male', 
-        coins: 0, 
-        streak: 0, 
+        xp: 0, level: 1, nextXp: 500, 
+        totalSec: 0, subject: 'algebra', theme: 'standard', 
+        avatar: '😎', gender: 'male', 
+        coins: 0, streak: 0, 
         lastStudyDate: null, 
-        dailyStreak: 0, 
-        lastDailyClaim: null, 
-        ownedThemes: ['standard'], 
-        ownedAvatars: [], 
-        // 👇 Сразу создаем правильную структуру для Тренажера 2.0
+        dailyStreak: 0, lastDailyClaim: null, 
+        ownedThemes: ['standard'], ownedAvatars: [], 
+        
+        // 👇 ВОТ ЗДЕСЬ БЫЛА ОШИБКА. ТЕПЕРЬ ТУТ ПРАВИЛЬНАЯ СТРУКТУРА:
         trainerRecords: {
             standard: { easy: 0, medium: 0, hard: 0 },
             sign:     { easy: 0, medium: 0, hard: 0 },
             square:   { easy: 0, medium: 0, hard: 0 }
         },
+        // -----------------------------------------------------------
+        
         usedCodes: [],
-        lifetimeXP: 0 // Для достижений
+        lifetimeXP: 0
     }, 
     settings: { sfx: true }, 
+    
+    // Предметы
     subjects: { 
         algebra: {name:'Алгебра', icon:'✖️', sec:0}, 
         geometry: {name:'Геометрия', icon:'📐', sec:0},
@@ -1639,9 +1636,7 @@ const DefaultDB = {
         trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
         stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
     }, 
-    history: {}, 
-    sessions: [], 
-    achievements: [] 
+    history:{}, sessions:[], achievements:[] 
 };
 
 
@@ -1714,8 +1709,8 @@ const LEAGUES = [
     { min: 60000, name: "👑 Легендарная Лига", color: "league-legend" }
 ];
 
-// 🇺🇿 ГЛАВНАЯ ФУНКЦИЯ ВРЕМЕНИ
-// Возвращает дату в формате "ГГГГ-ММ-ДД" по Ташкенту
+
+// 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
 const getUZDate = (dateObj = new Date()) => {
     return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
 };
@@ -1775,49 +1770,47 @@ const Data = {
         const raw = localStorage.getItem(this.currentKey); 
         
         if (raw) { 
-            const loaded = JSON.parse(raw);
-            if(loaded.user) { 
+            let loaded;
+            try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
+
+            if(loaded && loaded.user) { 
                 DB = loaded; 
                 
-                // === 🔥 ЛЕЧЕНИЕ ДАННЫХ (FIX CRASH) 🔥 ===
-                // Если рекордов нет ИЛИ они в старом формате (где нет 'standard')
+                // === 🔥 ЛЕЧЕНИЕ СТРУКТУРЫ (FIX) ===
+                // Если рекордов нет вообще ИЛИ они в старом формате
                 if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
                     
-                    // Пытаемся спасти старый рекорд
+                    // Спасаем старый рекорд, если он есть
                     let oldRec = 0;
                     if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
-                        oldRec = DB.user.trainerRecords.easy; // Берем из старой структуры
-                    } else if (DB.user.trainerRecord) {
-                        oldRec = DB.user.trainerRecord; // Берем из древней структуры
+                        oldRec = DB.user.trainerRecords.easy;
                     }
 
-                    // Перезаписываем на НОВУЮ структуру
+                    // Перезаписываем на новую структуру
                     DB.user.trainerRecords = {
                         standard: { easy: oldRec, medium: 0, hard: 0 },
                         sign:     { easy: 0, medium: 0, hard: 0 },
                         square:   { easy: 0, medium: 0, hard: 0 }
                     };
-                    console.log("♻️ Рекорды обновлены до версии 2.0");
                 }
-                // ==========================================
+                // ===================================
 
-                // Остальные проверки на пустоту
+                // Прочие проверки (защита от undefined)
                 if(DB.user.coins === undefined) DB.user.coins = 0;
-                if(DB.user.gender === undefined) DB.user.gender = 'male';
-                if(DB.user.dob === undefined) DB.user.dob = '';
-                if(DB.user.ownedAvatars === undefined) DB.user.ownedAvatars = [];
-                if(DB.user.avatar === null && Auth.currentUser) DB.user.avatar = Auth.currentUser.avatar;
-                if(DB.settings.sfx === undefined) DB.settings.sfx = true;
+                if(!DB.user.avatar) DB.user.avatar = '😎';
                 if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
                 if(DB.sessions === undefined) DB.sessions = []; 
                 if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
                 
-                // Cloud Sync
-                if(window.DB_Online) {
-                    this.syncWithCloud(userId);
-                }
-            } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); }
-        } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
+                if(window.DB_Online) this.syncWithCloud(userId);
+            } else { 
+                this.initNewData(userId); 
+                DB = JSON.parse(localStorage.getItem(this.currentKey)); 
+            }
+        } else { 
+            this.initNewData(userId); 
+            DB = JSON.parse(localStorage.getItem(this.currentKey)); 
+        } 
     },
 
     async syncWithCloud(userId) {
