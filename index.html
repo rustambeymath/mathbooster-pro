@@ -29,7 +29,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"><meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MathBooster">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap">
 <!-- Иконки -->
@@ -196,25 +195,21 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         }
         
         body { 
-    font-family: 'Inter', -apple-system, sans-serif !important; 
+    /* Возвращаем стандартные системные шрифты */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
     background: var(--bg); 
     color: var(--text); 
-    transition: 0.3s; 
+    /* transition: 0.3s; <-- ЭТО ЛУЧШЕ ОСТАВИТЬ ЗАКОММЕНТИРОВАННЫМ, ЧТОБЫ НЕ ЛАГАЛО */
     min-height: 100vh;
-    
-    /* 👇 ФИКС ДЛЯ IPHONE (Шрифты станут четкими) */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    overflow-x: hidden; 
+    user-select: none;
+    -webkit-user-select: none;
     
     padding-top: calc(var(--safe-top) + 10px);
     padding-bottom: calc(90px + var(--safe-bottom)); 
 }
 
-/* Фикс для кнопок и полей ввода, чтобы они наследовали шрифт */
-button, input, textarea, select {
-    font-family: 'Inter', -apple-system, sans-serif !important;
-}
+
 
         .container { 
             max-width: 1000px; 
@@ -3063,7 +3058,7 @@ const App = {
         if (document.body.className !== newClass) {
             document.body.className = newClass;
         }
-        
+
         const toggle = document.getElementById('dark-toggle');
         if (toggle) toggle.checked = DB.user.darkMode;
 
