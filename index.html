@@ -5,28 +5,12 @@
     <!-- Адаптация под мобильные устройства и iPhone (челка) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
-
-    <link rel="manifest" href="data:application/manifest+json,{
-  &quot;name&quot;: &quot;MathBooster PRO&quot;,
-  &quot;short_name&quot;: &quot;MathBooster&quot;,
-  &quot;start_url&quot;: &quot;/&quot;,
-  &quot;display&quot;: &quot;standalone&quot;,
-  &quot;background_color&quot;: &quot;#F4F7FE&quot;,
-  &quot;theme_color&quot;: &quot;#6C63FF&quot;,
-  &quot;orientation&quot;: &quot;portrait&quot;,
-  &quot;icons&quot;: [
-    {&quot;src&quot;: &quot;icon-192.png&quot;, &quot;sizes&quot;: &quot;192x192&quot;, &quot;type&quot;: &quot;image/png&quot;},
-    {&quot;src&quot;: &quot;icon-512.png&quot;, &quot;sizes&quot;: &quot;512x512&quot;, &quot;type&quot;: &quot;image/png&quot;}
-  ]
-}">
+    
     <!-- PWA настройки -->
 <link id="manifest-link" rel="manifest" href="">
 <meta name="theme-color" content="#6C63FF">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="format-detection" content="telephone=no">
-<!-- Отключаем автоматическое масштабирование и убираем адресную строку -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"><meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
+<meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MathBooster">
 
@@ -195,21 +179,18 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         }
         
         body { 
-    /* Возвращаем стандартные системные шрифты */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-    background: var(--bg); 
-    color: var(--text); 
-    /* transition: 0.3s; <-- ЭТО ЛУЧШЕ ОСТАВИТЬ ЗАКОММЕНТИРОВАННЫМ, ЧТОБЫ НЕ ЛАГАЛО */
-    min-height: 100vh;
-    overflow-x: hidden; 
-    user-select: none;
-    -webkit-user-select: none;
-    
-    padding-top: calc(var(--safe-top) + 10px);
-    padding-bottom: calc(90px + var(--safe-bottom)); 
-}
-
-
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            transition: 0.3s; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            user-select: none;
+            -webkit-user-select: none;
+            /* Отступы для навигации и челки */
+            padding-top: calc(var(--safe-top) + 10px);
+            padding-bottom: calc(90px + var(--safe-bottom)); 
+        }
 
         .container { 
             max-width: 1000px; 
@@ -522,14 +503,6 @@ body.zen-active #timer {
     max-width: calc(100vw - 40px);
 }
 
-/* Активная кнопка режима */
-.mode-btn.active {
-    border-color: var(--primary) !important;
-    background: rgba(108, 99, 255, 0.05) !important; /* Легкий фон */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    transform: scale(1.02);
-}
-
 /* Уменьшаем шрифты на маленьких экранах */
 @media (max-width: 380px) {
     .timer-display { font-size: 60px; }
@@ -615,22 +588,6 @@ body.zen-active #timer {
     opacity: 0.3;
 }
 
-/* Фикс для тренажера в разных темах */
-.trainer-problem {
-    color: var(--primary); /* Всегда берет главный цвет темы (Красный в магме, Золотой в золоте) */
-    text-shadow: 2px 2px 0px var(--bg); /* Тень цвета фона делает текст читаемым везде */
-}
-
-/* Кнопки в тренажере */
-#sign-area .btn {
-    transition: transform 0.1s, background 0.2s;
-}
-#sign-area .btn:active {
-    transform: scale(0.9);
-    background: var(--primary) !important;
-    color: white !important;
-}
-
 /* Анимация движения, чтобы не выгорал экран */
 @keyframes drift {
     0% { transform: translate(0, 0); }
@@ -710,22 +667,6 @@ body.zen-active #timer {
 </style>
 
 <script>
-// Жёсткая очистка кэша и перезапуск PWA (только для iOS)
-if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    // Очищаем кэш Service Worker
-    if ('caches' in window) {
-        caches.keys().then(keys => {
-            keys.forEach(key => caches.delete(key));
-        });
-    }
-    // Принудительный рефреш manifest
-    if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistrations().then(regs => {
-            regs.forEach(reg => reg.unregister());
-        });
-    }
-}
-
 // Плавное исчезновение splash через 1.8 секунды после загрузки
 window.addEventListener('load', () => {
     setTimeout(() => {
@@ -843,12 +784,9 @@ window.addEventListener('load', () => {
                 <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
                 
                 <div id="timer" class="timer-display">00:00:00</div>
-                <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
-    1 монета 💰 за каждые 10 минут
-</div>
-<div style="font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 15px; opacity: 0.8;">
-    "Время — это материал, из которого сделана жизнь."
-</div>
+                <div style="font-size: 13px; color: var(--text-light); margin-bottom: 15px;">
+                    1 монета 💰 за каждые 10 минут
+                </div>
                 
                 <!-- SESSION GOAL -->
                 <input type="text" id="session-goal" class="input-field" placeholder="🎯 Цель на сессию (опционально)..." style="text-align: center; font-size: 14px; padding: 10px;">
@@ -901,17 +839,11 @@ window.addEventListener('load', () => {
 
         <!-- Миссия -->
         <div class="card" style="margin-top: 20px;">
-            <h3>⏳ Философия Времени</h3>
+            <h3>🎯 Наша миссия</h3>
             <p style="color: var(--text-light); line-height: 1.6; margin-top: 10px;">
-                В жизни нет полоски опыта, как в играх. Ты учишься, но не видишь прогресса сразу. Это демотивирует.
+                Учеба не должна быть скучной. Мы верим, что <b>геймификация</b> — это ключ к продуктивности. 
                 <br><br>
-                <b>Основная цель MathBooster</b> — сделать твои усилия видимыми.
-                <br><br>
-                Мы считаем каждую минуту, которую ты инвестировал в себя. 
-                <br>
-                <b>Чем больше часов ты потратил — тем больше твой "Опыт" и выше результат.</b>
-                <br>
-                Просто включи таймер и копи свои часы. Это твой главный капитал.
+                MathBooster превращает часы за учебниками в увлекательную RPG-игру, где ты качаешь свой мозг так же, как персонажа в играх.
             </p>
         </div>
 
@@ -968,88 +900,60 @@ window.addEventListener('load', () => {
         </button>
     </section>
 
-    <!-- 2. TRAINER (Меню с выбором + Завершить) -->
+    <!-- 2. TRAINER -->
     <section id="trainer" class="section">
-        
-        <!-- МЕНЮ -->
-        <div class="card" id="trainer-menu" style="text-align: center; padding: 30px 20px;">
-            <div style="font-size: 60px; margin-bottom: 10px;">🧠</div>
-            <h2 style="margin-bottom: 5px;">Тренажер</h2>
-            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">Настрой тренировку:</p>
+        <div class="card" id="trainer-menu" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 60px; margin-bottom: 20px;">🧠</div>
+            <h2>Математический Спринт</h2>
+            <p style="color: var(--text-light); margin: 10px 0 20px;">Реши как можно больше примеров за 60 секунд.</p>
             
-            <!-- 1. Выбор режима (теперь с подсветкой) -->
-            <div style="display: grid; gap: 10px; margin-bottom: 20px;">
-                <button class="btn mode-btn active" onclick="Trainer.selectMode('standard', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
-                    <span style="font-size: 20px;">🔢</span> <b>Классика</b>
-                </button>
-                
-                <button class="btn mode-btn" onclick="Trainer.selectMode('sign', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
-                    <span style="font-size: 20px;">🧩</span> <b>Найди знак</b>
-                </button>
-                
-                <button class="btn mode-btn" onclick="Trainer.selectMode('square', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 12px 20px; transition:0.2s;">
-                    <span style="font-size: 20px;">🟥</span> <b>Квадраты</b>
-                </button>
-            </div>
-
-            <!-- 2. Сложность -->
-            <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-light);">СЛОЖНОСТЬ</div>
             <div class="diff-switch">
                 <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
                 <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
             </div>
 
-            <!-- 3. Рекорд (Динамический) -->
-            <div style="margin-top: 20px; display: flex; justify-content: center;">
-                <div style="background: var(--bg); padding: 10px 40px; border-radius: 20px; border: 2px solid var(--primary); box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
-                    <div style="font-size: 10px; text-transform: uppercase; color: var(--text-light); font-weight: bold; margin-bottom: 5px;">
-                        Ваш Рекорд (<span id="record-mode-label">Классика</span>)
-                    </div>
-                    <div style="font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1;" id="trainer-high-score">0</div>
-                </div>
+            <div class="stat-pill" style="display: inline-block; margin-bottom: 30px;">
+                <span class="stat-label">Ваш Рекорд</span><br>
+                <span class="stat-val" style="font-size: 24px;" id="trainer-high-score">0</span>
             </div>
-
-            <!-- 4. Кнопка СТАРТ -->
-            <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 25px; padding: 18px; font-size: 20px; width: 100%; box-shadow: 0 10px 20px rgba(108, 99, 255, 0.3);">
-                🚀 ПОГНАЛИ!
-            </button>
+            <br>
+            <button class="btn btn-primary" style="font-size: 20px; padding: 15px 40px;" onclick="Trainer.start()">Начать Игру 🚀</button>
         </div>
 
-        <!-- ИГРОВОЙ ЭКРАН -->
         <div class="card" id="trainer-game" style="display: none; text-align: center;">
             <div class="trainer-stats">
-                <div>⏳ <span id="game-time">60</span>s</div>
-                <div>✅ <span id="game-score">0</span></div>
-            </div>
+    <div>⏳ <span id="game-time">60</span>s</div>
+    <div>✅ <span id="game-score">0</span></div>
+</div>
 
-            <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>
+<div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>
 
-            <!-- ВВОД ОТВЕТА -->
-            <div id="input-area">
-                <div style="display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 20px auto;">
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="flex: 1; margin-bottom: 0;">
-                        <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px; color: var(--text); border-color: var(--text-light);" title="Минус">+/-</button>
-                    </div>
-                    <button class="btn btn-primary" onclick="Trainer.check()" style="font-size: 18px; padding: 14px;">Ответить ➜</button>
-                </div>
-                <div style="font-size: 12px; color: var(--text-light); margin-top: 10px;">Нажми Enter на клавиатуре</div>
-            </div>
+<!-- Блок ввода + кнопка для мобилок -->
+<div style="display: flex; flex-direction: column; gap: 12px; max-width: 320px; margin: 20px auto;">
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="flex: 1; margin-bottom: 0;">
+        
+        <!-- Кнопка +/- (оставляем как было) -->
+        <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px;" title="Минус">+</button>
+    </div>
+    
+    <!-- Большая кнопка "Ответить" — видна всегда -->
+    <button class="btn btn-primary" onclick="Trainer.check()" style="font-size: 18px; padding: 14px;">
+        Ответить → 
+    </button>
+</div>
 
-            <!-- КНОПКИ ЗНАКОВ -->
-            <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 300px; margin: 20px auto;">
-                <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">+</button>
-                <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">−</button>
-                <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">×</button>
-                <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 32px; background: var(--bg); color: var(--text); border: 2px solid var(--primary); font-weight: bold; aspect-ratio: 1/1;">÷</button>
-            </div>
+<div style="font-size: 12px; color: var(--text-light); text-align: center; margin-top: 10px;">
+    Или нажми Enter на клавиатуре (если есть)
+</div>
 
-            <!-- 👇 ЗАМЕНИЛИ "СДАТЬСЯ" НА "ЗАВЕРШИТЬ" 👇 -->
-            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">🏁 Завершить</button>
+<button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
+
+<div style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Нажми Enter чтобы ответить</div>
+            <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">Закончить</button>
         </div>
 
-        <!-- РЕЗУЛЬТАТ -->
         <div class="card" id="trainer-result" style="display: none; text-align: center;">
             <h2>Время вышло! 🏁</h2>
             <div style="margin: 30px 0;">
@@ -1057,10 +961,14 @@ window.addEventListener('load', () => {
                 <div style="font-size: 48px; font-weight: bold; color: var(--primary);" id="result-score">0</div>
             </div>
             <div class="grid" style="margin-bottom: 20px;">
-                <div class="stat-pill"><div class="stat-val" id="result-xp">+0 XP</div></div>
-                <div class="stat-pill"><div class="stat-val" id="result-coins">+0 💰</div></div>
+                <div class="stat-pill">
+                    <div class="stat-val" id="result-xp">+0 XP</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-val" id="result-coins">+0 💰</div>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="Trainer.init()">В меню</button>
+            <button class="btn btn-primary" onclick="Trainer.init()">Сыграть еще раз</button>
         </div>
     </section>
 
@@ -1639,28 +1547,15 @@ const GenAch = () => {
 const DefaultDB = { 
     user: { 
         darkMode: false,
-        xp: 0, level: 1, nextXp: 500, 
-        totalSec: 0, subject: 'algebra', theme: 'standard', 
-        avatar: '😎', gender: 'male', 
-        coins: 0, streak: 0, 
-        lastStudyDate: null, 
-        dailyStreak: 0, lastDailyClaim: null, 
-        ownedThemes: ['standard'], ownedAvatars: [], 
-        
-        // 👇 ВОТ ЗДЕСЬ БЫЛА ОШИБКА. ТЕПЕРЬ ТУТ ПРАВИЛЬНАЯ СТРУКТУРА:
-        trainerRecords: {
-            standard: { easy: 0, medium: 0, hard: 0 },
-            sign:     { easy: 0, medium: 0, hard: 0 },
-            square:   { easy: 0, medium: 0, hard: 0 }
-        },
-        // -----------------------------------------------------------
-        
-        usedCodes: [],
-        lifetimeXP: 0
+        xp:0, level:1, nextXp:500, totalSec:0, subject:'algebra', theme:'standard', 
+        avatar:'😎', gender:'male', coins:0, streak:0, lastStudyDate:null, 
+        dailyStreak:0, lastDailyClaim:null, ownedThemes:['standard'], ownedAvatars:[], 
+        trainerRecord:0, usedCodes:[] 
     }, 
-    settings: { sfx: true }, 
+    settings: { sfx:true }, 
+
     
-    // Предметы
+    // 👇 ВОТ ЗДЕСЬ МЫ ДОБАВИЛИ ВСЕ НОВЫЕ ПРЕДМЕТЫ 👇
     subjects: { 
         algebra: {name:'Алгебра', icon:'✖️', sec:0}, 
         geometry: {name:'Геометрия', icon:'📐', sec:0},
@@ -1669,7 +1564,7 @@ const DefaultDB = {
         combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
         statistics: {name:'Статистика', icon:'📊', sec:0},
         trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
-        stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
+        stereometry: {name:'Стереометрияя', icon:'🧊', sec:0}
     }, 
     history:{}, sessions:[], achievements:[] 
 };
@@ -1744,19 +1639,11 @@ const LEAGUES = [
     { min: 60000, name: "👑 Легендарная Лига", color: "league-legend" }
 ];
 
-
-// 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
+// 🇺🇿 ГЛАВНАЯ ФУНКЦИЯ ВРЕМЕНИ
+// Возвращает дату в формате "ГГГГ-ММ-ДД" по Ташкенту
 const getUZDate = (dateObj = new Date()) => {
-    // 1. Получаем время UTC
-    const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
-    // 2. Добавляем 5 часов (Ташкент)
-    const uzTime = new Date(utc + (3600000 * 5));
-    // 3. Возвращаем YYYY-MM-DD
-    return uzTime.toISOString().slice(0, 10);
+    return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
 };
-
-
-
 
 const NameGuard = {
     // Список запрещенных корней (RU, UZ, EN)
@@ -1792,75 +1679,41 @@ const NameGuard = {
 let DB = null; 
 const Data = {
     currentKey: null,
-    
-    initNewData(userId) { 
-        const newDB = JSON.parse(JSON.stringify(DefaultDB)); 
-        newDB.achievements = GenAch(); 
-        
-        // Сразу создаем правильную структуру рекордов
-        newDB.user.trainerRecords = {
-            standard: { easy: 0, medium: 0, hard: 0 },
-            sign:     { easy: 0, medium: 0, hard: 0 },
-            square:   { easy: 0, medium: 0, hard: 0 }
-        };
-        
-        localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
-    },
-
+    initNewData(userId) { const newDB = JSON.parse(JSON.stringify(DefaultDB)); newDB.achievements = GenAch(); localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); },
     load(userId) { 
-        this.currentKey = 'MathData_' + userId; 
-        const raw = localStorage.getItem(this.currentKey); 
-        
+        this.currentKey = 'MathData_' + userId; const raw = localStorage.getItem(this.currentKey); 
         if (raw) { 
-            let loaded;
-            try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
-
-            if(loaded && loaded.user) { 
+            const loaded = JSON.parse(raw);
+            if(loaded.user) { 
                 DB = loaded; 
-                
-                // === 🔥 ЛЕЧЕНИЕ СТРУКТУРЫ (FIX) ===
-                // Если рекордов нет вообще ИЛИ они в старом формате
-                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
-                    
-                    // Спасаем старый рекорд, если он есть
-                    let oldRec = 0;
-                    if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
-                        oldRec = DB.user.trainerRecords.easy;
-                    }
-
-                    // Перезаписываем на новую структуру
-                    DB.user.trainerRecords = {
-                        standard: { easy: oldRec, medium: 0, hard: 0 },
-                        sign:     { easy: 0, medium: 0, hard: 0 },
-                        square:   { easy: 0, medium: 0, hard: 0 }
-                    };
+                if (!DB.user.trainerRecords) {const oldRec = DB.user.trainerRecord || 0;
+                    DB.user.trainerRecords = { easy: oldRec, medium: 0, hard: 0 };
                 }
-                // ===================================
-
-                // Прочие проверки (защита от undefined)
                 if(DB.user.coins === undefined) DB.user.coins = 0;
-                if(!DB.user.avatar) DB.user.avatar = '😎';
+                if(DB.user.gender === undefined) DB.user.gender = 'male';
+                if(DB.user.dob === undefined) DB.user.dob = '';
+                if(DB.user.ownedAvatars === undefined) DB.user.ownedAvatars = [];
+                if(DB.user.avatar === null && Auth.currentUser) DB.user.avatar = Auth.currentUser.avatar;
+                if(DB.settings.sfx === undefined) DB.settings.sfx = true;
                 if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
                 if(DB.sessions === undefined) DB.sessions = []; 
                 if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
                 
-                if(window.DB_Online) this.syncWithCloud(userId);
-            } else { 
-                this.initNewData(userId); 
-                DB = JSON.parse(localStorage.getItem(this.currentKey)); 
-            }
-        } else { 
-            this.initNewData(userId); 
-            DB = JSON.parse(localStorage.getItem(this.currentKey)); 
-        } 
+                // Cloud Sync
+                if(window.DB_Online) {
+                    this.syncWithCloud(userId);
+                }
+            } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); }
+            
+        } else { this.initNewData(userId); DB = JSON.parse(localStorage.getItem(this.currentKey)); } 
     },
-
     async syncWithCloud(userId) {
         try {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
             const docSnap = await window.DB_Online.getDoc(docRef);
             if(docSnap.exists()) {
                 const cloudData = docSnap.data();
+                // Basic conflict resolution: take cloud if more playtime
                 if(cloudData.user.totalSec > DB.user.totalSec) {
                     DB = cloudData;
                     this.save();
@@ -1868,18 +1721,20 @@ const Data = {
             }
         } catch(e) {}
     },
-
-    save() {
+        save() {
         if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
         
+        // Облачная синхронизация — теперь с именем!
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            
+            // Явно берём актуальное имя из Auth
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
 
             window.DB_Online.setDoc(docRef, {
                 user: {
                     ...DB.user,
-                    name: currentName,
+                    name: currentName,  // ←←← всегда актуальное имя
                     avatar: DB.user.avatar || "😎",
                     level: DB.user.level || 1,
                     xp: DB.user.xp || 0
@@ -2156,35 +2011,33 @@ const Online = {
 const Auth = {
     users: [], currentUser: null,
     avatars: ['😎', '👩‍🎓', '👨‍🎓', '👱‍♀️', '👨', '🧕', '🧔', '🐱', '🦊', '⚽'],
-    init() {
-    let stored = localStorage.getItem('MathUsers');
-    this.users = [];
-    
-    if (stored) {
-        try {
-            const raw = JSON.parse(stored);
-            this.users = Array.isArray(raw) 
-                ? raw.filter(u => u && typeof u === 'object' && u.id && typeof u.id === 'string' && u.name)
-                : [];
-            
-            // Если после фильтра пусто — чистим localStorage
-            if (this.users.length === 0 && raw.length > 0) {
-                localStorage.removeItem('MathUsers');
-                console.log('Очищен битый MathUsers');
+    init() { 
+        const stored = localStorage.getItem('MathUsers'); 
+        if (stored) {
+            try {
+                let rawUsers = JSON.parse(stored);
+                // 🔥 ИСПРАВЛЕНИЕ ОШИБКИ:
+                // Фильтруем список: оставляем только тех, у кого есть ID и Имя
+                this.users = rawUsers.filter(u => u && u.id && u.name);
+                
+                // Если нашлись "битые" пользователи, перезаписываем чистый список
+                if (this.users.length !== rawUsers.length) {
+                    console.log("Удалены поврежденные профили");
+                    localStorage.setItem('MathUsers', JSON.stringify(this.users));
+                }
+            } catch (e) {
+                console.error("Ошибка чтения пользователей", e);
+                this.users = [];
             }
-        } catch (e) {
-            console.error('Битый MathUsers — удаляем', e);
-            localStorage.removeItem('MathUsers');
-        }
-    }
-
-    this.renderUserList();
-    this.renderAvatars();
-    SoundSys.init();
-    Whiteboard.init();
-    PWA.init();
-    MusicPlayer.init();
-},
+        } 
+        
+        this.renderUserList(); 
+        this.renderAvatars(); 
+        SoundSys.init(); 
+        Whiteboard.init(); 
+        PWA.init(); 
+        MusicPlayer.init(); 
+    },
 
     renderUserList() {
     const list = document.getElementById('user-list');
@@ -2236,6 +2089,7 @@ const Auth = {
         list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Все профили повреждены. Создайте новый!</div>';
     }
 },
+
     deleteUser(id, event) {
         event.stopPropagation();
         if(!confirm("Точно удалить этот профиль? Он пропадет с телефона и из Топа!")) return;
@@ -2327,12 +2181,8 @@ const Auth = {
             DB.user.avatar = this.selectedAvatar;
             Data.save();
         }
-this.login(user.id);
-        
-        // 🔥 ЗАПУСКАЕМ ОБУЧЕНИЕ ДЛЯ НОВИЧКА
-        setTimeout(() => {
-            Tutorial.start();
-        }, 800); // Небольшая задержка, чтобы интерфейс успел прогрузиться
+
+        this.login(user.id);
     },
     login(id) { 
         const user = this.users.find(u => u.id === id); 
@@ -2372,29 +2222,6 @@ this.login(user.id);
             alert("Данные сброшены.");
             location.reload();
         }
-    }
-};
-
-const Tutorial = {
-    start() {
-        document.getElementById('tutorial-modal').classList.add('show');
-    },
-
-    next(slideNum) {
-        // Скрываем все слайды
-        document.querySelectorAll('.tutorial-slide').forEach(el => el.style.display = 'none');
-        // Показываем нужный с анимацией
-        const slide = document.getElementById('tut-' + slideNum);
-        if(slide) {
-            slide.style.display = 'block';
-            slide.style.animation = 'fadeIn 0.5s';
-        }
-    },
-
-    close() {
-        document.getElementById('tutorial-modal').classList.remove('show');
-        FX.confetti(); // Праздничный салют для старта
-        SoundSys.play('success');
     }
 };
 
@@ -2610,51 +2437,45 @@ const Timer = {
 const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
 
 const Trainer = {
-    score: 0, time: 60, interval: null, 
-    ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard', // По умолчанию стандарт
-
-    // 1. Выбор режима (Кнопки 1, 2, 3)
-    selectMode(mode, btn) {
-        this.mode = mode;
-        
-        // Визуально переключаем кнопки
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        if(btn) btn.classList.add('active');
-        
-        // Обновляем текст рекорда
-        this.updateMenuRecordDisplay();
-    },
-
-    // 2. Выбор сложности (Легко, Средне, Сложно)
+    score: 0, time: 60, interval: null, ans: 0, difficulty: 'easy',
+    
+    // Переключение сложности и обновление рекорда на экране
     setDiff(diff, btn) {
         this.difficulty = diff;
+        
+        // Переключаем визуально кнопки
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
         if(btn) btn.classList.add('active');
         
-        // Обновляем текст рекорда
-        this.updateMenuRecordDisplay();
+        // Показываем рекорд для ЭТОЙ сложности
+        this.updateRecordDisplay();
     },
 
-    // 3. Обновление цифры рекорда в меню
-    updateMenuRecordDisplay() {
-        const labelNames = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Квадраты' };
-        
-        // 🛑 БЕЗОПАСНАЯ ПРОВЕРКА (Чтобы не было краша)
-        if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
-            const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
-            const scoreEl = document.getElementById('trainer-high-score');
-            if(scoreEl) scoreEl.innerText = rec;
-            const labelEl = document.getElementById('record-mode-label');
-            if(labelEl) labelEl.innerText = labelNames[this.mode];
-        }
+    updateRecordDisplay() {
+        const rec = DB.user.trainerRecords ? DB.user.trainerRecords[this.difficulty] : 0;
+        document.getElementById('trainer-high-score').innerText = rec;
     },
 
+// Добавьте это внутрь объекта Trainer:
+    
     toggleMinus() {
         const input = document.getElementById('game-input');
         let val = input.value;
-        if (val === '') input.value = '-';
-        else if (val.startsWith('-')) input.value = val.substring(1);
-        else input.value = '-' + val;
+
+        // Если пусто, просто ставим минус
+        if (val === '') {
+            input.value = '-';
+        } 
+        // Если минус уже есть — убираем его
+        else if (val.startsWith('-')) {
+            input.value = val.substring(1);
+        } 
+        // Если минуса нет — добавляем
+        else {
+            input.value = '-' + val;
+        }
+
+        // Возвращаем фокус на поле, чтобы клавиатура не закрылась
         input.focus();
     },
 
@@ -2663,39 +2484,33 @@ const Trainer = {
         document.getElementById('trainer-game').style.display = 'none'; 
         document.getElementById('trainer-result').style.display = 'none'; 
         
-        // При входе обновляем рекорд для текущего выбранного режима
-        this.updateMenuRecordDisplay();
+        // По умолчанию ставим Easy и показываем его рекорд
+        this.difficulty = 'easy';
+        const btns = document.querySelectorAll('.diff-btn');
+        btns.forEach(b => b.classList.remove('active'));
+        if(btns[0]) btns[0].classList.add('active'); // Активируем кнопку Easy
+        
+        this.updateRecordDisplay();
     },
 
-    // 4. СТАРТ ИГРЫ (Теперь без параметров, берет текущий this.mode)
     start() {
         this.score = 0; 
         this.time = 60; 
-        
         document.getElementById('trainer-menu').style.display = 'none'; 
         document.getElementById('trainer-game').style.display = 'block';
         document.getElementById('game-score').innerText = 0; 
         document.getElementById('game-time').innerText = 60;
-
-        // Настройка интерфейса под режим
-        const inputArea = document.getElementById('input-area');
-        const signArea = document.getElementById('sign-area');
-
-        if (this.mode === 'sign') {
-            inputArea.style.display = 'none';
-            signArea.style.display = 'grid';
-        } else {
-            inputArea.style.display = 'block';
-            signArea.style.display = 'none';
-            const input = document.getElementById('game-input'); 
-            input.value = ''; 
-            input.focus();
-            input.onclick = () => input.focus();
-            input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
-        }
         
         SoundSys.play('click'); 
         this.nextProblem(); 
+        
+        const input = document.getElementById('game-input'); 
+        input.value = ''; 
+        input.focus();
+        // Фикс для мобилок: фокус иногда сбивается, возвращаем
+        input.onclick = () => input.focus();
+
+        input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
         
         if(this.interval) clearInterval(this.interval);
         this.interval = setInterval(() => { 
@@ -2706,182 +2521,61 @@ const Trainer = {
     },
 
     nextProblem() {
-        // --- 1. РЕЖИМ: НАЙДИ ЗНАК 🧩 ---
-        if (this.mode === 'sign') {
-            const ops = ['+', '-', '*', '/'];
-            const availableOps = this.difficulty === 'easy' ? ['+', '-', '*'] : ops;
-            
-            this.correctSign = availableOps[Math.floor(Math.random() * availableOps.length)];
-            let a, b, res;
-            
-            // Настройки чисел для знаков
-            let range = this.difficulty === 'easy' ? 10 : 20;
-
-            if (this.correctSign === '/') {
-                b = Math.floor(Math.random() * 10) + 2; 
-                res = Math.floor(Math.random() * 10) + 2;
-                a = b * res; 
-            } else if (this.correctSign === '*') {
-                a = Math.floor(Math.random() * 10) + 2;
-                b = Math.floor(Math.random() * 10) + 2;
-                res = a * b;
-            } else {
-                a = Math.floor(Math.random() * range) + 2;
-                b = Math.floor(Math.random() * range) + 2;
-                if (this.correctSign === '+') res = a + b;
-                else res = a - b;
-            }
-            document.getElementById('game-problem').innerText = `${a} ? ${b} = ${res}`;
+        const ops = this.difficulty === 'hard' ? ['+','-','*','/'] : (this.difficulty === 'medium' ? ['+','-','*'] : ['+','-']);
+        const op = ops[Math.floor(Math.random() * ops.length)];
+        
+        let range = 10;
+        if(this.difficulty === 'medium') range = 50;
+        if(this.difficulty === 'hard') range = 100;
+        
+        let a, b;
+        
+        if (op === '*') {
+            let multRange = this.difficulty === 'hard' ? 20 : 10;
+            a = Math.floor(Math.random() * multRange) + 2; 
+            b = Math.floor(Math.random() * multRange) + 2;
+        } else if (op === '/') {
+             b = Math.floor(Math.random() * 10) + 2;
+             a = b * (Math.floor(Math.random() * 10) + 2);
+        } else {
+            a = Math.floor(Math.random() * range) + 1;
+            b = Math.floor(Math.random() * range) + 1;
         }
 
-        // --- 2. РЕЖИМ: КВАДРАТЫ 🟥 ---
-        else if (this.mode === 'square') {
-            const isRoot = Math.random() > 0.5; 
-            let maxBase = this.difficulty === 'easy' ? 10 : (this.difficulty === 'medium' ? 20 : 32);
-            let base = Math.floor(Math.random() * (maxBase - 2)) + 2; 
-            let square = base * base;
+        if(op === '+') this.ans = a + b; 
+        if(op === '-') this.ans = a - b; 
+        if(op === '*') this.ans = a * b;
+        if(op === '/') this.ans = a / b;
 
-            if (isRoot) {
-                document.getElementById('game-problem').innerText = `√${square}`;
-                this.ans = base;
-            } else {
-                document.getElementById('game-problem').innerHTML = `${base}²`;
-                this.ans = square;
-            }
-            document.getElementById('game-input').value = '';
-        }
-
-        // --- 3. РЕЖИМ: КЛАССИКА 🔢 ---
-        else {
-            // ЛЕГКО и СРЕДНЕ (Только положительные числа)
-            if (this.difficulty !== 'hard') {
-                let range = this.difficulty === 'easy' ? 20 : 50;
-                let multRange = this.difficulty === 'easy' ? 5 : 10;
-                let ops = this.difficulty === 'easy' ? ['+', '-'] : ['+', '-', '*'];
-                
-                const op = ops[Math.floor(Math.random() * ops.length)];
-                let a, b;
-
-                if (op === '*') {
-                    a = Math.floor(Math.random() * multRange) + 2; 
-                    b = Math.floor(Math.random() * multRange) + 2;
-                } else {
-                    a = Math.floor(Math.random() * range) + 2;
-                    b = Math.floor(Math.random() * range) + 2;
-                }
-
-                if(op === '+') this.ans = a + b; 
-                if(op === '-') this.ans = a - b; 
-                if(op === '*') this.ans = a * b;
-
-                // Отображение
-                let displayOp = op === '*' ? '×' : (op === '-' ? '−' : '+');
-                document.getElementById('game-problem').innerText = `${a} ${displayOp} ${b}`; 
-            }
-            
-            // 🔥 СЛОЖНО (ОТРИЦАТЕЛЬНЫЕ ЧИСЛА) 🔥
-            else {
-                const ops = ['+', '-', '*', '/'];
-                const op = ops[Math.floor(Math.random() * ops.length)];
-                
-                // Генерируем модули чисел (не слишком большие, чтобы не взрывать мозг)
-                // Для сложения до 30, для умножения до 12
-                let limit = (op === '*' || op === '/') ? 12 : 30;
-                
-                let absA = Math.floor(Math.random() * limit) + 1;
-                let absB = Math.floor(Math.random() * limit) + 1;
-
-                // Случайно делаем числа отрицательными (50% шанс)
-                // Math.random() < 0.5 ? -1 : 1  создает либо минус, либо плюс
-                let signA = Math.random() < 0.5 ? -1 : 1; 
-                let signB = Math.random() < 0.5 ? -1 : 1;
-
-                // Если деление - подгоняем числа
-                if (op === '/') {
-                    let res = Math.floor(Math.random() * 10) + 1; // Ответ
-                    // Знак ответа тоже может быть минусом
-                    let signRes = Math.random() < 0.5 ? -1 : 1;
-                    
-                    // Пересчитываем B и A
-                    absB = Math.floor(Math.random() * 10) + 2;
-                    let bVal = absB * signB;
-                    let resVal = res * signRes;
-                    
-                    var a = bVal * resVal; // Делимое
-                    var b = bVal;          // Делитель
-                } else {
-                    var a = absA * signA;
-                    var b = absB * signB;
-                }
-
-                // Считаем ответ
-                if (op === '+') this.ans = a + b;
-                if (op === '-') this.ans = a - b;
-                if (op === '*') this.ans = a * b;
-                if (op === '/') this.ans = a / b;
-
-                // ФОРМАТИРОВАНИЕ ДЛЯ ЭКРАНА
-                // Если второе число отрицательное, берем его в скобки: 5 + (-3)
-                let displayB = b < 0 ? `(${b})` : b;
-                let displayA = a; // Первое число можно без скобок, даже если минус: -5 + 3
-
-                let displayOp = op;
-                if (op === '*') displayOp = '×';
-                if (op === '/') displayOp = '÷';
-                if (op === '-') displayOp = '−'; // Жирный минус для знака операции
-
-                document.getElementById('game-problem').innerText = `${displayA} ${displayOp} ${displayB}`;
-            }
-            
-            document.getElementById('game-input').value = '';
-        }
+        let problemStr = `${a} ${op === '*' ? '×' : (op === '/' ? '÷' : op)} ${b}`;
+        document.getElementById('game-problem').innerText = problemStr; 
+        document.getElementById('game-input').value = '';
     },
 
     check() {
+        const val = parseInt(document.getElementById('game-input').value); 
         const inputEl = document.getElementById('game-input');
-        const val = parseInt(inputEl.value); 
-        if(val === this.ans) this.success(inputEl);
-        else this.fail(inputEl);
-    },
-
-    checkSign(sign) {
-        if(sign === this.correctSign) {
-            const area = document.getElementById('sign-area');
-            this.success(area);
-        } else {
-            SoundSys.play('error');
+        
+        if(val === this.ans) {
+            this.score++; 
+            document.getElementById('game-score').innerText = this.score; 
+            SoundSys.play('success');
+            
+            inputEl.style.borderColor = 'var(--primary)'; 
+            setTimeout(() => inputEl.style.borderColor = 'var(--text-light)', 200);
+            
+            let pts = 10; 
+            if(this.difficulty==='medium') pts=20; 
+            if(this.difficulty==='hard') pts=30;
+            
+            const rect = inputEl.getBoundingClientRect(); 
+            FX.floatText(rect.left + 50, rect.top - 30, `+${pts} XP`, "#6C63FF");
+            this.nextProblem();
+        } else { 
+            SoundSys.play('error'); 
+            inputEl.style.borderColor = 'red'; 
+            inputEl.value = ''; 
         }
-    },
-
-    success(el) {
-        this.score++; 
-        document.getElementById('game-score').innerText = this.score; 
-        SoundSys.play('success');
-        
-        el.style.borderColor = 'var(--primary)'; 
-        if(this.mode === 'sign') el.style.background = 'rgba(0, 255, 0, 0.1)';
-        
-        setTimeout(() => { 
-            el.style.borderColor = 'var(--text-light)'; 
-            el.style.background = '';
-        }, 200);
-        
-        let pts = 10;
-        if(this.difficulty === 'medium') pts = 15;
-        if(this.difficulty === 'hard') pts = 25;
-
-        if (el && el.getBoundingClientRect) {
-            const rect = el.getBoundingClientRect(); 
-            FX.floatText(rect.left + rect.width/2, rect.top, `+${pts} XP`, "#6C63FF");
-        }
-        
-        this.nextProblem();
-    },
-
-    fail(el) {
-        SoundSys.play('error'); 
-        el.style.borderColor = 'red'; 
-        if(el.tagName === 'INPUT') el.value = ''; 
     },
 
     end() {
@@ -2889,12 +2583,12 @@ const Trainer = {
         document.getElementById('trainer-game').style.display = 'none'; 
         document.getElementById('trainer-result').style.display = 'block';
         
-        let mult = 10;
-        if(this.difficulty === 'medium') mult = 15;
-        if(this.difficulty === 'hard') mult = 25;
-
+        let mult = 10; 
+        if(this.difficulty==='medium') mult=20; 
+        if(this.difficulty==='hard') mult=30;
+        
         const earnedXP = this.score * mult; 
-        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 4)); 
+        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 5)); 
         
         App.addXP(earnedXP);
         if(earnedCoins > 0) { 
@@ -2903,19 +2597,17 @@ const Trainer = {
             App.toast(`🪙 +${earnedCoins} 💰`); 
         }
 
-        // --- СОХРАНЕНИЕ РЕКОРДА ---
-        if (!DB.user.trainerRecords[this.mode]) {
-            DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
-        }
-
-        const oldRec = DB.user.trainerRecords[this.mode][this.difficulty];
-
-        if(this.score > oldRec) {
-            DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
+        // --- СОХРАНЕНИЕ ОТДЕЛЬНОГО РЕКОРДА ---
+        // Берем текущий рекорд для этой сложности
+        const currentRecord = DB.user.trainerRecords[this.difficulty];
+        
+        if(this.score > currentRecord) {
+            DB.user.trainerRecords[this.difficulty] = this.score;
             SoundSys.play('win'); 
-            App.toast(`🏆 Новый рекорд!`); 
+            App.toast(`🏆 Новый рекорд (${this.difficulty}): ${this.score}!`); 
             FX.confetti(); 
         }
+        // -------------------------------------
 
         Data.save(); 
         App.updateUI();
@@ -2925,7 +2617,6 @@ const Trainer = {
         document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
     }
 };
-
 const AchievementSys = {
     check() {
         if (!DB || !DB.achievements) return;
@@ -2984,69 +2675,83 @@ const AchievementSys = {
 const App = {
     async init() { Auth.init(); },
     
-    setText(id, text) {
+    // БЕЗОПАСНАЯ ФУНКЦИЯ (Защита от твоей ошибки)
+       setText(id, text) {
         const el = document.getElementById(id);
-        if (el) el.innerText = text;
+        if (el) {
+            el.innerText = text;
+        } else {
+            console.warn(`Элемент с id="${id}" не найден — но это не критично`);
+        }
     },
-
-    // 🔥 ИСПРАВЛЕНИЕ ЗАВИСАНИЯ ПРИ ВХОДЕ 🔥
-    initAfterLogin() {
-        // 1. Сначала обновляем только шапку (Имя, Монеты) - это мгновенно
-        this.updateUI();
-        
-        // 2. Даем телефону 100мс передохнуть, потом грузим Тренажер и Предметы
-        setTimeout(() => {
-            this.renderSubjects();
-            SubjectSys.render();
-            if (window.Trainer) Trainer.init();
-        }, 100);
-
-        // 3. Еще через 300мс проверяем бонусы и историю
-        setTimeout(() => {
-            this.renderHistory();
-            DailySys.check(); 
-            AchievementSys.check();
-        }, 400);
-    },
-
     changeNickname() {
         const COST = 500;
-        if (DB.user.coins < COST) return App.toast(`❌ Нужно ${COST} монет`);
+        
+        if (DB.user.coins < COST) {
+            return App.toast(`❌ Нужно ${COST} монет (у вас ${DB.user.coins})`);
+        }
 
         const newName = prompt(`Смена ника стоит ${COST} монет.\nВведите новое имя:`, DB.user.name);
+        
         if (!newName) return;
         const cleanName = newName.trim();
 
-        if (cleanName.length === 0 || cleanName.length > 12) return App.toast("Имя от 1 до 12 символов");
-        if (!NameGuard.check(cleanName)) return alert("⛔️ Имя запрещено.");
+        if (cleanName.length === 0) return App.toast("Имя не может быть пустым");
+        if (cleanName.length > 12) return App.toast("Максимум 12 символов");
+        if (cleanName === DB.user.name) return;
 
-        if (confirm(`Сменить на "${cleanName}" за ${COST} монет?`)) {
+        if (!NameGuard.check(cleanName)) {
+            return alert("⛔️ Это имя запрещено политикой сообщества.");
+        }
+
+        if (confirm(`Сменить имя на "${cleanName}" за ${COST} монет?`)) {
+            // 1. Списываем монеты и меняем имя в текущей сессии
             DB.user.coins -= COST;
             DB.user.name = cleanName;
-            Data.save();
+            Data.save(); // Сохраняем прогресс
 
-            // Обновляем список на входе
+            // 2. 🔥 ВАЖНО: Обновляем имя в Списке Пользователей (экран входа)
             try {
                 let users = JSON.parse(localStorage.getItem('MathUsers') || '[]');
                 const index = users.findIndex(u => u.id === Auth.currentUser.id);
+                
                 if (index !== -1) {
-                    users[index].name = cleanName;
-                    localStorage.setItem('MathUsers', JSON.stringify(users));
+                    users[index].name = cleanName; // Меняем имя в списке
+                    localStorage.setItem('MathUsers', JSON.stringify(users)); // Сохраняем список
+                    
+                    // Обновляем текущие переменные Auth
                     Auth.users = users;
                     Auth.currentUser.name = cleanName;
                 }
-            } catch(e){}
+            } catch (e) {
+                console.error("Ошибка обновления списка пользователей", e);
+            }
 
+            // 3. Обновляем интерфейс
             this.updateUI();
+            
             SoundSys.play('coin');
-            App.toast("✅ Никнейм изменен!");
+            App.toast("✅ Никнейм успешно изменен!");
         }
     },
 
-    toggleDarkMode(enabled) {
+    initAfterLogin() {
+        this.updateUI();
+        this.renderSubjects();
+        SubjectSys.render();
+        Trainer.init();
+        this.renderHistory();
+        this.updateUI();   
+        AchievementSys.check();
+    },
+
+toggleDarkMode(enabled) {
         DB.user.darkMode = enabled;
-        if (enabled) document.body.classList.add('dark-mode');
-        else document.body.classList.remove('dark-mode');
+        if (enabled) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
         localStorage.setItem('darkMode', enabled);
         Data.save();
         this.updateUI();
@@ -3054,33 +2759,114 @@ const App = {
 
     updateUI() {
         if(!DB) return;
-        const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
-        if (document.body.className !== newClass) {
-            document.body.className = newClass;
-        }
-
+document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+        // Восстановление переключателя
         const toggle = document.getElementById('dark-toggle');
         if (toggle) toggle.checked = DB.user.darkMode;
+
+        // Полный список предметов, который мы хотим видеть
+        const newSubjects = {
+            algebra: {name:'Алгебра', icon:'✖️', sec:0},
+            geometry: {name:'Геометрия', icon:'📐', sec:0},
+            calculus: {name:'Мат. анализ', icon:'∫', sec:0},
+            arithmetic: {name:'Арифметика', icon:'🔢', sec:0},
+            combinatorics: {name:'Комбинаторика', icon:'🔀', sec:0},
+            statistics: {name:'Статистика', icon:'📊', sec:0},
+            trigonometry: {name:'Тригонометрия', icon:'📏', sec:0},
+            stereometry: {name:'Стереометрия', icon:'🧊', sec:0}
+        };
+        let changed = false;
+        for (let key in newSubjects) {
+            if (!DB.subjects[key]) {
+                DB.subjects[key] = newSubjects[key];
+                changed = true;
+            }
+        }
+        if (changed) Data.save();
+
 
         this.setText('coin-display', DB.user.coins);
         this.setText('streak-display', DB.user.streak);
         this.setText('header-name', DB.user.name || 'Игрок');
         this.setText('header-avatar', DB.user.avatar || '😎');
-        this.setText('profile-name-big', DB.user.name || 'Игрок');
-        this.setText('profile-avatar-big', DB.user.avatar || '😎');
+
+document.body.className = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
 
         // Лиги
         let cl = LEAGUES[0]; 
         for(let l of LEAGUES) { if(DB.user.xp >= l.min) cl = l; }
+        
         this.setText('header-league', cl.name);
         this.setText('profile-league-big', cl.name);
         
         const headerBox = document.getElementById('header-avatar-box');
         if(headerBox) headerBox.className = `profile-img ${cl.color}`;
+        
         const pb = document.getElementById('profile-avatar-box');
         if(pb) pb.className = `profile-img ${cl.color}`;
 
-        // Статистика
+        // МАГАЗИН ТЕМ
+        const themeList = document.getElementById('theme-list');
+        if (themeList) {
+            themeList.innerHTML = THEMES.map(t => {
+                const owned = DB.user.ownedThemes.includes(t.id), active = DB.user.theme === t.id;
+                return `<div class="shop-item ${active?'active':''}" onclick="App.buyTheme('${t.id}')"><div>${t.icon}</div><div>${t.name}</div>${owned?'':'<small>'+t.price+'💰</small>'}</div>`
+            }).join('');
+        }
+
+        // --- ВСТАВИТЬ ВНУТРЬ App.updateUI() ---
+
+        // МАГАЗИН АВАТАРОВ (Обновленный)
+        const avatarList = document.getElementById('avatar-shop-list');
+        if (avatarList) {
+            avatarList.innerHTML = SHOP_AVATARS.map(a => {
+                // Проверяем, куплен ли аватар
+                const owned = DB.user.ownedAvatars.includes(a.id);
+                // Проверяем, надет ли он сейчас
+                const active = DB.user.avatar === a.icon;
+                
+                // Если денег хватает, подсвечиваем цену (класс affordable)
+                const canBuy = DB.user.coins >= a.price;
+                const priceClass = canBuy ? 'affordable' : '';
+                
+                // Формируем красивую карточку
+                return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div>
+                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>
+                    ${owned 
+                        ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' 
+                        : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`
+                    }
+                </div>`;
+            }).join('');
+        }
+        
+        // ДОСТИЖЕНИЯ
+        const achList = document.getElementById('ach-list');
+        if (achList && DB.achievements) {
+            achList.innerHTML = DB.achievements.map(a => {
+                let currentVal = 0;
+                if (a.type === 'total') currentVal = DB.user.totalSec;
+                else if (a.type === 'lvl') currentVal = DB.user.level;
+                else if (a.type === 'xp') currentVal = DB.user.xp;
+
+                const pct = Math.min(100, (currentVal / a.max) * 100);
+                const unlocked = pct >= 100;
+
+                return `<div class="ach-row ${unlocked ? 'unlocked' : ''}">
+                    <div class="ach-icon">${unlocked ? '✅' : a.icon}</div>
+                    <div class="ach-info">
+                        <div class="ach-title">${a.title}</div>
+                        <div class="ach-desc">${a.desc}</div>
+                        <div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%"></div></div>
+                        <small>${currentVal} / ${a.max}</small>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // СТАТИСТИКА
         const h = (DB.user.totalSec/3600).toFixed(1);
         this.setText('timer', new Date(Timer.sec * 1000).toISOString().substr(11, 8));
         this.setText('stat-total-time', h + 'ч');
@@ -3090,6 +2876,7 @@ const App = {
         
         const xpBar = document.getElementById('prof-xp-bar');
         if(xpBar) xpBar.style.width = (DB.user.xp/DB.user.nextXp*100)+'%';
+        
         this.setText('xp-progress-text', `${DB.user.xp} / ${DB.user.nextXp} XP`);
     },
 
@@ -3101,39 +2888,69 @@ const App = {
             DB.user.coins -= t.price; DB.user.ownedThemes.push(id); DB.user.theme=id; Data.save(); App.updateUI(); SoundSys.play('success');
         } else { App.toast("Недостаточно монет"); }
     },
-
     buyAvatar(id) {
+        // Ищем аватар в новом списке
         const a = SHOP_AVATARS.find(x => x.id === id);
-        if (!a) return;
-        if (DB.user.ownedAvatars.includes(id)) { 
-            DB.user.avatar = a.icon; Data.save(); App.updateUI(); SoundSys.play('click');
-        } else if (DB.user.coins >= a.price) {
-            if(confirm(`Купить "${a.name}" за ${a.price} монет?`)) {
-                DB.user.coins -= a.price; DB.user.ownedAvatars.push(id); DB.user.avatar = a.icon; 
-                Data.save(); App.updateUI(); SoundSys.play('success'); FX.confetti();
-            }
-        } else { App.toast("Недостаточно монет 💰"); SoundSys.play('error'); }
-    },
+        if (!a) return; // Если не нашли (защита)
 
+        // Если уже куплен — просто надеваем
+        if (DB.user.ownedAvatars.includes(id)) { 
+            DB.user.avatar = a.icon; 
+            Data.save(); 
+            App.updateUI(); 
+            SoundSys.play('click');
+        } 
+        // Если не куплен — пробуем купить
+        else if (DB.user.coins >= a.price) {
+            if(confirm(`Купить "${a.name}" за ${a.price} монет?`)) {
+                DB.user.coins -= a.price; 
+                DB.user.ownedAvatars.push(id); 
+                DB.user.avatar = a.icon; 
+                Data.save(); 
+                App.updateUI(); 
+                SoundSys.play('success');
+                FX.confetti(); // Салют при покупке!
+            }
+        } else { 
+            App.toast("Недостаточно монет 💰"); 
+            SoundSys.play('error');
+        }
+    },
     addXP(n) { 
         DB.user.xp += n; 
-        if (!DB.user.lifetimeXP) DB.user.lifetimeXP = 0;
-        DB.user.lifetimeXP += n;
-
+        
+        // Проверка: Хватает ли опыта для следующего уровня?
         if(DB.user.xp >= DB.user.nextXp){
             DB.user.level++; 
+            
+            // Переносим остаток опыта на следующий уровень (честно)
+            // Например, надо 500, набрали 510 -> останется 10
             DB.user.xp = DB.user.xp - DB.user.nextXp; 
+            
+            // Увеличиваем сложность следующего уровня на 20%
             DB.user.nextXp = Math.floor(DB.user.nextXp * 1.2); 
-            DB.user.coins += 50;
+            
+            // --- НАГРАДА ---
+            const reward = 50; // Даем 50 монет
+            DB.user.coins += reward;
 
+            // --- ПОКАЗ ОКНА ---
             document.getElementById('lvl-up-new-level').innerText = DB.user.level;
             document.getElementById('levelup-modal').classList.add('show');
-            FX.confetti(); SoundSys.play('win'); 
+            
+            // --- ЭФФЕКТЫ ---
+            FX.confetti(); // Салют
+            SoundSys.play('win'); // Звук победы
         } 
-        Data.save(); this.updateUI(); AchievementSys.check();
-    },
+        
+        Data.save(); 
+        this.updateUI(); 
 
+        AchievementSys.check();
+
+    },
     switchTab(id, btn) {
+        // Стандартная логика переключения
         document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
         const sec = document.getElementById(id);
         if(sec) sec.classList.add('active');
@@ -3141,166 +2958,264 @@ const App = {
         document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
         if(btn) btn.classList.add('active');
        
-        // 🔥 ЛЕНИВАЯ ЗАГРУЗКА (Разгружает CPU)
-        if (id === 'dashboard') setTimeout(() => this.renderSubjects(), 50); 
-        if (id === 'trainer') setTimeout(() => Trainer.init(), 50);
-        if (id === 'stats') setTimeout(() => { this.renderHistory(); this.renderStats(); }, 50);
-        if (id === 'shop') {
-            // Рисуем магазин только когда открыли
-            const themeList = document.getElementById('theme-list');
-            if (themeList) themeList.innerHTML = THEMES.map(t => {
-                const owned = DB.user.ownedThemes.includes(t.id), active = DB.user.theme === t.id;
-                return `<div class="shop-item ${active?'active':''}" onclick="App.buyTheme('${t.id}')"><div>${t.icon}</div><div>${t.name}</div>${owned?'':'<small>'+t.price+'💰</small>'}</div>`
-            }).join('');
-            
-            const avatarList = document.getElementById('avatar-shop-list');
-            if (avatarList) avatarList.innerHTML = SHOP_AVATARS.map(a => {
-                const owned = DB.user.ownedAvatars.includes(a.id), active = DB.user.avatar === a.icon;
-                const priceClass = (DB.user.coins >= a.price) ? 'affordable' : '';
-                return `<div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')"><div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div><div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>${owned ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`}</div>`;
-            }).join('');
+        if (id === 'stats') {
+            this.renderStats();
         }
-
-        if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
+        // Отправляем данные в Яндекс Метрику
+        if (typeof ym !== 'undefined') {
+            ym(105919372, 'hit', '#' + id, {
+                title: id.toUpperCase() // Название страницы в отчете
+            });
+        }
     },
     
-    renderStats() {
-        const statsSection = document.getElementById('stats');
-        // Если вкладка закрыта или не активна - сразу выходим, экономим память
-        if (!statsSection || !statsSection.classList.contains('active')) return; 
+    renderStats(){
+        const ctx = document.getElementById('weekChart');
+        if(window.myChart) window.myChart.destroy();
+        // Проверка существования канваса
+        if (ctx) {
+            window.myChart = new Chart(ctx, {type:'bar', data:{labels:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'], datasets:[{label:'Часы',data:[0,0,0,0,0,0,0],backgroundColor:'#6C63FF'}]}});
+        }
+    },
+       renderSubjects() {
+        const grid = document.getElementById('subjects-grid');
+        if (!grid || !DB || !DB.subjects) return;
 
-        // 1. Текстовая статистика (легкая)
-        const today = new Date();
-        let weekSec = 0, monthSec = 0;
+        grid.innerHTML = Object.keys(DB.subjects).map(k => {
+            const s = DB.subjects[k];
+            const isActive = DB.user.subject === k;
+            return `
+                <div onclick="App.selectSubject('${k}')"
+                     class="card"
+                     style="padding:15px; text-align:center; cursor:pointer; 
+                            ${isActive ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.1);' : 'border:2px solid transparent;'}">
+                    <div style="font-size:24px">${s.icon}</div>
+                    <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
+                </div>`;
+        }).join('');
         
-        // Оптимизированный цикл (без создания лишних объектов Date)
-        const currentTimestamp = today.getTime();
+        // Обновляем заголовок на дашборде
+        const currentSub = DB.subjects[DB.user.subject];
+        if (currentSub && document.getElementById('subject-title')) {
+            document.getElementById('subject-title').innerText = currentSub.name;
+        }
+    },
+
+    selectSubject(key) {
+        if (DB.subjects[key]) {
+            DB.user.subject = key;
+            Data.save();
+            this.renderSubjects();
+            this.updateUI();
+            App.toast("Предмет: " + DB.subjects[key].name);
+        }
+    },
+
+        renderHistory() {
+        // Эта функция обновляет журнал занятий в разделе "Статистика"
+        const logContainer = document.getElementById('session-log');
+        if (!logContainer || !DB || !DB.sessions) return;
+
+        logContainer.innerHTML = '';
+        DB.sessions.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'session-row';
+            row.innerHTML = `
+                <div class="session-info">
+                    <div>${s.subject}</div>
+                    <div class="session-date">${new Date(s.date).toLocaleDateString('ru-RU')}</div>
+                </div>
+                <div>
+                    <span style="color:var(--text-light);">${Math.floor(s.sec/60)} мин</span>
+                    ${s.coins > 0 ? `<span class="session-coins">+${s.coins} 💰</span>` : ''}
+                </div>
+            `;
+            logContainer.appendChild(row);
+        });
+
+        // Если сессий нет — покажем сообщение
+        if (DB.sessions.length === 0) {
+            logContainer.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет записей</div>';
+        }
+    },
+
+    renderStats() {
+        // 1. ВЫЧИСЛЕНИЕ (ПО ТАШКЕНТУ)
+        const today = new Date();
+        let weekSec = 0;
+        let monthSec = 0;
+
         for (let i = 0; i < 30; i++) {
-            const loopDate = new Date(currentTimestamp - (i * 86400000));
-            const key = getUZDate(loopDate);
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            
+            // Используем нашу функцию для получения ключа
+            const key = getUZDate(d); 
+            
             const seconds = DB.history[key] || 0;
-            monthSec += seconds;
+            monthSec += seconds; 
             if (i < 7) weekSec += seconds; 
         }
 
+
+        // Вспомогательная функция для перевода секунд в "1ч 30м"
         const fmtTime = (s) => {
-            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-            return h > 0 ? `${h}ч ${m}м` : `${m}м`;
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            if (h > 0) return `${h}ч ${m}м`;
+            return `${m}м`;
         };
+
+        // Вспомогательная: примерный XP (10 XP за минуту)
+        // Точный XP за прошлые дни мы не храним, поэтому считаем по формуле
         const estXP = (s) => Math.floor(s / 60) * 10;
 
+        // Обновляем текст в HTML
         this.setText('stat-week-time', fmtTime(weekSec));
-        this.setText('stat-week-xp', `~${estXP(weekSec)} XP`);
+        this.setText('stat-week-xp', `~${estXP(weekSec)} XP`); // Знак ~, т.к. это примерно
+        
         this.setText('stat-month-time', fmtTime(monthSec));
         this.setText('stat-month-xp', `~${estXP(monthSec)} XP`);
-        
+
+        // Общее время и XP (берем реальные данные)
+        // Используем lifetimeXP если есть, иначе обычный xp
         const totalXP = DB.user.lifetimeXP || DB.user.xp; 
         this.setText('stat-total-time', fmtTime(DB.user.totalSec));
         this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
-        // 2. Графики (Рисуем только через requestAnimationFrame)
-        requestAnimationFrame(() => {
-            // PIE CHART
+
+        // 2. ГРАФИКИ (Оставляем как было, но с задержкой для отрисовки)
+        setTimeout(() => {
+            // --- PIE CHART (Предметы) ---
             const subjectCtx = document.getElementById('subjectChart');
             if (subjectCtx) {
-                if (window.subjectChart instanceof Chart) {
-                    window.subjectChart.destroy();
-                    window.subjectChart = null;
-                }
-                const labels = [], data = [];
+                if (window.subjectChart instanceof Chart) window.subjectChart.destroy();
+
+                const labels = [];
+                const data = [];
+                // Цвета для предметов
                 const colors = ['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#D60270', '#556B2F', '#FF8F66'];
-                if (DB.subjects) Object.values(DB.subjects).forEach(s => { if (s.sec > 0) { labels.push(s.name); data.push(Math.round(s.sec / 60)); }});
-                
+
+                if (DB.subjects) {
+                    Object.values(DB.subjects).forEach(s => {
+                        if (s.sec > 0) {
+                            labels.push(s.name);
+                            data.push(Math.round(s.sec / 60)); // Минуты
+                        }
+                    });
+                }
+
+                // Если данных нет, рисуем пустой круг
+                const finalData = data.length ? data : [1];
+                const finalColors = data.length ? colors : ['#E0E0E0'];
+                const finalLabels = data.length ? labels : ['Нет данных'];
+
                 window.subjectChart = new Chart(subjectCtx, {
                     type: 'doughnut',
-                    data: { labels: labels.length ? labels : ['Нет'], datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#eee'], borderWidth: 0 }] },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        animation: false, // 🔥 ОТКЛЮЧАЕМ АНИМАЦИЮ ГРАФИКА ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
-                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } 
+                    data: {
+                        labels: finalLabels,
+                        datasets: [{
+                            data: finalData,
+                            backgroundColor: finalColors,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
                     }
                 });
             }
 
-            // BAR CHART
+            // --- BAR CHART (Неделя) ---
             const weekCtx = document.getElementById('weekChart');
             if (weekCtx) {
-                if (window.weekChart instanceof Chart) {
-                    window.weekChart.destroy();
-                    window.weekChart = null;
-                }
-                const days = [], data = [];
+                if (window.weekChart instanceof Chart) window.weekChart.destroy();
+
+                const days = [];
+                const data = [];
+                
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date(currentTimestamp - (i * 86400000));
-                    days.push(['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()]);
-                    data.push(((DB.history && DB.history[getUZDate(d)]) || 0) / 3600);
+                    const d = new Date();
+                    d.setDate(today.getDate() - i);
+                    
+                    const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+                    days.push(dayNames[d.getDay()]);
+                    
+                    // Ключ по Ташкенту
+                    const key = getUZDate(d); 
+                    
+                    const hours = ((DB.history && DB.history[key]) || 0) / 3600;
+                    data.push(hours.toFixed(1));
                 }
+                
                 window.weekChart = new Chart(weekCtx, {
                     type: 'bar',
-                    data: { labels: days, datasets: [{ label: 'Часы', data: data, backgroundColor: '#6C63FF', borderRadius: 4 }] },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        animation: false, // 🔥 ОТКЛЮЧАЕМ АНИМАЦИЮ
-                        scales: { y: { beginAtZero: true, grid:{display:false} }, x:{grid:{display:false}} }, 
-                        plugins:{legend:{display:false}} 
+                    data: {
+                        labels: days,
+                        datasets: [{
+                            label: 'Часы',
+                            data: data,
+                            backgroundColor: '#6C63FF',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: { legend: { display: false } }
                     }
                 });
             }
-            
-            // HEATMAP (Генерируем HTML строку, это быстро)
+
+            // --- HEATMAP (Активность) ---
             const heatmap = document.getElementById('heatmap');
             if (heatmap) {
+                const start = new Date(today);
+                start.setDate(today.getDate() - 29); // 30 дней назад
+
                 let html = '';
                 for (let i = 0; i < 30; i++) {
-                    const date = new Date(currentTimestamp - ((29-i) * 86400000));
-                    const sec = (DB.history && DB.history[getUZDate(date)]) || 0;
+                    const date = new Date(start);
+                    date.setDate(start.getDate() + i);
+                    const key = date.toISOString().split('T')[0];
+                    
+                    const sec = (DB.history && DB.history[key]) || 0;
                     const minutes = Math.round(sec / 60);
-                    let color = 'var(--bg)';
-                    if (minutes > 0) color = '#c6e48b'; if (minutes > 20) color = '#7bc96f'; 
-                    if (minutes > 60) color = '#239a3b'; if (minutes > 120) color = '#196127';
+                    
+                    // Цвет зависит от активности
+                    let color = 'var(--bg)'; // Пусто (серый)
+                    if (minutes > 0) color = '#c6e48b';   // Мало
+                    if (minutes > 20) color = '#7bc96f';  // Норм
+                    if (minutes > 60) color = '#239a3b';  // Много
+                    if (minutes > 120) color = '#196127'; // Монстр
+
+                    // Рамка для "сегодня"
                     const isToday = i === 29 ? 'border: 1px solid var(--text);' : '';
-                    html += `<div title="${minutes} мин" style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
+
+                    html += `<div title="${date.toLocaleDateString()}: ${minutes} мин" 
+                                  style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
                 }
                 heatmap.innerHTML = html;
             }
-        });
-    },
 
-    renderSubjects() {
-        const grid = document.getElementById('subjects-grid');
-        if (!grid || !DB || !DB.subjects) return;
-        grid.innerHTML = Object.keys(DB.subjects).map(k => {
-            const s = DB.subjects[k];
-            const isActive = DB.user.subject === k;
-            return `<div onclick="App.selectSubject('${k}')" class="card" style="padding:15px; text-align:center; cursor:pointer; ${isActive ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.1);' : 'border:2px solid transparent;'}"><div style="font-size:24px">${s.icon}</div><div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div></div>`;
-        }).join('');
-        const currentSub = DB.subjects[DB.user.subject];
-        if (currentSub && document.getElementById('subject-title')) document.getElementById('subject-title').innerText = currentSub.name;
+        }, 100); 
     },
-
-    selectSubject(key) {
-        if (DB.subjects[key]) { DB.user.subject = key; Data.save(); this.renderSubjects(); this.updateUI(); App.toast("Предмет: " + DB.subjects[key].name); }
-    },
-
-    renderHistory() {
-        const logContainer = document.getElementById('session-log');
-        if (!logContainer || !DB || !DB.sessions) return;
-        logContainer.innerHTML = DB.sessions.length === 0 ? '<div style="text-align:center; color:var(--text-light); padding:20px;">Нет записей</div>' : '';
-        DB.sessions.forEach(s => {
-            const row = document.createElement('div'); row.className = 'session-row';
-            row.innerHTML = `<div class="session-info"><div>${s.subject}</div><div class="session-date">${new Date(s.date).toLocaleDateString('ru-RU')}</div></div><div><span style="color:var(--text-light);">${Math.floor(s.sec/60)} мин</span>${s.coins > 0 ? `<span class="session-coins">+${s.coins} 💰</span>` : ''}</div>`;
-            logContainer.appendChild(row);
-        });
-    },
-
     toggleEcoMode(enable) {
         const overlay = document.getElementById('eco-overlay');
-        if (enable) { overlay.classList.add('active'); App.toast("🔋 Эко-режим вкл."); } 
-        else { overlay.classList.remove('active'); }
+        if (enable) {
+            overlay.classList.add('active');
+            App.toast("🔋 Экономия энергии включена. Нажми на экран, чтобы выйти.");
+            // Принудительно ставим яркость экрана на минимум (программно нельзя, но черный цвет помогает)
+        } else {
+            overlay.classList.remove('active');
+        }
     },
-
     toast(m) { 
         const container = document.getElementById('toast-container');
         if (container) {
@@ -3310,8 +3225,8 @@ const App = {
             setTimeout(()=>{t.classList.remove('show');t.remove()},3000); 
         }
     }
+    
 };
-
 
 
 
@@ -3846,49 +3761,6 @@ Transfer.pasteCode = function(code) {
             Таймер работает<br>
             Нажми, чтобы разбудить
         </div>
-    </div>
-</div>
-
-<!-- TUTORIAL MODAL (Обучение для новичков) -->
-<div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.95);">
-    <div class="modal-content" style="text-align: center; max-width: 340px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px;">
-        
-        <!-- Слайд 1: Философия -->
-        <div class="tutorial-slide" id="tut-1">
-            <div style="font-size: 60px; margin-bottom: 20px;">⏳</div>
-            <h2 style="margin-bottom: 15px;">Время = Опыт</h2>
-            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                В жизни нет полоски прогресса, и это демотивирует. <br>
-                <b>MathBooster исправит это.</b><br><br>
-                Мы будем считать каждый час, который ты инвестировал в свои знания.
-            </p>
-            <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Понятно 👇</button>
-        </div>
-
-        <!-- Слайд 2: Механика -->
-        <div class="tutorial-slide" id="tut-2" style="display: none;">
-            <div style="font-size: 60px; margin-bottom: 20px;">⏱️</div>
-            <h2 style="margin-bottom: 15px;">Как это работает?</h2>
-            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                1. Садишься за уроки — <b>включай таймер</b>.<br>
-                2. Твое время превращается в <b>XP</b> (Опыт) и <b>Coins</b> (Монеты).<br>
-                3. Чем больше учишься, тем выше твой Ранг.
-            </p>
-            <button class="btn btn-primary" onclick="Tutorial.next(3)" style="width: 100%;">Дальше 👇</button>
-        </div>
-
-        <!-- Слайд 3: Мотивация -->
-        <div class="tutorial-slide" id="tut-3" style="display: none;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🏆</div>
-            <h2 style="margin-bottom: 15px;">Стань Легендой</h2>
-            <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                Трать монеты на крутые темы и аватары.<br>
-                Соревнуйся с друзьями.<br>
-                Докажи, что ты самый продуктивный!
-            </p>
-            <button class="btn btn-primary" onclick="Tutorial.close()" style="width: 100%; background: #00d26a; box-shadow: 0 5px 15px rgba(0, 210, 106, 0.4);">Начать путь 🚀</button>
-        </div>
-
     </div>
 </div>
 </body>
