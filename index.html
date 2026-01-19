@@ -101,42 +101,54 @@
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
-        /* === ТЕМЫ ОФОРМЛЕНИЯ === */
+        /* === ТЕМЫ ОФОРМЛЕНИЯ (ПОЛНЫЙ СПИСОК) === */
+        
+        /* 1. СТАНДАРТНЫЕ */
+        body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; --text-light: #707EAE; }
         body.theme-gold { --primary: #FFD700; --bg: #1E1E2E; --surface: #2D2D44; --text: #FFFFFF; --text-light: #B8B8D1; --shadow: 0 10px 30px rgba(255, 215, 0, 0.3); }
-        body.dark-mode.theme-gold { --primary: #FFEA80; }
-        body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; }
         body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
         body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
         body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
         body.theme-forest { --primary: #556B2F; --bg: #F5F5DC; --surface: #FFFFF0; --text: #3E2723; --text-light: #6D4C41; --shadow: 0 10px 30px rgba(85, 107, 47, 0.15); }
-        body.theme-magma {  --primary: #FF3333; --bg: #000000; --surface: #121212; --text: #FFFFFF; --text-light: #888888; --shadow: 0 0 25px rgba(255, 51, 51, 0.4); 
-}
 
-/* Применим свечение к кнопкам в этой теме */
-body.theme-magma .btn-primary, 
-body.theme-magma .nav-btn.active,
-body.theme-magma .daily-day.active {
-    box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
-    border: 1px solid #FF3333;
-}
-        body.dark-mode {
-    --bg: #1A1A2E;
-    --surface: #16213E;
-    --text: #EAEAEA;
-    --text-light: #8892B0;
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
+        /* 2. 🔥 НОВЫЕ ТЕМЫ  */
+        
+        /* 📝 PAPER (Бумага) */
+        body.theme-paper { --primary: #333333; --bg: #F2F2EB; --surface: #FFFFFF; --text: #111111; --text-light: #999999; --shadow: 0 5px 0 rgba(0,0,0,0.05); }
 
-/* Комбинации: тёмный режим + конкретная тема (акцент остаётся, фон тёмный) */
-body.dark-mode.theme-standard { --primary: #8B7EFF; }
-body.dark-mode.theme-math { --primary: #00F5E0; }
-body.dark-mode.theme-pantone { --primary: #FFB399; }
-body.dark-mode.theme-forest { --primary: #8FBC8F; }
-body.dark-mode.theme-neon { --primary: #FF69B4; }
-body.dark-mode.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
-body.dark-mode.theme-dark { --primary: #9D7EFF; } 
-body.dark-mode.theme-magma { --bg: #000000; --surface: #121212; --primary: #FF3333;
-}        
+        /* 🌸 SAKURA (Сакура) */
+        body.theme-sakura { --primary: #FF80AB; --bg: #FFF0F5; --surface: #FFFFFF; --text: #880E4F; --text-light: #F06292; --shadow: 0 10px 30px rgba(255, 128, 171, 0.2); }
+
+        /* 🍋 LEMON (Лимон) */
+        body.theme-lemon { --primary: #FFB300; --bg: #FFFDE7; --surface: #FFFFFF; --text: #F57F17; --text-light: #FBC02D; --shadow: 0 10px 30px rgba(255, 179, 0, 0.15); }
+
+        /* 🔥 MAGMA (Легендарная) */
+        body.theme-magma { --primary: #FF3333; --bg: #000000; --surface: #121212; --text: #FFFFFF; --text-light: #888888; --shadow: 0 0 25px rgba(255, 51, 51, 0.4); }
+        
+        /* Свечение кнопок только для Магмы */
+        body.theme-magma .btn-primary, 
+        body.theme-magma .nav-btn.active, 
+        body.theme-magma .daily-day.active { 
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.6); 
+            border: 1px solid #FF3333; 
+        }
+
+        /* === ТЕМНЫЙ РЕЖИМ (АДАПТАЦИЯ) === */
+        body.dark-mode { --bg: #1A1A2E; --surface: #16213E; --text: #EAEAEA; --text-light: #8892B0; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+        
+        /* Исправление цветов тем в темном режиме */
+        body.dark-mode.theme-gold { --primary: #FFEA80; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
+        body.dark-mode.theme-standard { --primary: #8B7EFF; }
+        body.dark-mode.theme-math { --primary: #00F5E0; }
+        body.dark-mode.theme-pantone { --primary: #FFB399; }
+        body.dark-mode.theme-forest { --primary: #8FBC8F; }
+        body.dark-mode.theme-neon { --primary: #FF69B4; }
+        
+        /* Новые темы в темном режиме */
+        body.dark-mode.theme-paper { --primary: #FFFFFF; --bg: #121212; --surface: #1E1E1E; --text: #EEEEEE; }
+        body.dark-mode.theme-sakura { --primary: #FF80AB; --bg: #1A1A2E; --surface: #16213E; }
+        body.dark-mode.theme-lemon { --primary: #FFB300; --bg: #1A1A2E; --surface: #16213E; }
+        body.dark-mode.theme-magma { --bg: #000000; --surface: #121212; --primary: #FF3333; }         
         body.theme-dark {
     --primary: #7B73FF;
     --bg: #1E1E2E;
@@ -685,6 +697,28 @@ body.zen-active #timer {
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 * {
     font-family: "Segoe UI", Roboto, "Noto Color Emoji", sans-serif !important;
+}
+
+/* Анимация ошибки (Тряска) */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
+.error-shake {
+    animation: shake 0.4s;
+    border-color: red !important;
+    background: rgba(255, 0, 0, 0.1) !important;
+}
+
+/* Класс для блокировки нажатий */
+.input-locked {
+    opacity: 0.5;
+    pointer-events: none; /* Запрещает клики */
+    filter: grayscale(1);
 }
     </style>
 </head>
@@ -1734,13 +1768,25 @@ const AVATARS = [
 ];
 
 const THEMES = [
+    // Бесплатные и Дешевые
     { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
-    { id: 'dark', name: 'Темная', icon: '🌙', price: 0 },
-    { id: 'pantone', name: 'Персик', icon: '🍑', price: 100 },
-    { id: 'forest', name: 'Лес', icon: '🌲', price: 150 },
-    { id: 'neon', name: 'Неон', icon: '🦄', price: 500 },
-    { id: 'math', name: 'Алмаз', icon: '💎', price: 600 },
-    { id: 'gold', name: 'Золото', icon: '🥇', price: 1000 },
+    { id: 'dark', name: 'Темная', icon: '🌙', price: 0 }, /* Сделал бесплатной для удобства */
+    
+    // Новые Дневные (Легкие)
+    { id: 'paper', name: 'Бумага', icon: '📝', price: 300 },
+    { id: 'sakura', name: 'Сакура', icon: '🌸', price: 400 },
+    { id: 'lemon', name: 'Лимон', icon: '🍋', price: 400 },
+
+    // Стильные (Средние)
+    { id: 'pantone', name: 'Персик', icon: '🍑', price: 500 },
+    { id: 'forest', name: 'Лес', icon: '🌲', price: 600 },
+    
+    // Элитные
+    { id: 'neon', name: 'Неон', icon: '🦄', price: 800 },
+    { id: 'math', name: 'Алмаз', icon: '💎', price: 1000 },
+    { id: 'gold', name: 'Золото', icon: '🥇', price: 1500 },
+    
+    // Легендарная
     { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 }
 ];
 
@@ -2657,8 +2703,10 @@ const Timer = {
 const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
 
 const Trainer = {
+    // Добавили флаг isLocked
     score: 0, time: 60, interval: null, 
-    ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard',
+    ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard', 
+    isLocked: false, // <--- НОВОЕ: Защита от спама
 
     // 1. Выбор режима
     selectMode(mode, btn) {
@@ -2843,39 +2891,106 @@ const Trainer = {
         }
     },
 
+    // --- ПРОВЕРКА ЧИСЕЛ (Классика/Квадраты) ---
     check() {
+        if (this.isLocked) return; // Если заблокировано - игнор
+
         const inputEl = document.getElementById('game-input');
         const val = parseInt(inputEl.value); 
-        if(val === this.ans) this.success(inputEl);
-        else this.fail(inputEl);
+        
+        if (isNaN(val)) return; // Защита от пустого ввода
+
+        if(val === this.ans) {
+            this.success(inputEl);
+        } else { 
+            this.fail(inputEl);
+        }
     },
 
+    // --- ПРОВЕРКА ЗНАКОВ (Найди знак) ---
     checkSign(sign) {
+        if (this.isLocked) return; // Если заблокировано - игнор
+
         if(sign === this.correctSign) {
             const area = document.getElementById('sign-area');
             this.success(area);
         } else {
-            SoundSys.play('error');
+            // Ищем кнопку, которую нажали (визуально подсветить ошибку сложно без event, 
+            // поэтому подсветим всю область знаков)
+            const area = document.getElementById('sign-area');
+            this.fail(area);
         }
     },
 
+    // --- УСПЕХ ---
     success(el) {
         this.score++; 
         document.getElementById('game-score').innerText = this.score; 
         SoundSys.play('success');
+        
         el.style.borderColor = 'var(--primary)'; 
         if(this.mode === 'sign') el.style.background = 'rgba(0, 255, 0, 0.1)';
-        setTimeout(() => { el.style.borderColor = 'var(--text-light)'; el.style.background = ''; }, 200);
         
-        const rect = el.getBoundingClientRect(); 
-        FX.floatText(rect.left + rect.width/2, rect.top, `+XP`, "#6C63FF");
+        setTimeout(() => { 
+            el.style.borderColor = ''; 
+            el.style.background = '';
+        }, 200);
+        
+        // XP
+        let pts = 10;
+        if(this.difficulty === 'medium') pts = 15;
+        if(this.difficulty === 'hard') pts = 25;
+
+        // Анимация XP (если элемент имеет координаты)
+        try {
+            const rect = el.getBoundingClientRect(); 
+            FX.floatText(rect.left + rect.width/2, rect.top, `+${pts} XP`, "#6C63FF");
+        } catch(e){}
+        
         this.nextProblem();
     },
 
+    // --- 🔥 НАКАЗАНИЕ ЗА ОШИБКУ 🔥 ---
     fail(el) {
+        if (this.isLocked) return;
+        this.isLocked = true; // 1. БЛОКИРУЕМ ВВОД
+
         SoundSys.play('error'); 
-        el.style.borderColor = 'red'; 
-        if(el.tagName === 'INPUT') el.value = ''; 
+        
+        // 2. Визуальный эффект (Тряска + Красный)
+        el.classList.add('error-shake');
+        
+        // 3. Блокируем кнопки визуально
+        document.getElementById('input-area').classList.add('input-locked');
+        document.getElementById('sign-area').classList.add('input-locked');
+
+        // 4. ШТРАФ ВРЕМЕНИ (-5 секунд)
+        this.time -= 5;
+        if (this.time < 0) this.time = 0;
+        document.getElementById('game-time').innerText = this.time;
+        
+        // Анимация штрафа
+        try {
+            const rect = el.getBoundingClientRect();
+            FX.floatText(rect.left + rect.width/2, rect.top, `-5 сек`, "#ff4d4d");
+        } catch(e){}
+
+        // Если время кончилось из-за штрафа
+        if (this.time <= 0) {
+            this.end();
+            return;
+        }
+
+        // 5. РАЗБЛОКИРОВКА ЧЕРЕЗ 1.2 СЕКУНДЫ
+        setTimeout(() => {
+            this.isLocked = false;
+            el.classList.remove('error-shake');
+            document.getElementById('input-area').classList.remove('input-locked');
+            document.getElementById('sign-area').classList.remove('input-locked');
+            
+            // Очищаем поле ввода, если это инпут
+            if(el.tagName === 'INPUT') el.value = '';
+        }, 1200);
     },
 
     end() {
