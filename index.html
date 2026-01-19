@@ -108,9 +108,24 @@
         body.theme-gold { --primary: #FFD700; --bg: #1E1E2E; --surface: #2D2D44; --text: #FFFFFF; --text-light: #B8B8D1; --shadow: 0 10px 30px rgba(255, 215, 0, 0.3); }
         body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
         body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
-        body.theme-pantone { --primary: #FF8F66; --bg: #FFF5EE; --surface: #FFFFFF; --text: #5D4037; --text-light: #8D6E63; --shadow: 0 10px 30px rgba(255, 143, 102, 0.2); }
-        body.theme-forest { --primary: #556B2F; --bg: #F5F5DC; --surface: #FFFFF0; --text: #3E2723; --text-light: #6D4C41; --shadow: 0 10px 30px rgba(85, 107, 47, 0.15); }
+        body.theme-pantone { 
+            --primary: #FF8A65;   /* Насыщенный персик */
+            --bg: #FFF8E1;        /* Теплый кремовый фон */
+            --surface: #FFFFFF;   /* Белые карточки */
+            --text: #5D4037;      /* Текст цвета кофе */
+            --text-light: #8D6E63; 
+            --shadow: 0 10px 30px rgba(255, 138, 101, 0.2); 
+        }
 
+        /* 🌲 FOREST (Лес) - Глубокий изумруд (Focus) */
+        body.theme-forest { 
+            --primary: #2E7D32;   /* Профессиональный зеленый */
+            --bg: #E8F5E9;        /* Очень светлый мятный фон */
+            --surface: #FFFFFF; 
+            --text: #1B5E20;      /* Темно-зеленый текст */
+            --text-light: #43A047; 
+            --shadow: 0 10px 30px rgba(46, 125, 50, 0.15); 
+        }
         /* 2. 🔥 НОВЫЕ ТЕМЫ  */
         
         /* 📝 PAPER (Бумага) */
@@ -165,8 +180,21 @@
         body.dark-mode.theme-gold { --primary: #FFEA80; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
         body.dark-mode.theme-standard { --primary: #8B7EFF; }
         body.dark-mode.theme-math { --primary: #00F5E0; }
-        body.dark-mode.theme-pantone { --primary: #FFB399; }
-        body.dark-mode.theme-forest { --primary: #8FBC8F; }
+        body.dark-mode.theme-pantone { 
+            --bg: #3E2723;        /* Темный шоколад */
+            --surface: #4E342E; 
+            --primary: #FFAB91;   /* Светлый персик */
+            --text: #EFEBE9;
+        }
+
+        /* Лес ночью (Чаща) */
+        body.dark-mode.theme-forest { 
+            --bg: #002820;        /* Темно-болотный */
+            --surface: #004D40; 
+            --primary: #69F0AE;   /* Светящийся лайм */
+            --text: #E0F2F1;
+        }
+
         body.dark-mode.theme-neon { --primary: #FF69B4; }
         
         /* Новые темы в темном режиме */
@@ -1812,7 +1840,7 @@ const THEMES = [
     { id: 'gold', name: 'Золото', icon: '🥇', price: 1500 },
     
     // Легендарная
-        { id: 'joker', name: 'JOKER', icon: '🃏', price: 2000 },
+    { id: 'joker', name: 'JOKER', icon: '🃏', price: 2000 },
     { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 }
 ];
 
