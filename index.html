@@ -135,7 +135,26 @@
         body.theme-sakura { --primary: #FF80AB; --bg: #FFF0F5; --surface: #FFFFFF; --text: #880E4F; --text-light: #F06292; --shadow: 0 10px 30px rgba(255, 128, 171, 0.2); }
 
         /* 🍋 LEMON (Лимон) */
-        body.theme-lemon { --primary: #FFB300; --bg: #FFFDE7; --surface: #FFFFFF; --text: #F57F17; --text-light: #FBC02D; --shadow: 0 10px 30px rgba(255, 179, 0, 0.15); }
+        body.theme-lemon { 
+            --primary: #FFD600;   /* Яркий Желтый (Костюм) */
+            --bg: #F2F5F8;        /* Очень светлый холодный фон (День) */
+            --surface: #FFFFFF;   /* Белые карточки */
+            --text: #1565C0;      /* Геройский Синий (Текст) */
+            --text-light: #546E7A; /* Стальной серый */
+            --shadow: 0 10px 30px rgba(21, 101, 192, 0.15); /* Синяя тень */
+        }
+
+        /* Кнопки: Желтые с синей обводкой (Комикс-стиль) */
+        body.theme-lemon .btn-primary,
+        body.theme-lemon .nav-btn.active,
+        body.theme-lemon .daily-day.active {
+            background: #FFD600;
+            color: #0D47A1; /* Темно-синий жирный текст */
+            font-weight: 900;
+            border: 2px solid #0D47A1; /* Контур */
+        }
+
+
 
         /* 🔥 MAGMA (Легендарная) */
         body.theme-magma { --primary: #FF3333; --bg: #000000; --surface: #121212; --text: #FFFFFF; --text-light: #888888; --shadow: 0 0 25px rgba(255, 51, 51, 0.4); }
@@ -200,7 +219,12 @@
         /* Новые темы в темном режиме */
         body.dark-mode.theme-paper { --primary: #FFFFFF; --bg: #121212; --surface: #1E1E1E; --text: #EEEEEE; }
         body.dark-mode.theme-sakura { --primary: #FF80AB; --bg: #1A1A2E; --surface: #16213E; }
-        body.dark-mode.theme-lemon { --primary: #FFB300; --bg: #1A1A2E; --surface: #16213E; }
+        body.dark-mode.theme-lemon { 
+            --bg: #0D1B2A;        /* Темно-синий */
+            --surface: #1B263B;   
+            --text: #FFFFFF;
+            --primary: #FFC107;   
+        }        
         body.dark-mode.theme-magma { --bg: #000000; --surface: #121212; --primary: #FF3333; }         
         body.theme-dark {
     --primary: #7B73FF;
@@ -2127,39 +2151,93 @@ const SubjectSys = {
 // --- DAILY REWARD SYSTEM ---
 const DailySys = {
     rewards: [10, 20, 30, 40, 50, 75, 100],
-        check() {
-        const today = getUZDate(); 
-        const last = DB.user.lastDailyClaim;
+
+    // 🛡️ ТЕПЕРЬ ПРОВЕРКА АСИНХРОННАЯ (С ЗАЩИТОЙ)
+    async check() {
+        const today = getUZDate();
         
-        if (last !== today) { 
-            if (last) { 
-                const d = new Date();
-                d.setDate(d.getDate() - 1);
-                const yesterdayStr = getUZDate(d);
-        
-                if (last !== yesterdayStr) DB.user.dailyStreak = 0; 
-            } 
-            this.showModal(); 
+        // 1. Быстрая проверка локально (если уже забрал тут - выходим)
+        if (DB.user.lastDailyClaim === today) return;
+
+        // 2. 🔥 ПРОВЕРКА ЧЕРЕЗ ОБЛАКО (АНТИ-АБУЗ)
+        if (window.DB_Online && Auth.currentUser) {
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                const snap = await window.DB_Online.getDoc(docRef);
+
+                if (snap.exists()) {
+                    const cloudData = snap.data();
+                    // Если в облаке написано, что сегодня уже брал...
+                    if (cloudData.user && cloudData.user.lastDailyClaim === today) {
+                        console.log("🚫 Бонус уже получен на другом устройстве");
+                        
+                        // Синхронизируем локальные данные с облаком (чтобы не отставали)
+                        DB.user.lastDailyClaim = today;
+                        DB.user.coins = cloudData.user.coins; // Обновляем монеты, чтобы было честно
+                        DB.user.dailyStreak = cloudData.user.dailyStreak;
+                        
+                        Data.save(); // Сохраняем локально
+                        App.updateUI(); // Обновляем экран
+                        return; // 🛑 ОСТАНАВЛИВАЕМ ВЫДАЧУ БОНУСА
+                    }
+                }
+            } catch (e) {
+                console.error("Ошибка проверки облака (нет инета?)", e);
+                // Если интернета нет, разрешаем забрать (чтобы не злить честных)
+            }
         }
+
+        // 3. Если проверки пройдены - рассчитываем Стрик
+        const last = DB.user.lastDailyClaim;
+        if (last) { 
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            const yesterdayStr = getUZDate(d);
+    
+            // Если пропустил день - сброс
+            if (last !== yesterdayStr) DB.user.dailyStreak = 0; 
+        } 
+        
+        // 4. Показываем окно
+        this.showModal(); 
     },
 
     showModal() {
-        const modal = document.getElementById('daily-modal'); const grid = document.getElementById('daily-grid'); const currentDayIndex = DB.user.dailyStreak % 7;
-        grid.innerHTML = this.rewards.map((r, i) => { let cls = 'daily-day'; if (i < currentDayIndex) cls += ' claimed'; if (i === currentDayIndex) cls += ' active'; return `<div class="${cls}"><div class="daily-coin">💰</div><div>${r}</div></div>`; }).join('');
-        document.getElementById('daily-reward-amount').innerText = this.rewards[currentDayIndex]; modal.classList.add('show'); FX.confetti(); SoundSys.play('win');
+        const modal = document.getElementById('daily-modal'); 
+        const grid = document.getElementById('daily-grid'); 
+        const currentDayIndex = DB.user.dailyStreak % 7;
+        
+        grid.innerHTML = this.rewards.map((r, i) => { 
+            let cls = 'daily-day'; 
+            if (i < currentDayIndex) cls += ' claimed'; 
+            if (i === currentDayIndex) cls += ' active'; 
+            return `<div class="${cls}"><div class="daily-coin">💰</div><div>${r}</div></div>`; 
+        }).join('');
+        
+        document.getElementById('daily-reward-amount').innerText = this.rewards[currentDayIndex]; 
+        modal.classList.add('show'); 
+        FX.confetti(); 
+        SoundSys.play('win');
     },
-    claim() {
+
+    async claim() {
         const currentDayIndex = DB.user.dailyStreak % 7; 
         const reward = this.rewards[currentDayIndex];
         
+        // Начисляем
         DB.user.coins += reward; 
         DB.user.dailyStreak++; 
+        DB.user.lastDailyClaim = getUZDate(); // Ставим дату "Сегодня"
         
-        DB.user.lastDailyClaim = getUZDate();
+        if (currentDayIndex === 6) { 
+            App.addXP(500); 
+            App.toast("🎉 Неделя пройдена! +500 XP"); 
+            FX.confetti(); 
+        }
         
-        if (currentDayIndex === 6) { App.addXP(500); App.toast("🎉 Неделя пройдена! +500 XP"); FX.confetti(); }
-        
+        // 🔥 МГНОВЕННОЕ СОХРАНЕНИЕ В ОБЛАКО (Чтобы другой телефон узнал)
         Data.save(); 
+        
         App.updateUI(); 
         document.getElementById('daily-modal').classList.remove('show'); 
         SoundSys.play('coin'); 
