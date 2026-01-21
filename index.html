@@ -192,10 +192,49 @@
             --surface: #2E003E;
             --primary: #00E676;
         }
+
+        /* 🌌 ТЕМА GALAXY (LEGENDARY) */
+        body.theme-galaxy { 
+            --bg: #0b0014;        /* Очень темный фиолетовый */
+            --surface: #18002b;   /* Темная материя */
+            --text: #ffffff;      /* Звездно-белый */
+            --text-light: #b39ddb; /* Звездная пыль */
+            --primary: #d500f9;   /* Яркий неон */
+            --shadow: 0 0 30px rgba(124, 77, 255, 0.3); /* Фиолетовое свечение */
+        }
+
+        /* ☄️ Анимация: Плывущая туманность */
+        @keyframes galaxy-move {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Применяем анимацию к кнопкам */
+        body.theme-galaxy .btn-primary,
+        body.theme-galaxy .nav-btn.active,
+        body.theme-galaxy .daily-day.active,
+        body.theme-galaxy .shop-item.active {
+            /* Градиент Космос: Фиолетовый -> Синий -> Розовый */
+            background: linear-gradient(270deg, #6200ea, #2962ff, #c51162, #6200ea);
+            background-size: 600% 600%; /* Растягиваем, чтобы плыло плавно */
+            
+            animation: galaxy-move 12s ease infinite; /* Медленное движение */
+            
+            color: white;
+            border: none;
+            font-weight: 800;
+            box-shadow: 0 0 20px rgba(101, 31, 255, 0.4); /* Глубокая тень */
+        }
+
+        /* Темный режим (Фиксируем, чтобы не ломалось) */
+        body.dark-mode.theme-galaxy {
+            --bg: #05000a;
+            --surface: #120021;
+        }
+
         /* === ТЕМНЫЙ РЕЖИМ === */
         body.dark-mode { --bg: #1A1A2E; --surface: #16213E; --text: #EAEAEA; --text-light: #8892B0; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
-        
-        /* Исправление цветов тем в темном режиме */
         body.dark-mode.theme-gold { --primary: #FFEA80; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
         body.dark-mode.theme-standard { --primary: #8B7EFF; }
         body.dark-mode.theme-math { --primary: #00F5E0; }
@@ -1275,6 +1314,12 @@ window.addEventListener('load', () => {
             <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Выделитесь из толпы!</p>
             <div id="avatar-shop-list" class="shop-grid"></div>
         </div>
+        <!-- Блок Статусов -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>🏷️ Статусы</h3>
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Установи крутую подпись под именем!</p>
+            <div id="title-shop-list" class="shop-grid" style="grid-template-columns: 1fr 1fr;"></div>
+        </div>
     </section>
 
     <!-- 6. SETTINGS & DONATION -->
@@ -1807,7 +1852,8 @@ const DefaultDB = {
         lastStudyDate: null, 
         dailyStreak: 0, lastDailyClaim: null, 
         ownedThemes: ['standard'], ownedAvatars: [], 
-        
+        ownedTitles: [],
+        currentTitle: null, // Если null, показываем Лигу
         // Внутри DefaultDB.user:
         trainerRecords: {
             standard: { easy: 0, medium: 0, hard: 0 },
@@ -1864,58 +1910,79 @@ const THEMES = [
     { id: 'gold', name: 'Золото', icon: '🥇', price: 1500 },
     
     // Легендарная
-    { id: 'joker', name: 'JOKER', icon: '🃏', price: 2000 },
-    { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 }
+    { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 },
+    { id: 'joker', name: 'JOKER', icon: '🃏', price: 3000 },
+
+
+    // КОСМИЧЕСКАЯ ТЕМА
+    { id: 'galaxy', name: 'Галактика', icon: '🌌', price: 5000 }
 ];
 
 const SHOP_AVATARS = [
     // 🐣 НАЧАЛЬНЫЕ (50 - 100)
     { id: 'cat', icon: '🐱', name: 'Котик', price: 50 },
     { id: 'dog', icon: '🐶', name: 'Песель', price: 50 },
+    { id: 'hamster', icon: '🐹', name: 'Хомяк', price: 50 }, /* NEW */
     { id: 'girl_student', icon: '👩‍🎓', name: 'Студентка', price: 100 },
     { id: 'boy_student', icon: '👨‍🎓', name: 'Студент', price: 100 },
     { id: 'gamer', icon: '🎧', name: 'Геймер', price: 100 },
     { id: 'nerd', icon: '🤓', name: 'Умник', price: 100 },
 
-    // 🧢 СРЕДНИЕ / ПРОФЕССИИ (150 - 250)
+    // 🧢 СРЕДНИЕ (150 - 250)
     { id: 'muslimah', icon: '🧕', name: 'Муслима', price: 150 },
     { id: 'brother', icon: '🧔', name: 'Бородач', price: 150 },
-    { id: 'footballer', icon: '⚽', name: 'Футболист', price: 200 }, 
-    { id: 'boxer', icon: '🥊', name: 'Боксер', price: 200 },       
-    { id: 'doctor_w', icon: '👩‍⚕️', name: 'Врач ', price: 250 },
-    { id: 'doctor_m', icon: '👨‍⚕️', name: 'Врач ', price: 250 },
+    { id: 'panda', icon: '🐼', name: 'Панда', price: 200 }, /* NEW */
+    { id: 'robot', icon: '🤖', name: 'Робот', price: 200 }, /* NEW */
+    { id: 'footballer', icon: '⚽', name: 'Футболист', price: 250 }, 
+    { id: 'boxer', icon: '🥊', name: 'Боксер', price: 250 },       
     { id: 'police', icon: '👮‍♂️', name: 'Офицер', price: 250 },
     { id: 'artist', icon: '👩‍🎨', name: 'Художница', price: 250 },
 
     // 🔥 ЭПИЧЕСКИЕ (300 - 500)
+    { id: 'alien', icon: '👽', name: 'Пришелец', price: 300 }, /* NEW */
     { id: 'ghost', icon: '👻', name: 'Призрак', price: 300 },
+    { id: 'skull', icon: '💀', name: 'Череп', price: 350 },    /* NEW - Популярно */
     { id: 'superman', icon: '🦸‍♂️', name: 'Супермен', price: 350 },
     { id: 'supergirl', icon: '🦸‍♀️', name: 'Супергёрл', price: 350 },
-    { id: 'wizard', icon: '🧙‍♂️', name: 'Волшебник', price: 400 },
-    { id: 'fairy', icon: '🧚‍♀️', name: 'Фея', price: 400 },
+    { id: 'tiger', icon: '🐯', name: 'Тигр', price: 400 },     /* NEW */
+    { id: 'eagle', icon: '🦅', name: 'Орел', price: 400 },     /* NEW */
+    { id: 'wizard', icon: '🧙‍♂️', name: 'Волшебник', price: 450 },
     { id: 'vampire_m', icon: '🧛‍♂️', name: 'Вампир', price: 450 },
-    { id: 'vampire_w', icon: '🧛‍♀️', name: 'Вампирша', price: 450 },
-    { id: 'astronaut', icon: '👨‍🚀', name: 'Космонавт', price: 500 },
     { id: 'dragon', icon: '🐲', name: 'Дракон', price: 500 },
 
-    // 💎 ЭЛИТА (600+)
-    { id: 'king', icon: '👑', name: 'Король', price: 600 },
-    { id: 'queen', icon: '👸', name: 'Королева', price: 600 },
-    { id: 'genie', icon: '🧞‍♂️', name: 'Джинн', price: 800 },
-    { id: 'lion', icon: '🦁', name: 'Лев', price: 1000 },
-    { id: 'wolf', icon: '🐺', name: 'Волк', price: 1000 },
-    { id: 'hacker', icon: '🕵️‍♂️', name: 'Анонимус', price: 1000 }, /* Hacker */
-    { id: 'diamond', icon: '💎', name: 'Магнат', price: 2000 }
+    // 💎 ЭЛИТА (600 - 2000)
+    { id: 'samurai', icon: '👺', name: 'Самурай', price: 600 }, /* NEW */
+    { id: 'clown', icon: '🤡', name: 'Джокер', price: 666 },    /* NEW - Прикол с ценой */
+    { id: 'king', icon: '👑', name: 'Король', price: 1000 },
+    { id: 'queen', icon: '👸', name: 'Королева', price: 1000 },
+    { id: 'lion', icon: '🦁', name: 'Лев', price: 1500 },
+    { id: 'wolf', icon: '🐺', name: 'Волк', price: 1500 },
+    { id: 'diamond', icon: '💎', name: 'Магнат', price: 2000 },
+
+    // 🚀 LEGENDARY (Для миллионеров)
+    { id: 'hacker', icon: '🕵️‍♂️', name: 'Анонимус', price: 5000 },
+    { id: 'elon', icon: '🚀', name: 'SpaceX', price: 10000 }
+];
+
+const SHOP_TITLES = [
+    { id: 'student', name: 'Ученик', price: 50 },
+    { id: 'nerd', name: 'Ботан 🤓', price: 100 },
+    { id: 'pro', name: 'PRO Игрок', price: 200 },
+    { id: 'brain', name: 'Мегамозг 🧠', price: 300 },
+    { id: 'boss', name: 'Big Boss 😎', price: 500 },
+    { id: 'sigma', name: 'SIGMA 🗿', price: 1000 },
+    { id: 'khan', name: 'ХАН 👑', price: 2000 },
+    { id: 'future', name: 'Future Millionaire 💼', price: 5000 }
 ];
 
 // ЛИГИ 
 const LEAGUES = [
-    { min: 0, name: "🥉 Бронзовая Лига", color: "league-bronze" },
-    { min: 1000, name: "🥈 Серебряная Лига", color: "league-silver" },
-    { min: 5000, name: "🥇 Золотая Лига", color: "league-gold" },
-    { min: 12000, name: "💠 Платиновая Лига", color: "league-platinum" },
-    { min: 25000, name: "💎 Алмазная Лига", color: "league-diamond" },
-    { min: 60000, name: "👑 Легендарная Лига", color: "league-legend" }
+    { min: 1,  name: "🥉 Бронзовая Лига", color: "league-bronze" },
+    { min: 5,  name: "🥈 Серебряная Лига", color: "league-silver" },
+    { min: 10, name: "🥇 Золотая Лига", color: "league-gold" },
+    { min: 20, name: "💠 Платиновая Лига", color: "league-platinum" },
+    { min: 35, name: "💎 Алмазная Лига", color: "league-diamond" },
+    { min: 50, name: "👑 Легендарная Лига", color: "league-legend" }
 ];
 
 
@@ -2007,8 +2074,14 @@ const Data = {
             // Защита: если вдруг какого-то режима не хватает
             if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
             if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
-                // ===================================
-
+// 👇 ЛЕЧЕНИЕ СТАТУСОВ (FIX CRASH) 👇
+                if (!DB.user.ownedTitles) {
+                    DB.user.ownedTitles = [];
+                }
+                if (DB.user.currentTitle === undefined) {
+                    DB.user.currentTitle = null;
+                }
+                // 👆 ---------------------------- 👆
                 // Прочие проверки (защита от undefined)
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(!DB.user.avatar) DB.user.avatar = '😎';
@@ -2031,14 +2104,37 @@ const Data = {
         try {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
             const docSnap = await window.DB_Online.getDoc(docRef);
-            if(docSnap.exists()) {
+            
+            if (docSnap.exists()) {
                 const cloudData = docSnap.data();
-                if(cloudData.user.totalSec > DB.user.totalSec) {
+
+                // 👮‍♂️ 1. АДМИНСКИЙ СБРОС (FORCE UPDATE)
+                // Если ты в консоли добавил поле forceUpdate: true
+                if (cloudData.user.forceUpdate === true) {
+                    console.log("👮‍♂️ Применено наказание админа");
+                    
+                    DB = cloudData; // Жестко заменяем локальные данные на облачные
+                    DB.user.forceUpdate = false; // Снимаем метку (чтобы не обновлялось вечно)
+                    
+                    this.save(); // Сохраняем "бедность" на телефон игрока
+                    App.updateUI(); // Обновляем интерфейс
+                    App.toast("⚠️ Данные скорректированы сервером");
+                    setTimeout(() => location.reload(), 1000); // Перезагружаем для надежности
+                    return;
+                }
+
+                // 2. ОБЫЧНАЯ СИНХРОНИЗАЦИЯ (Если на другом телефоне прогресс больше)
+                // Проверяем по времени (totalSec) или по опыту (xp)
+                if (cloudData.user.totalSec > DB.user.totalSec || cloudData.user.xp > DB.user.xp) {
+                    console.log("☁️ Найдено сохранение новее");
                     DB = cloudData;
                     this.save();
+                    App.updateUI();
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Sync error:", e);
+        }
     },
 
     save() {
@@ -2548,6 +2644,7 @@ const Auth = {
 
         // Сразу сохраняем имя в облачную структуру
         Data.load(user.id);
+        
         if(DB && DB.user) {
             DB.user.name = name;
             DB.user.avatar = this.selectedAvatar;
@@ -3306,10 +3403,16 @@ const App = {
         this.setText('profile-avatar-big', DB.user.avatar || '😎');
 
         // Лиги
-        let cl = LEAGUES[0]; 
-        for(let l of LEAGUES) { if(DB.user.xp >= l.min) cl = l; }
-        this.setText('header-league', cl.name);
-        this.setText('profile-league-big', cl.name);
+let cl = LEAGUES[0]; 
+        for(let l of LEAGUES) { 
+            // 👇 Сравниваем с LEVEL, а не с XP
+            if(DB.user.level >= l.min) cl = l; 
+        }
+// Если есть статус - показываем его, иначе показываем Лигу
+const statusText = DB.user.currentTitle ? `★ ${DB.user.currentTitle}` : cl.name;
+this.setText('header-league', statusText);
+// В большом профиле тоже
+this.setText('profile-league-big', statusText);        this.setText('profile-league-big', cl.name);
         
         const headerBox = document.getElementById('header-avatar-box');
         if(headerBox) headerBox.className = `profile-img ${cl.color}`;
@@ -3441,6 +3544,34 @@ const App = {
         }
     }, 
 
+    buyTitle(id) {
+        const t = SHOP_TITLES.find(x => x.id === id);
+        
+        // Если уже куплено - надеваем
+        if (DB.user.ownedTitles.includes(id)) {
+            this.equipTitle(t.name);
+        } 
+        // Покупка
+        else if (DB.user.coins >= t.price) {
+            if (confirm(`Купить статус "${t.name}" за ${t.price}?`)) {
+                DB.user.coins -= t.price;
+                DB.user.ownedTitles.push(id);
+                this.equipTitle(t.name); // Сразу надеваем
+                FX.confetti();
+            }
+        } else {
+            App.toast("Недостаточно монет");
+        }
+    },
+
+    equipTitle(name) {
+        DB.user.currentTitle = name;
+        Data.save();
+        this.updateUI();
+        this.renderShop();
+        SoundSys.play('click');
+    },
+    
 // 👇 ФУНКЦИЯ ДЛЯ ОТРИСОВКИ МАГАЗИНА 👇
     renderShop() {
         // Темы
@@ -3474,6 +3605,37 @@ const App = {
                         : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`
                     }
                 </div>`;
+            }).join('');
+        }
+
+        // СТАТУСЫ
+        // СТАТУСЫ
+        const titleList = document.getElementById('title-shop-list');
+        if (titleList) {
+            titleList.innerHTML = SHOP_TITLES.map(t => {
+                // 🔥 ЗАЩИТА: Если массива нет, используем пустой []
+                const userTitles = DB.user.ownedTitles || []; 
+                
+                const owned = userTitles.includes(t.id);
+                const active = DB.user.currentTitle === t.name;
+                const priceClass = (DB.user.coins >= t.price) ? 'affordable' : '';
+
+                // Кнопка "Убрать" (если активен)
+                if (active) {
+                    return `<div class="shop-item active" onclick="App.equipTitle(null)" style="border-color:var(--success);">
+                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
+                        <small style="color:var(--success);">Выбрано (Снять)</small>
+                    </div>`;
+                }
+
+                return `<div class="shop-item" onclick="App.buyTitle('${t.id}')">
+                    <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
+                    ${owned 
+                        ? '<small style="color:var(--text-light);">Надеть</small>' 
+                        : `<small class="shop-price-tag ${priceClass}">${t.price} 💰</small>`
+                    }
+                </div>`
+                ;
             }).join('');
         }
     },
