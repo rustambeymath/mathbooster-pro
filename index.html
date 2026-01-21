@@ -46,9 +46,8 @@
     <!-- FIREBASE (База Данных) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // 🔥 ВСТАВЬ СЮДА КОНФИГ ИЗ FIREBASE CONSOLE 🔥
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // 🔥  КОНФИГ ИЗ FIREBASE CONSOLE 🔥
         const firebaseConfig = {
   	  apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
   	  authDomain: "mathbooster-pro.firebaseapp.com",
@@ -64,8 +63,7 @@
                 const app = initializeApp(firebaseConfig);
                 const db = getFirestore(app);
                 // Делаем доступным глобально
-                window.DB_Online = { db, doc, setDoc, getDoc, collection, getDocs, query, orderBy, limit };
-                console.log("✅ Firebase подключен успешно");
+            window.DB_Online = { db, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, orderBy, limit, getCountFromServer };                console.log("✅ Firebase подключен успешно");
             } else {
                 console.log("⚠️ Firebase конфиг отсутствует. Работает оффлайн режим.");
             }
@@ -1006,7 +1004,7 @@ window.addEventListener('load', () => {
     const manifest = {
     "name": "MathBooster PRO",
     "short_name": "MathBooster",
-    "start_url": "/",  // ← фикс
+    "start_url": ".",
     "display": "standalone",
     "background_color": "#F4F7FE",
     "theme_color": "#6C63FF",
@@ -1334,6 +1332,7 @@ window.addEventListener('load', () => {
             </div>
             <button class="btn btn-primary" onclick="Trainer.init()">В меню</button>
         </div>
+</div>
     </section>
 
 
@@ -1932,36 +1931,33 @@ const SoundSys = {
         const pack = DB.user.soundPack || 'standard';
 
         // --- 🕹️ 8-BIT (РЕТРО) ---
-        // Квадратная волна очень громкая, ставим громкость 0.05
         if (pack === 'retro') {
             osc.type = 'square'; 
-            gain.gain.setValueAtTime(0.05, t); // <--- ТИХО
-            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1); // Быстрое затухание
+            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
 
             if (type === 'click') { osc.frequency.setValueAtTime(440, t); osc.start(t); osc.stop(t+0.1); }
-            if (type === 'coin')  { osc.frequency.setValueAtTime(900, t); osc.frequency.linearRampToValueAtTime(1800, t+0.1); osc.start(t); osc.stop(t+0.1); }
-            if (type === 'success') { osc.frequency.setValueAtTime(500, t); osc.frequency.setValueAtTime(1000, t+0.1); osc.start(t); osc.stop(t+0.2); }
-            if (type === 'error') { osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(50, t+0.2); osc.start(t); osc.stop(t+0.2); }
-            if (type === 'win')   { osc.frequency.setValueAtTime(500, t); osc.frequency.linearRampToValueAtTime(1500, t+0.3); osc.start(t); osc.stop(t+0.3); }
+            else if (type === 'coin')  { osc.frequency.setValueAtTime(900, t); osc.frequency.linearRampToValueAtTime(1800, t+0.1); osc.start(t); osc.stop(t+0.1); }
+            else if (type === 'success') { osc.frequency.setValueAtTime(500, t); osc.frequency.setValueAtTime(1000, t+0.1); osc.start(t); osc.stop(t+0.2); }
+            else if (type === 'error') { osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(50, t+0.2); osc.start(t); osc.stop(t+0.2); }
+            else if (type === 'win')   { osc.frequency.setValueAtTime(500, t); osc.frequency.linearRampToValueAtTime(1500, t+0.3); osc.start(t); osc.stop(t+0.3); }
         }
         
         // --- 🧼 BUBBLE (БУЛЬК) ---
-        // Синусоида мягкая, ставим громкость 0.2
         else if (pack === 'bubble') {
             osc.type = 'sine';
-            gain.gain.setValueAtTime(0.2, t); // <--- СРЕДНЕ
-            gain.gain.linearRampToValueAtTime(0, t + 0.15); // Плавное затухание
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.15);
 
             if (type === 'click') { osc.frequency.setValueAtTime(300, t); osc.frequency.linearRampToValueAtTime(600, t+0.1); osc.start(t); osc.stop(t+0.1); }
-            if (type === 'coin')  { osc.frequency.setValueAtTime(600, t); osc.frequency.linearRampToValueAtTime(1200, t+0.15); osc.start(t); osc.stop(t+0.15); }
+            else if (type === 'coin')  { osc.frequency.setValueAtTime(600, t); osc.frequency.linearRampToValueAtTime(1200, t+0.15); osc.start(t); osc.stop(t+0.15); }
             else { osc.frequency.setValueAtTime(400, t); osc.start(t); osc.stop(t+0.1); }
         }
 
         // --- 🚀 SCI-FI (КОСМОС) ---
-        // Пила (Sawtooth) очень резкая, ставим громкость 0.04
         else if (pack === 'sci-fi') {
             osc.type = 'sawtooth';
-            gain.gain.setValueAtTime(0.04, t); // <--- ОЧЕНЬ ТИХО
+            gain.gain.setValueAtTime(0.04, t);
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
 
             if (type === 'click') { osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(100, t+0.1); osc.start(t); osc.stop(t+0.1); }
@@ -3235,20 +3231,52 @@ const BattleSys = {
     },
 
     // 1. СОЗДАТЕЛЬ НАЧИНАЕТ
-    create() {
+    async create() {
         if (DB.user.coins < this.bet) return App.toast("Недостаточно монет!");
         
-        // Списываем монеты сразу (залог)
-        DB.user.coins -= this.bet;
-        Data.save();
-        App.updateUI();
+        App.toast("⏳ Генерация кода...");
 
-        // Настраиваем Тренажер на дуэль
-        document.getElementById('battle-modal').classList.remove('show');
-        Trainer.startDuel('creator', this.bet);
+        // Генерируем код ТУТ
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+        try {
+            // Создаем битву со статусом 'playing' (Создатель играет)
+            await window.DB_Online.setDoc(window.DB_Online.doc(window.DB_Online.db, "battles", code), {
+                creator: DB.user.name,
+                bet: this.bet,
+                scoreA: 0, // Пока 0
+                mode: Trainer.mode, // Текущий режим тренажера
+                difficulty: Trainer.difficulty,
+                status: 'playing', // ВАЖНО: Статус "В процессе"
+                date: new Date().toISOString()
+            });
+
+            // Списываем деньги
+            DB.user.coins -= this.bet;
+            Data.save();
+            App.updateUI();
+
+            // Показываем код
+            document.getElementById('battle-modal').classList.remove('show');
+            
+            // Копируем в буфер
+            navigator.clipboard.writeText(code).catch(()=>{});
+            
+            // Показываем окно с кодом перед стартом
+            prompt(`✅ БИТВА СОЗДАНА!\nСкопируй код и скинь другу, пока играешь:\n\nКОД: ${code}\n\nНажми ОК, чтобы начать бой!`, code);
+
+            // Запускаем игру, передавая код
+            Trainer.startDuel('creator', this.bet, code);
+
+        } catch (e) {
+            console.error(e);
+            App.toast("Ошибка сети");
+        }
     },
 
-    // 2. ВТОРОЙ ИГРОК ПРИСОЕДИНЯЕТСЯ
+    // 2. ВТОРОЙ ИГРОК (ПРОВЕРКА СТАТУСА)
     async join() {
         const code = document.getElementById('battle-code-input').value.trim().toUpperCase();
         if (code.length < 4) return App.toast("Введите код!");
@@ -3262,23 +3290,31 @@ const BattleSys = {
             if (!snap.exists()) return App.toast("❌ Битва не найдена");
             
             const battle = snap.data();
-            if (battle.status !== 'waiting') return App.toast("⛔️ Битва уже завершена");
-            if (DB.user.coins < battle.bet) return App.toast(`Нужно ${battle.bet} монет для входа`);
+            
+            // Если создатель еще играет
+            if (battle.status === 'playing') {
+                return alert(`⏳ Подожди!\nИгрок ${battle.creator} еще не закончил свой раунд.\n\nПопробуй через минуту.`);
+            }
 
-            // Списываем ставку
+            if (battle.status !== 'waiting') return App.toast("⛔️ Битва уже завершена");
+            
+            if (DB.user.coins < battle.bet) return App.toast(`Нужно ${battle.bet} монет`);
+
+            // Списываем
             DB.user.coins -= battle.bet;
             Data.save();
             App.updateUI();
 
             this.currentBattleId = code;
             
-            // Запускаем ту же игру, что и у создателя
-            // Важно: ставим тот же режим и сложность!
+            // Настройки игры как у создателя
             Trainer.difficulty = battle.difficulty;
             Trainer.mode = battle.mode; 
             
             document.getElementById('battle-modal').classList.remove('show');
-            Trainer.startDuel('challenger', battle.bet);
+            
+            // Запуск (код передаем, хотя челленджеру он не так важен для записи)
+            Trainer.startDuel('challenger', battle.bet, code);
 
         } catch (e) {
             console.error(e);
@@ -3287,11 +3323,30 @@ const BattleSys = {
     }
 };
 
-const Trainer = {
+const Trainer = {  
     // Добавили флаг isLocked
     score: 0, time: 60, interval: null, 
     ans: 0, correctSign: '', difficulty: 'easy', mode: 'standard', 
     isLocked: false, // <--- НОВОЕ: Защита от спама
+
+// --- ДУЭЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+    isDuel: false,
+    duelRole: null, 
+    duelBet: 0,
+    duelCode: null, // <--- НОВАЯ ПЕРЕМЕННАЯ
+
+    // ФУНКЦИЯ ЗАПУСКА ДУЭЛИ
+    startDuel(role, bet, code) { 
+        this.isDuel = true;
+        this.duelRole = role;
+        this.duelBet = bet;
+        this.duelCode = code; // <--- Запоминаем код
+        
+        // Запускаем игру в нужном режиме
+        this.start(this.mode);
+        
+        App.toast(role === 'creator' ? "⚠️ Твой счет запишется в битву!" : "⚠️ Побей рекорд соперника!");
+    },
 
     // 1. Выбор режима
     selectMode(mode, btn) {
@@ -3591,7 +3646,7 @@ const Trainer = {
 
         const earnedXP = this.score * mult; 
 
-        // Делитель монет (Жесткий)
+        // Делитель монет 
         // Легко/Средне: 1 монета за 10 ответов
         // Сложно: 1 монета за 5 ответов
         let div = (this.difficulty === 'hard') ? 5 : 10;
@@ -3606,7 +3661,6 @@ const Trainer = {
         }
 
         // 🔥 4. ПРОВЕРКА ДУЭЛИ (PVP)
-        // Если это была дуэль — уходим в спец. обработчик и не показываем обычный экран
         if (this.isDuel) {
             this.handleDuelEnd();
             this.isDuel = false; // Сбрасываем флаг битвы
@@ -3640,6 +3694,84 @@ const Trainer = {
         document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
         document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
     },
+    async handleDuelEnd() {
+        const score = this.score;
+        
+        // Показываем экран результатов
+        document.getElementById('trainer-game').style.display = 'none';
+        document.getElementById('trainer-result').style.display = 'block';
+        
+        // Показываем код на экране, чтобы не забыли
+        const codeArea = document.getElementById('duel-code-area');
+        const codeText = document.getElementById('duel-code-text');
+        
+        // Статистика
+        document.getElementById('result-score').innerText = score; 
+        document.getElementById('result-xp').innerText = "PvP"; 
+        document.getElementById('result-coins').innerText = "---"; 
+
+        // 1. СОЗДАТЕЛЬ (ОБНОВЛЯЕМ ЗАПИСЬ)
+        if (this.duelRole === 'creator') {
+            App.toast("⏳ Сохранение результата...");
+            
+            try {
+                // Обновляем существующий документ по коду
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", this.duelCode);
+                
+                await window.DB_Online.updateDoc(docRef, {
+                    scoreA: score,
+                    status: 'waiting' // 🔥 ТЕПЕРЬ ДРУГ МОЖЕТ ЗАЙТИ
+                });
+
+                // Показываем код
+                if(codeArea) codeArea.style.display = 'block'; 
+                if(codeText) codeText.innerText = this.duelCode;        
+                
+                App.toast("✅ Результат сохранен! Ждем соперника.");
+
+            } catch (e) {
+                console.error(e);
+                alert("Ошибка сохранения. Проверьте интернет.");
+            }
+        }
+
+        // 2. ЧЕЛЛЕНДЖЕР (Оставляем как было, только используем duelCode)
+        else if (this.duelRole === 'challenger') {
+            if(codeArea) codeArea.style.display = 'none'; // Скрываем код
+            App.toast("⏳ Проверка...");
+            
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", this.duelCode);
+                const snap = await window.DB_Online.getDoc(docRef);
+                const battle = snap.data();
+
+                let msg = "";
+                let win = false;
+
+                if (score > battle.scoreA) {
+                    msg = `🏆 ПОБЕДА! (+${battle.bet * 2} 💰)`;
+                    DB.user.coins += battle.bet * 2; 
+                    win = true;
+                    SoundSys.play('win');
+                    FX.confetti();
+                } else if (score < battle.scoreA) {
+                    msg = `💀 Поражение... (-${battle.bet} 💰)`;
+                    SoundSys.play('error');
+                } else {
+                    msg = `🤝 Ничья (Возврат)`;
+                    DB.user.coins += battle.bet;
+                }
+                
+                document.querySelector('#trainer-result h2').innerText = msg;
+                document.getElementById('result-coins').innerText = `VS: ${battle.scoreA}`;
+
+                await window.DB_Online.updateDoc(docRef, { status: 'finished', winner: win ? DB.user.name : battle.creator });
+                Data.save();
+                App.updateUI();
+
+            } catch (e) { console.error(e); }
+        }
+    }
 };
 
 const AchievementSys = {
