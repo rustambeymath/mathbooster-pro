@@ -2283,7 +2283,9 @@ const Data = {
                 if (!DB.user.soundPack) DB.user.soundPack = 'standard';
                 if (!DB.achievements || DB.achievements.length === 0) DB.achievements = GenAch();
                 if(DB.user.coins === undefined) DB.user.coins = 0;
-                if(DB.settings.notifications === undefined) DB.settings.notifications = false;
+                if (!DB.settings) {DB.settings = { sfx: true, notifications: false };}
+                if (DB.settings.sfx === undefined) DB.settings.sfx = true;
+                if (DB.settings.notifications === undefined) DB.settings.notifications = false;
                 if(!DB.user.avatar) DB.user.avatar = '😎';
                 if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
                 if(DB.sessions === undefined) DB.sessions = []; 
