@@ -1117,7 +1117,7 @@ window.addEventListener('load', () => {
                 
                 <div id="timer" class="timer-display">00:00:00</div>
                 <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
-    1 монета 💰 за каждые 10 минут
+    5 монет 💰 за каждые 10 минут
 </div>
 <div style="font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 15px; opacity: 0.8;">
     "Время — это материал, из которого сделана жизнь."
@@ -1265,6 +1265,13 @@ window.addEventListener('load', () => {
                     <span style="font-size: 20px;">🟥</span> <b>Квадраты</b>
                 </button>
             </div>
+
+            <!-- КНОПКА ДУЭЛИ  -->
+            <button class="btn" onclick="BattleSys.openMenu()" style="background: linear-gradient(45deg, #FF416C, #FF4B2B); color: white; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4); border: none;">
+                ⚔️ PVP ДУЭЛЬ 
+            </button>
+            <!-------------------->
+            
 
             <!-- Сложность -->
             <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-light);">СЛОЖНОСТЬ</div>
@@ -1490,6 +1497,20 @@ window.addEventListener('load', () => {
         <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.5);">
     </div>
     
+    <!-- Уведомления -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: var(--bg); padding: 15px; border-radius: 15px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 20px;">🔔</span>
+            <div>
+                <div style="font-weight: bold; font-size: 14px;">Уведомления</div>
+                <div style="font-size: 10px; opacity: 0.7;">Напоминание о таймере</div>
+            </div>
+        </div>
+        
+        <!-- 👇 ОБНОВЛЕННЫЙ ПЕРЕКЛЮЧАТЕЛЬ 👇 -->
+        <input type="checkbox" id="notify-toggle" onchange="Notify.toggle(this.checked)" style="transform: scale(1.5);">
+    </div>
+
     <!-- Темный режим -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
         <span>🌙 Тёмный режим</span>
@@ -2016,9 +2037,9 @@ const DefaultDB = {
         currentTitle: null, // Если null, показываем Лигу
         // Внутри DefaultDB.user:
         ownedFrames: [],      // Купленные рамки
-currentFrame: null,   // Текущая рамка
-ownedSounds: ['standard'], // Купленные звуки
-soundPack: 'standard',     // Текущий пак
+        currentFrame: null,   // Текущая рамка
+        ownedSounds: ['standard'], // Купленные звуки
+        soundPack: 'standard',     // Текущий пак
         trainerRecords: {
             standard: { easy: 0, medium: 0, hard: 0 },
             sign:     { easy: 0, medium: 0, hard: 0 },
@@ -2028,8 +2049,11 @@ soundPack: 'standard',     // Текущий пак
         usedCodes: [],
         lifetimeXP: 0
     }, 
-    settings: { sfx: true }, 
-    
+
+    settings: { 
+        sfx: true,  
+        notifications: false // <--- ДОБАВИТЬ ЭТО
+    },
     // Предметы
     subjects: { 
         algebra: {name:'Алгебра', icon:'✖️', sec:0}, 
@@ -2264,6 +2288,7 @@ const Data = {
                 if (!DB.user.soundPack) DB.user.soundPack = 'standard';
                 if (!DB.achievements || DB.achievements.length === 0) DB.achievements = GenAch();
                 if(DB.user.coins === undefined) DB.user.coins = 0;
+                if(DB.settings.notifications === undefined) DB.settings.notifications = false;
                 if(!DB.user.avatar) DB.user.avatar = '😎';
                 if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
                 if(DB.sessions === undefined) DB.sessions = []; 
@@ -2961,39 +2986,35 @@ const Tutorial = {
 };
 
 const Timer = {
-    timerId: null,          // ← Добавили поле для setTimeout
-    sec: 0,
-    active: false,
-    lastActive: 0,
-    sessionDuration: 0,
+    timerId: null,
+    sec: 0,             // Текущие секунды на экране
+    active: false,      // Работает ли таймер
+    startTime: 0,       // Время запуска (для сверки часов)
+    lastKnownTime: 0,   // Последнее время, когда таймер "тикал"
+    
+    sessionDuration: 0, // Общее время сессии
     sessionCoins: 0,
-    maxSessionTime: 30 * 60,
-    maxIdleTime: 25 * 60 * 1000,
+    
+    // НАСТРОЙКИ (В МИНУТАХ)
+    maxSessionTime: 60 * 60,       // 60 минут (Проверка реальностью)
+    maxIdleTime: 25 * 60 * 1000,   // 25 минут (Анти-АФК)
+    lastActive: 0,                 // Когда последний раз трогали экран
+
     wakeLock: null,
-    useWakeLock: localStorage.getItem('useWakeLock') !== 'false', // ← Читаем из сохранения (по умолчанию true)
+    useWakeLock: localStorage.getItem('useWakeLock') !== 'false',
 
     async requestWakeLock() {
-        if (!this.useWakeLock) return; // ← Проверка — если выключено, ничего не делаем
-        try {
-            if ('wakeLock' in navigator) {
-                this.wakeLock = await navigator.wakeLock.request('screen');
-            }
-        } catch (err) {}
+        if (!this.useWakeLock) return;
+        try { if ('wakeLock' in navigator) this.wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
     },
 
     releaseWakeLock() {
-        if (this.wakeLock) {
-            this.wakeLock.release();
-            this.wakeLock = null;
-        }
+        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
     },
 
     toggleWakeLock(enabled) {
         this.useWakeLock = enabled;
         localStorage.setItem('useWakeLock', enabled ? 'true' : 'false');
-        App.toast(enabled 
-            ? "Экран будет гореть во время учёбы" 
-            : "Экономим батарею — экран может гаснуть");
     },
 
     preStart() {
@@ -3003,81 +3024,112 @@ const Timer = {
 
     start() {
         this.active = true; 
-        this.lastActive = Date.now(); 
-        this.sessionDuration = 0; 
+        
+        // 🔥 ВАЖНО: Запоминаем текущее время как точку отсчета
+        // Если мы продолжили после паузы, отнимаем уже накопленные секунды
+        this.startTime = Date.now() - (this.sec * 1000);
+        this.lastKnownTime = Date.now();
+        this.lastActive = Date.now();
+        
         this.sessionCoins = 0; 
+        
         SoundSys.play('click');
         this.requestWakeLock();
         
-        // Слушаем активность, чтобы не сработал анти-афк
-        window.onmousemove = window.onkeypress = () => { this.lastActive = Date.now(); };
+        // Слушаем активность
+        window.onmousemove = window.onkeypress = window.ontouchstart = () => { 
+            this.lastActive = Date.now(); 
+        };
 
-        // ЗАПУСК ТАЙМЕРА
+        // ЗАПУСК ИНТЕРВАЛА
+        if (this.ref) clearInterval(this.ref);
+        
         this.ref = setInterval(() => {
             const now = Date.now();
             
-            // 1. Проверка: не ушел ли пользователь (15 мин бездействия)
-            if (now - this.lastActive > this.maxIdleTime) { 
-                this.forcePause("🛑 Таймер остановлен: Нет активности 15 минут."); 
-                return; 
-            }
+            // 1. ВЫЧИСЛЕНИЕ РЕАЛЬНОГО ВРЕМЕНИ (С учетом выключенного экрана)
+            // Сколько секунд должно быть на таймере по системным часам
+            const expectedSec = Math.floor((now - this.startTime) / 1000);
             
-            // 2. Проверка: слишком долгая сессия (30 мин)
-            if (this.sessionDuration >= this.maxSessionTime) { 
-                this.forcePause("👮 Проверка реальностью! Решите пример."); 
-                MathGame.show(true); 
-                return; 
+            // Разница между тем, что было (this.sec) и тем, что стало
+            // Если экран был выключен, diff будет большим (например, 300 сек)
+            const diff = expectedSec - this.sec;
+
+            // Если время реально прошло (больше 0)
+            if (diff > 0) {
+                
+                // 2. АНТИ-АФК ПРОВЕРКА (Учитываем сон)
+                // Если телефон спал дольше, чем разрешено (25 мин)
+                const sleepTime = now - this.lastKnownTime;
+                if (sleepTime > this.maxIdleTime) {
+                    this.forcePause("🛑 Таймер остановлен: Телефон спал слишком долго (>25 мин).");
+                    return;
+                }
+                
+                // Если активность была давно (пока экран горел)
+                if (now - this.lastActive > this.maxIdleTime) {
+                    this.forcePause("🛑 Таймер остановлен: Нет активности 25 минут.");
+                    return;
+                }
+
+                // 3. ПРИМЕНЯЕМ ВРЕМЯ
+                this.sec = expectedSec;
+                this.sessionDuration += diff;
+                DB.user.totalSec += diff;
+                
+                if (DB.subjects && DB.subjects[DB.user.subject]) {
+                    DB.subjects[DB.user.subject].sec += diff;
+                }
+
+                // 4. ПРОВЕРКА НА ДОЛГУЮ СЕССИЮ (60 мин)
+                if (this.sessionDuration >= this.maxSessionTime) { 
+                    Notify.send("⏱️ Время вышло!", "Сессия завершена. Зайди за наградой.");
+                    this.forcePause("👮 Проверка реальностью!"); 
+                    MathGame.show(true); 
+                    return; 
+                }
+
+                // 5. НАГРАДА ЗА ПРОШЕДШЕЕ ВРЕМЯ (Даже если спал)
+                // Мы проверяем, сколько 10-минутных отрезков мы "перешагнули"
+                const prevMilestone = Math.floor((this.sec - diff) / 600);
+                const currentMilestone = Math.floor(this.sec / 600);
+                
+                if (currentMilestone > prevMilestone) {
+                    // Если проспал 30 минут, дадим награду 3 раза
+                    const milestonesPassed = currentMilestone - prevMilestone;
+                    const coinsReward = 5 * milestonesPassed; 
+                    
+                    DB.user.coins += coinsReward;
+                    this.sessionCoins += coinsReward;
+                    SoundSys.play('coin');
+                    
+                    const coinEl = document.getElementById('coin-display'); 
+                    if(coinEl) {
+                        const rect = coinEl.getBoundingClientRect(); 
+                        FX.floatText(rect.left, rect.top, `+${coinsReward} 💰`); 
+                    }
+                    App.updateUI();
+                }
+
+                // 6. СОХРАНЕНИЕ
+                Data.save();
+                
+                // Обновляем "последнее известное время"
+                this.lastKnownTime = now;
             }
 
-            // 3. Увеличиваем счетчики времени
-            this.sec++; 
-            this.sessionDuration++; 
-            DB.user.totalSec++; 
-            
-            // Безопасно увеличиваем время предмета
-            if (DB.subjects && DB.subjects[DB.user.subject]) {
-                DB.subjects[DB.user.subject].sec++;
-            }
-
-            // === 4. ОБНОВЛЕНИЕ ЭКРАНА (Обычный + Эко режим) ===
+            // === ОБНОВЛЕНИЕ ЭКРАНА ===
             const timeString = new Date(this.sec * 1000).toISOString().substr(11, 8);
             
-            // Обновляем обычный таймер
             const timerEl = document.getElementById('timer');
             if(timerEl) timerEl.innerText = timeString;
             
-            // Обновляем черный Эко-экран
             const ecoEl = document.getElementById('eco-timer-display');
             if(ecoEl) ecoEl.innerText = timeString;
-            // =================================================
+            // ==========================
 
-            // 5. Награда монетками (каждые 10 минут = 600 сек)
-            if(this.sec % 600 === 0) { 
-                DB.user.coins++; 
-                this.sessionCoins++; 
-                SoundSys.play('coin'); 
-                
-                // Анимация монетки
-                const coinEl = document.getElementById('coin-display'); 
-                if(coinEl) {
-                    const rect = coinEl.getBoundingClientRect(); 
-                    FX.floatText(rect.left, rect.top, "+1 💰"); 
-                }
-                
-                Data.save(); 
-                App.updateUI(); 
-            } 
-
-            // 6. Сохранение данных (каждую минуту)
-            if(this.sec % 60 === 0) { 
-                Data.save(); 
-
-                AchievementSys.check(); 
-            }
-
-        }, 1000); // Интервал 1 секунда
+        }, 1000); 
         
-        // Меняем кнопку и цвет таймера
         document.getElementById('btn-start').innerText = "🔥 ИДЕТ..."; 
         document.getElementById('timer').style.color = "var(--primary)";
     },
@@ -3088,28 +3140,20 @@ const Timer = {
     },
 
     stop(manual = true) {
-        // 1. Если таймер уже остановлен, выходим
-        if (!this.active) {
-            return;
-        }
+        if (!this.active) return;
 
-        // 2. ОСТАНАВЛИВАЕМ ТАЙМЕР (самая важная часть)
         if (this.ref) {
             clearInterval(this.ref);
-            this.ref = null; // Очищаем ссылку на него
+            this.ref = null;
         }
 
-        // 3. Меняем статус на "неактивен"
         this.active = false;
-        
-        // Отключаем все "слушатели"
-        window.onmousemove = window.onkeypress = null;
+        window.onmousemove = window.onkeypress = window.ontouchstart = null;
         this.releaseWakeLock();
         SoundSys.play('click');
 
-        // 4. Если таймер работал больше минуты, начисляем XP и проверяем цели
         if (manual && this.sec > 60) {
-            App.addXP(Math.floor(this.sec / 60) * 10);
+            App.addXP(Math.floor(this.sec / 60) * 20); // 20 XP за минуту
             
             const goal = document.getElementById('session-goal').value.trim();
             if (goal && confirm(`Вы выполнили цель: "${goal}"?`)) {
@@ -3120,7 +3164,7 @@ const Timer = {
             document.getElementById('session-goal').value = "";
         }
         
-        // 5. Сохраняем статистику и стрики
+        // Сохранение истории (по Ташкенту)
         const k = getUZDate(); 
         DB.history[k] = (DB.history[k] || 0) + this.sec; 
         
@@ -3135,34 +3179,26 @@ const Timer = {
             const last = DB.user.lastStudyDate; 
             
             if (last !== today) { 
-                const d = new Date(); 
-                d.setDate(d.getDate() - 1); 
+                const d = new Date(); d.setDate(d.getDate() - 1); 
                 const yesterdayStr = getUZDate(d); 
                 
                 if (last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); } 
                 else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); } 
                 
                 DB.user.lastStudyDate = today; 
-                SoundSys.play('success'); 
-                FX.confetti(); 
+                SoundSys.play('success'); FX.confetti(); 
             } 
         }
 
-        // 6. СБРАСЫВАЕМ СЧЕТЧИК СЕКУНД
-        if (manual) {
-            this.sec = 0;
-        }
+        if (manual) this.sec = 0;
 
-        // 7. ОБНОВЛЯЕМ ИНТЕРФЕЙС, ЧТОБЫ ПОКАЗАТЬ ОСТАНОВКУ
         document.getElementById('btn-start').innerText = "🚀 СТАРТ";
         document.getElementById('timer').style.color = "var(--text)";
         
-        // 8. ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ДИСПЛЕЙ НА 00:00:00
         const timeString = new Date(this.sec * 1000).toISOString().substr(11, 8);
         const timerEl = document.getElementById('timer');
         if(timerEl) timerEl.innerText = timeString;
         
-        // 9. Сохраняем все изменения и обновляем остальной UI
         Data.save(); 
         App.updateUI(); 
         App.renderHistory(); 
@@ -3170,6 +3206,86 @@ const Timer = {
 };
 
 const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
+
+const BattleSys = {
+    bet: 50,
+    currentBattleId: null,
+
+    openMenu() {
+        if (!window.DB_Online) return App.toast("Нужен интернет для битв!");
+        document.getElementById('battle-menu-view').style.display = 'block';
+        document.getElementById('battle-create-view').style.display = 'none';
+        document.getElementById('battle-join-view').style.display = 'none';
+        document.getElementById('battle-modal').classList.add('show');
+    },
+
+    showCreate() {
+        document.getElementById('battle-menu-view').style.display = 'none';
+        document.getElementById('battle-create-view').style.display = 'block';
+    },
+
+    showJoin() {
+        document.getElementById('battle-menu-view').style.display = 'none';
+        document.getElementById('battle-join-view').style.display = 'block';
+    },
+
+    setBet(amount) {
+        this.bet = amount;
+        App.toast(`Ставка: ${amount} монет`);
+    },
+
+    // 1. СОЗДАТЕЛЬ НАЧИНАЕТ
+    create() {
+        if (DB.user.coins < this.bet) return App.toast("Недостаточно монет!");
+        
+        // Списываем монеты сразу (залог)
+        DB.user.coins -= this.bet;
+        Data.save();
+        App.updateUI();
+
+        // Настраиваем Тренажер на дуэль
+        document.getElementById('battle-modal').classList.remove('show');
+        Trainer.startDuel('creator', this.bet);
+    },
+
+    // 2. ВТОРОЙ ИГРОК ПРИСОЕДИНЯЕТСЯ
+    async join() {
+        const code = document.getElementById('battle-code-input').value.trim().toUpperCase();
+        if (code.length < 4) return App.toast("Введите код!");
+
+        App.toast("⏳ Поиск битвы...");
+        
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", code);
+            const snap = await window.DB_Online.getDoc(docRef);
+
+            if (!snap.exists()) return App.toast("❌ Битва не найдена");
+            
+            const battle = snap.data();
+            if (battle.status !== 'waiting') return App.toast("⛔️ Битва уже завершена");
+            if (DB.user.coins < battle.bet) return App.toast(`Нужно ${battle.bet} монет для входа`);
+
+            // Списываем ставку
+            DB.user.coins -= battle.bet;
+            Data.save();
+            App.updateUI();
+
+            this.currentBattleId = code;
+            
+            // Запускаем ту же игру, что и у создателя
+            // Важно: ставим тот же режим и сложность!
+            Trainer.difficulty = battle.difficulty;
+            Trainer.mode = battle.mode; 
+            
+            document.getElementById('battle-modal').classList.remove('show');
+            Trainer.startDuel('challenger', battle.bet);
+
+        } catch (e) {
+            console.error(e);
+            App.toast("Ошибка сети");
+        }
+    }
+};
 
 const Trainer = {
     // Добавили флаг isLocked
@@ -3406,15 +3522,15 @@ const Trainer = {
         }, 200);
         
         // XP
-        let pts = 10;
-        if(this.difficulty === 'medium') pts = 15;
-        if(this.difficulty === 'hard') pts = 25;
+        let pts = 2;
+        if(this.difficulty === 'medium') pts = 5;
+        if(this.difficulty === 'hard') pts = 10;
 
         // Анимация XP (если элемент имеет координаты)
-        try {
+        if (el && el.getBoundingClientRect) {
             const rect = el.getBoundingClientRect(); 
             FX.floatText(rect.left + rect.width/2, rect.top, `+${pts} XP`, "#6C63FF");
-        } catch(e){}
+        }
         
         this.nextProblem();
     },
@@ -3463,17 +3579,25 @@ const Trainer = {
     },
 
     end() {
+        // 1. Останавливаем таймер
         clearInterval(this.interval); 
         document.getElementById('trainer-game').style.display = 'none'; 
-        document.getElementById('trainer-result').style.display = 'block';
         
-        let mult = 10;
-        if(this.difficulty === 'medium') mult = 15;
-        if(this.difficulty === 'hard') mult = 25;
+        // 2. Рассчитываем награду (ПО НОВОЙ ЭКОНОМИКЕ)
+        // Множитель XP (урезанный)
+        let mult = 2; // Легко = 2 XP за ответ
+        if(this.difficulty === 'medium') mult = 5;
+        if(this.difficulty === 'hard') mult = 10;
 
         const earnedXP = this.score * mult; 
-        const earnedCoins = Math.floor(this.score / (this.difficulty === 'hard' ? 2 : 4)); 
+
+        // Делитель монет (Жесткий)
+        // Легко/Средне: 1 монета за 10 ответов
+        // Сложно: 1 монета за 5 ответов
+        let div = (this.difficulty === 'hard') ? 5 : 10;
+        const earnedCoins = Math.floor(this.score / div); 
         
+        // 3. Выдаем награду
         App.addXP(earnedXP);
         if(earnedCoins > 0) { 
             DB.user.coins += earnedCoins; 
@@ -3481,21 +3605,41 @@ const Trainer = {
             App.toast(`🪙 +${earnedCoins} 💰`); 
         }
 
-        // Сохранение рекорда (Безопасное)
-        if (!DB.user.trainerRecords[this.mode]) DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
-        
-        if(this.score > DB.user.trainerRecords[this.mode][this.difficulty]) {
+        // 🔥 4. ПРОВЕРКА ДУЭЛИ (PVP)
+        // Если это была дуэль — уходим в спец. обработчик и не показываем обычный экран
+        if (this.isDuel) {
+            this.handleDuelEnd();
+            this.isDuel = false; // Сбрасываем флаг битвы
+            return; 
+        }
+
+        // 5. ОБЫЧНАЯ ИГРА: Показываем экран результата
+        document.getElementById('trainer-result').style.display = 'block';
+
+        // Проверяем структуру базы (защита от сбоев)
+        if (!DB.user.trainerRecords[this.mode]) {
+            DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
+        }
+
+        // Берем старый рекорд
+        const oldRec = DB.user.trainerRecords[this.mode][this.difficulty];
+
+        // Если побили рекорд — сохраняем и празднуем
+        if(this.score > oldRec) {
             DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
             SoundSys.play('win'); 
-            App.toast("🏆 Новый рекорд!"); 
+            App.toast(`🏆 Новый рекорд в "${this.mode}": ${this.score}!`); 
             FX.confetti(); 
         }
 
-        Data.save(); App.updateUI();
+        // 6. Сохраняем и обновляем текст
+        Data.save(); 
+        App.updateUI();
+        
         document.getElementById('result-score').innerText = this.score; 
         document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
         document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
-    }
+    },
 };
 
 const AchievementSys = {
@@ -3633,7 +3777,10 @@ const App = {
 
         const toggle = document.getElementById('dark-toggle');
         if (toggle) toggle.checked = DB.user.darkMode;
-
+        const notifyToggle = document.getElementById('notify-toggle');
+        if (notifyToggle && DB.settings) {
+            notifyToggle.checked = DB.settings.notifications;
+        }
         this.setText('coin-display', DB.user.coins);
         this.setText('streak-display', DB.user.streak);
         this.setText('header-name', DB.user.name || 'Игрок');
@@ -4364,6 +4511,73 @@ const InstallSys = {
         FX.confetti(); // Праздник, что код скопирован
     }
 };
+const Notify = {
+    // Проверяем, поддерживает ли телефон уведомления
+    isSupported: 'Notification' in window,
+
+    // Обработка переключателя (ВКЛ/ВЫКЛ)
+    async toggle(isChecked) {
+        if (!this.isSupported) {
+            alert("Ваш браузер не поддерживает уведомления.");
+            document.getElementById('notify-toggle').checked = false;
+            return;
+        }
+
+        if (isChecked) {
+            // Если включили -> Просим разрешение
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                DB.settings.notifications = true;
+                App.toast("✅ Уведомления включены!");
+                
+                // Пробное уведомление
+                this.send("MathBooster", "Супер! Теперь я напомню, когда таймер закончится.");
+            } else {
+                // Если пользователь запретил -> Выключаем галочку обратно
+                alert("Вы запретили уведомления в настройках телефона. Разрешите их вручную.");
+                document.getElementById('notify-toggle').checked = false;
+                DB.settings.notifications = false;
+            }
+        } else {
+            // Если выключили -> Просто сохраняем
+            DB.settings.notifications = false;
+            App.toast("🔕 Уведомления выключены");
+        }
+        
+        Data.save();
+    },
+
+    // Отправка самого уведомления
+    send(title, body) {
+        // Если выключено в настройках игры или не разрешено телефоном - не отправляем
+        if (!DB.settings.notifications || Notification.permission !== 'granted') return;
+
+        try {
+            // Способ для Android/PWA (Service Worker)
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body: body,
+                        icon: 'icon-192.png',
+                        vibrate: [200, 100, 200],
+                        tag: 'math-timer' // Чтобы не спамить кучей уведомлений
+                    });
+                });
+            } 
+            // Способ для ПК и iOS Safari
+            else {
+                new Notification(title, {
+                    body: body,
+                    icon: 'icon-192.png'
+                });
+            }
+        } catch (e) {
+            console.error("Ошибка отправки пуша:", e);
+        }
+    }
+};
+
 /* === SPLASH SCREEN LOGIC === */
 window.onload = () => {
     // 1. Инициализируем приложение
@@ -4763,6 +4977,45 @@ Transfer.pasteCode = function(code) {
 
     </div>
 </div>
+
+<!-- BATTLE MODAL -->
+<div id="battle-modal" class="modal" style="z-index: 12000;">
+    <div class="modal-content" style="text-align: center;">
+        <h2 style="color: #FF4B2B;">⚔️ Арена</h2>
+        <p style="font-size: 13px; color: var(--text-light); margin-bottom: 20px;">Сразись с другом на монеты!</p>
+
+        <!-- Меню выбора -->
+        <div id="battle-menu-view">
+            <button class="btn" onclick="BattleSys.showCreate()" style="background: var(--bg); border: 2px solid var(--text); color: var(--text); margin-bottom: 10px;">
+                ➕ Создать вызов
+            </button>
+            <button class="btn" onclick="BattleSys.showJoin()" style="background: var(--primary); color: white;">
+                🚀 Ввести код битвы
+            </button>
+        </div>
+
+        <!-- Создание -->
+        <div id="battle-create-view" style="display: none;">
+            <p>Выберите ставку:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <button class="btn diff-btn" onclick="BattleSys.setBet(50)">50 💰</button>
+                <button class="btn diff-btn" onclick="BattleSys.setBet(100)">100 💰</button>
+                <button class="btn diff-btn" onclick="BattleSys.setBet(500)">500 💰</button>
+                <button class="btn diff-btn" onclick="BattleSys.setBet(1000)">1000 💰</button>
+            </div>
+            <button class="btn btn-primary" onclick="BattleSys.create()">Начать бой 🔥</button>
+        </div>
+
+        <!-- Вход -->
+        <div id="battle-join-view" style="display: none;">
+            <input type="text" id="battle-code-input" class="input-field" placeholder="Код (например: A1B2)" style="text-align: center; text-transform: uppercase;">
+            <button class="btn btn-primary" onclick="BattleSys.join()">Найти и Сразиться ⚔️</button>
+        </div>
+
+        <button class="btn btn-outline" onclick="document.getElementById('battle-modal').classList.remove('show')" style="margin-top: 15px;">Отмена</button>
+    </div>
+</div>
+
 </body>
 </html>
 
