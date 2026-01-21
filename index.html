@@ -3330,16 +3330,19 @@ const BattleSys = {
         }
     },
     async checkRewards() {
+        // Проверка на наличие активных битв
         if (!DB.user.activeBattles || DB.user.activeBattles.length === 0) {
             return alert("У вас нет активных созданных битв.");
         }
 
-        App.toast("⏳ Проверяем ваши битвы...");
-        let totalWin = 0;
-        let finishedCodes = [];
+        App.toast("⏳ Анализ ваших битв...");
+        let activeBattlesCount = DB.user.activeBattles.length;
+        let processedCount = 0;
 
-        // Проходим по всем созданным битвам
-        for (let code of DB.user.activeBattles) {
+        // Проходим по каждой битве
+        for (let i = 0; i < activeBattlesCount; i++) {
+            let code = DB.user.activeBattles[i];
+            
             try {
                 const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", code);
                 const snap = await window.DB_Online.getDoc(docRef);
@@ -3347,46 +3350,60 @@ const BattleSys = {
                 if (snap.exists()) {
                     const data = snap.data();
                     
-                    // Если битва закончена
+                    // СЦЕНАРИЙ 1: БИТВА ЗАКОНЧЕНА (Есть результат)
                     if (data.status === 'finished') {
-                        // Если победитель - Я (creator)
                         if (data.winner === DB.user.name) {
-                            totalWin += (data.bet * 2); // Забираем банк
-                        } 
-                        // Если Ничья (редко, но бывает)
-                        else if (!data.winner) { 
-                             totalWin += data.bet; // Возврат
+                            const winAmount = data.bet * 2;
+                            DB.user.coins += winAmount;
+                            SoundSys.play('win');
+                            FX.confetti();
+                            alert(`🎉 Битва ${code} завершена!\n\nВЫ ПОБЕДИЛИ!\nВаш куш: ${winAmount} монет 💰`);
+                        } else if (!data.winner) {
+                            DB.user.coins += data.bet;
+                            alert(`🤝 Битва ${code}: Ничья.\nСтавка возвращена.`);
+                        } else {
+                            alert(`💀 Битва ${code}: Вы проиграли.\nПобедитель: ${data.winner}`);
                         }
-                        // Если проиграл - ничего не получаем
+                        // Удаляем из списка
+                        this.removeBattleFromList(code);
+                    } 
+                    
+                    // СЦЕНАРИЙ 2: ЗАВИСЛА ИЛИ НИКТО НЕ ЗАХОДИТ
+                    else {
+                        // Спрашиваем игрока, что делать
+                        let statusText = (data.status === 'playing') ? "ошибка (статус: играет)" : "ожидание игрока";
                         
-                        // Помечаем на удаление из списка
-                        finishedCodes.push(code);
+                        if (confirm(`Битва ${code} (${data.bet}💰).\nСтатус: ${statusText}.\n\nХотите ОТМЕНИТЬ её и вернуть деньги?`)) {
+                            // Возврат денег
+                            DB.user.coins += data.bet;
+                            
+                            // Удаляем из базы, чтобы никто не зашел
+                            await window.DB_Online.deleteDoc(docRef);
+                            
+                            // Удаляем из локального списка
+                            this.removeBattleFromList(code);
+                            
+                            App.toast(`✅ Битва ${code} отменена. +${data.bet} монет.`);
+                            Data.save();
+                            App.updateUI();
+                        }
                     }
                 } else {
-                    // Битва удалена или не найдена - удаляем из списка
-                    finishedCodes.push(code);
+                    // Битвы нет в базе (удалена) - просто чистим список
+                    this.removeBattleFromList(code);
                 }
             } catch (e) { console.error(e); }
         }
+        
+        Data.save();
+        App.updateUI();
+    },
 
-        // Обновляем список (удаляем завершенные)
-        if (finishedCodes.length > 0) {
-            DB.user.activeBattles = DB.user.activeBattles.filter(c => !finishedCodes.includes(c));
-            
-            if (totalWin > 0) {
-                DB.user.coins += totalWin;
-                SoundSys.play('win');
-                FX.confetti();
-                alert(`🎉 Битвы завершены!\n\nВы выиграли: ${totalWin} монет 💰`);
-            } else {
-                alert("Битвы завершены. Новых выигрышей нет (или вы проиграли). Список очищен.");
-            }
-            Data.save();
-            App.updateUI();
-        } else {
-            App.toast("Ваши соперники еще не сыграли.");
-        }
-    }  
+    // Вспомогательная функция для удаления из списка
+    removeBattleFromList(code) {
+        DB.user.activeBattles = DB.user.activeBattles.filter(c => c !== code);
+    }
+
 
 
 };
