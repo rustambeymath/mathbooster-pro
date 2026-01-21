@@ -2214,12 +2214,12 @@ const NameGuard = {
 let DB = null; 
 const Data = {
     currentKey: null,
-    
+    isBusy: false, // 🔥 Флаг защиты от перезаписи
+
     initNewData(userId) { 
         const newDB = JSON.parse(JSON.stringify(DefaultDB)); 
         newDB.achievements = GenAch(); 
         
-        // Сразу создаем правильную структуру рекордов
         newDB.user.trainerRecords = {
             standard: { easy: 0, medium: 0, hard: 0 },
             sign:     { easy: 0, medium: 0, hard: 0 },
@@ -2231,54 +2231,58 @@ const Data = {
 
     load(userId) { 
         this.currentKey = 'MathData_' + userId; 
+        
+        // 🛑 ВКЛЮЧАЕМ ЗАЩИТУ НА 3 СЕКУНДЫ
+        // В это время приложение НЕ будет сохранять данные в облако,
+        // чтобы успеть скачать админские правки.
+        this.isBusy = true;
+        setTimeout(() => { this.isBusy = false; }, 3000);
+
         const raw = localStorage.getItem(this.currentKey); 
         
         if (raw) { 
             let loaded;
             try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
 
-            if(loaded.user) { 
+            if(loaded && loaded.user) { 
                 DB = loaded; 
                 
-                // === 🔥 ЛЕЧЕНИЕ СТРУКТУРЫ (Версия 2.0) ===
-            if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
-                let oldRec = 0;
-                if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
-                    oldRec = DB.user.trainerRecords.easy;
+                // Лечение структуры тренажера
+                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
+                    let oldRec = 0;
+                    if (DB.user.trainerRecords && typeof DB.user.trainerRecords.easy === 'number') {
+                        oldRec = DB.user.trainerRecords.easy;
+                    }
+                    DB.user.trainerRecords = {
+                        standard: { easy: oldRec, medium: 0, hard: 0 },
+                        sign:     { easy: 0, medium: 0, hard: 0 },
+                        square:   { easy: 0, medium: 0, hard: 0 }
+                    };
                 }
-                DB.user.trainerRecords = {
-                    standard: { easy: oldRec, medium: 0, hard: 0 },
-                    sign:     { easy: 0, medium: 0, hard: 0 },
-                    square:   { easy: 0, medium: 0, hard: 0 }
-                };
-            }
-            // Защита: если вдруг какого-то режима не хватает
-            if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
-            if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
-// 👇 ЛЕЧЕНИЕ СТАТУСОВ (FIX CRASH) 👇
-                if (!DB.user.ownedTitles) {
-                    DB.user.ownedTitles = [];
-                }
-                if (DB.user.currentTitle === undefined) {
-                    DB.user.currentTitle = null;
-                }
-                // 👆 ---------------------------- 👆
-                // ... после лечения статусов ...
+                if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
+                if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
 
-            // 👇 ЛЕЧЕНИЕ РАМОК И ЗВУКОВ 👇
-            if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
-            if (DB.user.currentFrame === undefined) DB.user.currentFrame = null;
-            
-            if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
-            if (!DB.user.soundPack) DB.user.soundPack = 'standard';
-            // 👆 ---------------------- 👆
-                // Прочие проверки (защита от undefined)
+                // Лечение статусов, рамок и звуков
+                if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+                if (DB.user.currentTitle === undefined) DB.user.currentTitle = null;
+                if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
+                if (DB.user.currentFrame === undefined) DB.user.currentFrame = null;
+                if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
+                if (!DB.user.soundPack) DB.user.soundPack = 'standard';
+
+                // Лечение достижений
+                if (!DB.achievements || DB.achievements.length === 0) {
+                    DB.achievements = GenAch();
+                }
+
+                // Прочие проверки
                 if(DB.user.coins === undefined) DB.user.coins = 0;
                 if(!DB.user.avatar) DB.user.avatar = '😎';
                 if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
                 if(DB.sessions === undefined) DB.sessions = []; 
                 if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
                 
+                // Запускаем синхронизацию
                 if(window.DB_Online) this.syncWithCloud(userId);
             } else { 
                 this.initNewData(userId); 
@@ -2298,27 +2302,35 @@ const Data = {
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
 
-                // 👮‍♂️ 1. АДМИНСКИЙ СБРОС (FORCE UPDATE)
-                // Если ты в консоли добавил поле forceUpdate: true
-                if (cloudData.user.forceUpdate === true) {
-                    console.log("👮‍♂️ Применено наказание админа");
+                // 👮‍♂️ АДМИНСКОЕ НАКАЗАНИЕ (FORCE UPDATE)
+                if (cloudData.user && cloudData.user.forceUpdate === true) {
+                    console.log("👮‍♂️ Принудительное обновление от Админа");
                     
-                    DB = cloudData; // Жестко заменяем локальные данные на облачные
-                    DB.user.forceUpdate = false; // Снимаем метку (чтобы не обновлялось вечно)
+                    // 1. Если админ задал конкретные монеты через поле adminCoins - берем их
+                    // Это защита от перезаписи: adminCoins локалка не перезапишет
+                    if (typeof cloudData.user.adminCoins === 'number') {
+                        cloudData.user.coins = cloudData.user.adminCoins;
+                    }
+
+                    DB = cloudData; // Жестко заменяем локальные данные
+                    DB.user.forceUpdate = false; // Снимаем метку
                     
-                    this.save(); // Сохраняем "бедность" на телефон игрока
-                    App.updateUI(); // Обновляем интерфейс
-                    App.toast("⚠️ Данные скорректированы сервером");
-                    setTimeout(() => location.reload(), 1000); // Перезагружаем для надежности
+                    // Принудительно сохраняем локально прямо сейчас
+                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
+                    
+                    // Сохраняем в облако (снимаем метку forceUpdate)
+                    this.isBusy = false; // Разрешаем сохранение для этого действия
+                    this.save(); 
+                    
+                    alert("⚠️ Ваш профиль был скорректирован администратором.");
+                    location.reload(); // Перезагружаем, чтобы применить
                     return;
                 }
 
-                // 2. ОБЫЧНАЯ СИНХРОНИЗАЦИЯ (Если на другом телефоне прогресс больше)
-                // Проверяем по времени (totalSec) или по опыту (xp)
+                // Обычная синхронизация (если в облаке прогресс больше)
                 if (cloudData.user.totalSec > DB.user.totalSec || cloudData.user.xp > DB.user.xp) {
-                    console.log("☁️ Найдено сохранение новее");
                     DB = cloudData;
-                    this.save();
+                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
                     App.updateUI();
                 }
             }
@@ -2328,8 +2340,15 @@ const Data = {
     },
 
     save() {
+        // Сохраняем локально всегда
         if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
         
+        // 🔥 ЗАЩИТА: Не сохраняем в облако первые 3 секунды, чтобы не перебить админа
+        if (this.isBusy) {
+            console.log("⏳ Сохранение в облако отложено (защита при старте)");
+            return;
+        }
+
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
@@ -2341,11 +2360,8 @@ const Data = {
                     avatar: DB.user.avatar || "😎",
                     level: DB.user.level || 1,
                     xp: DB.user.xp || 0,
-                    
-                    // 👇 ДОБАВЛЯЕМ ЭТИ ПОЛЯ (чтобы их видели в Топе)
-                    currentFrame: DB.user.currentFrame || null, // Рамка
-                    currentTitle: DB.user.currentTitle || null, // Статус
-                    
+                    currentFrame: DB.user.currentFrame || null,
+                    currentTitle: DB.user.currentTitle || null,
                     totalSec: DB.user.totalSec || 0
                 },
                 subjects: DB.subjects,
@@ -2560,7 +2576,7 @@ const Donation = {
         // 💰 СПИСОК КОДОВ И НАГРАД 💰
         const rewards = { 
             // // --- ТАРИФ "СТАРТ" (5 000 сум -> 300 монет) ---
-            "START":      { c: 300, msg: "Удачный старт! 🚀" },
+            "START123":      { c: 100, msg: "Удачный старт! 🚀" },
             // "COFFEE":     { c: 300, msg: "Спасибо! ☕️ (Тариф 5k)" },
             // "UZ_5000":    { c: 300, msg: "Оплата 5.000 сум принята! ✅" },
 
