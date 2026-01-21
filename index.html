@@ -5,6 +5,12 @@
     <!-- Адаптация под мобильные устройства и iPhone (челка) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
+    <!-- 👇 КРАСИВАЯ ССЫЛКА В ТЕЛЕГРАМЕ И ИНСТЕ 👇 -->
+    <meta property="og:title" content="MathBooster PRO 🇺🇿">
+    <meta property="og:description" content="Учись, играй и зарабатывай монеты! Первый RPG-трекер для студентов.">
+    <meta property="og:image" content="https://rustambeymath.github.io/mathbooster-pro/preview.png">
+    <meta property="og:url" content="https://rustambeymath.github.io/mathbooster-pro/">
+    <meta property="og:type" content="website">
     <!-- PWA настройки -->
 <link id="manifest-link" rel="manifest" href="">
 <meta name="theme-color" content="#6C63FF">
@@ -2276,6 +2282,7 @@ const Data = {
                 if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
                 if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
                 if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+                if (!DB.user.activeBattles) DB.user.activeBattles = [];
                 if (DB.user.currentTitle === undefined) DB.user.currentTitle = null;
                 if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
                 if (DB.user.currentFrame === undefined) DB.user.currentFrame = null;
@@ -3276,7 +3283,7 @@ const BattleSys = {
             App.toast("Ошибка сети");
         }
     },
-
+    
     // 2. ВТОРОЙ ИГРОК (ПРОВЕРКА СТАТУСА)
     async join() {
         const code = document.getElementById('battle-code-input').value.trim().toUpperCase();
@@ -3321,7 +3328,67 @@ const BattleSys = {
             console.error(e);
             App.toast("Ошибка сети");
         }
-    }
+    },
+    async checkRewards() {
+        if (!DB.user.activeBattles || DB.user.activeBattles.length === 0) {
+            return alert("У вас нет активных созданных битв.");
+        }
+
+        App.toast("⏳ Проверяем ваши битвы...");
+        let totalWin = 0;
+        let finishedCodes = [];
+
+        // Проходим по всем созданным битвам
+        for (let code of DB.user.activeBattles) {
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", code);
+                const snap = await window.DB_Online.getDoc(docRef);
+                
+                if (snap.exists()) {
+                    const data = snap.data();
+                    
+                    // Если битва закончена
+                    if (data.status === 'finished') {
+                        // Если победитель - Я (creator)
+                        if (data.winner === DB.user.name) {
+                            totalWin += (data.bet * 2); // Забираем банк
+                        } 
+                        // Если Ничья (редко, но бывает)
+                        else if (!data.winner) { 
+                             totalWin += data.bet; // Возврат
+                        }
+                        // Если проиграл - ничего не получаем
+                        
+                        // Помечаем на удаление из списка
+                        finishedCodes.push(code);
+                    }
+                } else {
+                    // Битва удалена или не найдена - удаляем из списка
+                    finishedCodes.push(code);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Обновляем список (удаляем завершенные)
+        if (finishedCodes.length > 0) {
+            DB.user.activeBattles = DB.user.activeBattles.filter(c => !finishedCodes.includes(c));
+            
+            if (totalWin > 0) {
+                DB.user.coins += totalWin;
+                SoundSys.play('win');
+                FX.confetti();
+                alert(`🎉 Битвы завершены!\n\nВы выиграли: ${totalWin} монет 💰`);
+            } else {
+                alert("Битвы завершены. Новых выигрышей нет (или вы проиграли). Список очищен.");
+            }
+            Data.save();
+            App.updateUI();
+        } else {
+            App.toast("Ваши соперники еще не сыграли.");
+        }
+    }  
+
+
 };
 
 const Trainer = {  
@@ -3695,52 +3762,65 @@ const Trainer = {
         document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
         document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
     },
+    // Внутри const Trainer = { ... }
+
     async handleDuelEnd() {
         const score = this.score;
         
-        // Показываем экран результатов
+        // Показываем экран
         document.getElementById('trainer-game').style.display = 'none';
         document.getElementById('trainer-result').style.display = 'block';
         
-        // Показываем код на экране, чтобы не забыли
         const codeArea = document.getElementById('duel-code-area');
-        const codeText = document.getElementById('duel-code-text');
-        
-        // Статистика
-        document.getElementById('result-score').innerText = score; 
-        document.getElementById('result-xp').innerText = "PvP"; 
-        document.getElementById('result-coins').innerText = "---"; 
+        if(codeArea) codeArea.style.display = 'none';
 
-        // 1. СОЗДАТЕЛЬ (ОБНОВЛЯЕМ ЗАПИСЬ)
+        // 1. ЕСЛИ ТЫ СОЗДАТЕЛЬ
         if (this.duelRole === 'creator') {
-            App.toast("⏳ Сохранение результата...");
+            // 🔥 МЕНЯЕМ ЗАГОЛОВОК, ЧТОБЫ НЕ ПУТАТЬ
+            document.querySelector('#trainer-result h2').innerText = "Результат записан! 📝";
+            document.getElementById('result-score').innerText = score;
+            document.getElementById('result-xp').innerText = "PvP";
+            document.getElementById('result-coins').innerText = "Ждем...";
+
+            App.toast("⏳ Отправка в облако...");
             
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
             try {
-                // Обновляем существующий документ по коду
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", this.duelCode);
-                
-                await window.DB_Online.updateDoc(docRef, {
+                await window.DB_Online.setDoc(window.DB_Online.doc(window.DB_Online.db, "battles", code), {
+                    creator: DB.user.name,
+                    bet: this.duelBet,
                     scoreA: score,
-                    status: 'waiting' // 🔥 ТЕПЕРЬ ДРУГ МОЖЕТ ЗАЙТИ
+                    mode: this.mode,
+                    difficulty: this.difficulty,
+                    status: 'waiting',
+                    date: new Date().toISOString()
                 });
 
+                // 🔥 ЗАПОМИНАЕМ БИТВУ, ЧТОБЫ ПОТОМ ЗАБРАТЬ НАГРАДУ
+                if(!DB.user.activeBattles) DB.user.activeBattles = [];
+                DB.user.activeBattles.push(code);
+                Data.save();
+
                 // Показываем код
+                const codeText = document.getElementById('duel-code-text');
                 if(codeArea) codeArea.style.display = 'block'; 
-                if(codeText) codeText.innerText = this.duelCode;        
+                if(codeText) codeText.innerText = code;        
                 
-                App.toast("✅ Результат сохранен! Ждем соперника.");
+                App.toast("✅ Битва создана!");
+                navigator.clipboard.writeText(code).catch(()=>{});
 
             } catch (e) {
                 console.error(e);
-                alert("Ошибка сохранения. Проверьте интернет.");
+                App.toast("Ошибка сети");
             }
         }
 
-        // 2. ЧЕЛЛЕНДЖЕР (Оставляем как было, только используем duelCode)
+        // 2. ЕСЛИ ТЫ ЧЕЛЛЕНДЖЕР (Тут всё ок, результат сразу)
         else if (this.duelRole === 'challenger') {
-            if(codeArea) codeArea.style.display = 'none'; // Скрываем код
-            App.toast("⏳ Проверка...");
-            
+            App.toast("⏳ Судейство...");
             try {
                 const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", this.duelCode);
                 const snap = await window.DB_Online.getDoc(docRef);
@@ -3749,24 +3829,33 @@ const Trainer = {
                 let msg = "";
                 let win = false;
 
+                // СРАВНЕНИЕ
                 if (score > battle.scoreA) {
-                    msg = `🏆 ПОБЕДА! (+${battle.bet * 2} 💰)`;
+                    msg = `🏆 ПОБЕДА!`;
                     DB.user.coins += battle.bet * 2; 
                     win = true;
                     SoundSys.play('win');
                     FX.confetti();
                 } else if (score < battle.scoreA) {
-                    msg = `💀 Поражение... (-${battle.bet} 💰)`;
+                    msg = `💀 Поражение...`;
                     SoundSys.play('error');
                 } else {
-                    msg = `🤝 Ничья (Возврат)`;
+                    msg = `🤝 Ничья`;
                     DB.user.coins += battle.bet;
                 }
                 
                 document.querySelector('#trainer-result h2').innerText = msg;
-                document.getElementById('result-coins').innerText = `VS: ${battle.scoreA}`;
+                document.getElementById('result-score').innerText = score;
+                document.getElementById('result-xp').innerText = `VS: ${battle.scoreA}`;
+                document.getElementById('result-coins').innerText = win ? `+${battle.bet*2}` : (score < battle.scoreA ? `-${battle.bet}` : `+${battle.bet}`);
 
-                await window.DB_Online.updateDoc(docRef, { status: 'finished', winner: win ? DB.user.name : battle.creator });
+                // Закрываем битву
+                await window.DB_Online.updateDoc(docRef, { 
+                    status: 'finished', 
+                    winner: win ? DB.user.name : battle.creator, // Записываем имя победителя
+                    loserScore: score 
+                });
+                
                 Data.save();
                 App.updateUI();
 
@@ -5124,6 +5213,9 @@ Transfer.pasteCode = function(code) {
             </button>
             <button class="btn" onclick="BattleSys.showJoin()" style="background: var(--primary); color: white;">
                 🚀 Ввести код битвы
+            </button>
+            <button class="btn" onclick="BattleSys.checkRewards()" style="background: #00d26a; color: white; border: none; box-shadow: 0 5px 15px rgba(0,210,106,0.3);">
+                🎁 Проверить результат
             </button>
         </div>
 
