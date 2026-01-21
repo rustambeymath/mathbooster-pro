@@ -3214,116 +3214,150 @@ const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()
 const BattleSys = {
     bet: 50,
     currentCode: null,
-    listener: null, // Ссылка на слушатель базы
+    listener: null,
+    myRole: null, // 'p1' или 'p2'
+    gameStarted: false, // Чтобы игра не запускалась дважды
 
     openMenu() {
         if (!window.DB_Online) return App.toast("Нужен интернет!");
         document.getElementById('battle-modal').classList.add('show');
         document.getElementById('battle-login-view').style.display = 'block';
         document.getElementById('battle-lobby-view').style.display = 'none';
+        
+        // Сброс состояний
+        this.gameStarted = false;
+        if (this.listener) this.listener(); // Отключаем старую прослушку
     },
 
     setBet(amount, btn) {
         this.bet = amount;
         document.querySelectorAll('#battle-modal .diff-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        if(btn) btn.classList.add('active');
     },
 
-    // 1. ВХОД В КОМНАТУ
+    // ГЛАВНАЯ ФУНКЦИЯ ВХОДА
     async connect() {
-        const code = document.getElementById('battle-code-input').value.trim();
-        if (code.length < 3) return App.toast("Введите код (мин 3 цифры)");
+        const rawCode = document.getElementById('battle-code-input').value.trim();
+        if (rawCode.length < 3) return App.toast("Код слишком короткий!");
+        
+        // Убираем пробелы и делаем код строкой
+        const code = rawCode.replace(/\s/g, ''); 
+        this.currentCode = code;
+
         if (DB.user.coins < this.bet) return App.toast("Недостаточно монет!");
 
-        this.currentCode = code;
-        
-        // Показываем лобби
-        document.getElementById('battle-login-view').style.display = 'none';
-        document.getElementById('battle-lobby-view').style.display = 'block';
-        document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
-        document.getElementById('p2-name').innerText = "Ожидание...";
+        App.toast("⏳ Подключение...");
 
-        // 🔥 ПОДПИСЫВАЕМСЯ НА ИЗМЕНЕНИЯ В БАЗЕ 🔥
-        // onSnapshot запускается каждый раз, когда кто-то меняет этот документ
-        const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code); // battles_v2 чтобы не путать со старыми
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code);
+            const snap = await window.DB_Online.getDoc(docRef);
 
-        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                this.handleUpdate(data);
-            } else {
-                // Если комнаты нет - создаем её
-                this.createRoom(docRef);
+            // СЦЕНАРИЙ 1: КОМНАТЫ НЕТ -> Я СОЗДАТЕЛЬ (P1)
+            if (!snap.exists()) {
+                this.myRole = 'p1';
+                await this.createRoom(docRef);
+            } 
+            // СЦЕНАРИЙ 2: КОМНАТА ЕСТЬ -> Я ГОСТЬ (P2)
+            else {
+                const data = snap.data();
+                if (data.p2) return alert("⛔️ Комната уже полная!");
+                
+                this.myRole = 'p2';
+                await this.joinRoom(docRef, data);
             }
-        });
+
+            // ПОСЛЕ ВХОДА ИЛИ СОЗДАНИЯ -> ВКЛЮЧАЕМ РЕЖИМ ОЖИДАНИЯ
+            this.showLobby();
+            this.startListening(docRef);
+
+        } catch (e) {
+            console.error(e);
+            App.toast("Ошибка сети");
+        }
     },
 
-    // 2. СОЗДАНИЕ КОМНАТЫ (Если ты первый)
     async createRoom(docRef) {
-        // Списываем ставку
+        // Списываем деньги
         DB.user.coins -= this.bet;
         Data.save(); App.updateUI();
 
         await window.DB_Online.setDoc(docRef, {
             p1: DB.user.name,
             p1_id: Auth.currentUser.id,
-            p1_score: -1, // -1 значит еще не сыграл
+            p1_score: -1,
             
             p2: null,
             p2_id: null,
             p2_score: -1,
             
             bet: this.bet,
-            status: 'waiting', // waiting -> playing -> finished
+            status: 'waiting',
             date: new Date().toISOString()
         });
-        document.getElementById('lobby-status').innerText = "Комната создана. Ждем друга...";
     },
 
-    // 3. ОБРАБОТКА ИЗМЕНЕНИЙ (Когда кто-то зашел)
-    async handleUpdate(data) {
-        // Обновляем имена в лобби
-        document.getElementById('p1-name').innerText = data.p1;
-        document.getElementById('p2-name').innerText = data.p2 || "Ожидание...";
+    async joinRoom(docRef, currentData) {
+        // Проверяем ставку (она должна совпадать с создателем)
+        if (this.bet !== currentData.bet) {
+            if(!confirm(`В этой комнате ставка ${currentData.bet} монет. Согласны?`)) return;
+            this.bet = currentData.bet;
+        }
 
-        // Если я - второй игрок, и я еще не записан -> Записываемся
-        if (data.p1_id !== Auth.currentUser.id && !data.p2) {
-            if (DB.user.coins < data.bet) {
-                this.leaveLobby();
-                return alert(`Ставка в этой комнате: ${data.bet}. У вас не хватает.`);
+        if (DB.user.coins < this.bet) return App.toast("Не хватает монет!");
+
+        // Списываем деньги
+        DB.user.coins -= this.bet;
+        Data.save(); App.updateUI();
+
+        // Записываем себя как P2
+        await window.DB_Online.updateDoc(docRef, {
+            p2: DB.user.name,
+            p2_id: Auth.currentUser.id,
+            status: 'ready' // Статус "Готовы к старту"
+        });
+    },
+
+    showLobby() {
+        document.getElementById('battle-login-view').style.display = 'none';
+        document.getElementById('battle-lobby-view').style.display = 'block';
+        
+        // Сразу пишем себя
+        if (this.myRole === 'p1') {
+            document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
+            document.getElementById('p2-name').innerText = "Ожидание...";
+        } else {
+            document.getElementById('p1-name').innerText = "Соперник"; // Имя подгрузится через секунду
+            document.getElementById('p2-name').innerText = DB.user.name + " (Вы)";
+        }
+    },
+
+    // СЛУШАЕМ ИЗМЕНЕНИЯ (ЧТОБЫ УВИДЕТЬ ДРУГА И НАЧАТЬ ИГРУ)
+    startListening(docRef) {
+        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+
+            // Обновляем имена на экране
+            if (data.p1) document.getElementById('p1-name').innerText = data.p1 + (this.myRole === 'p1' ? " (Вы)" : "");
+            if (data.p2) document.getElementById('p2-name').innerText = data.p2 + (this.myRole === 'p2' ? " (Вы)" : "");
+
+            // 🔥 ЗАПУСК ИГРЫ (Если статус ready и мы еще не начали)
+            if (data.status === 'ready' && !this.gameStarted) {
+                this.gameStarted = true; // Блокируем повторный запуск
+                
+                // Ждем 1 секунду для красоты и запускаем
+                setTimeout(() => {
+                    if (this.listener) this.listener(); // Отключаем слушатель
+                    document.getElementById('battle-modal').classList.remove('show');
+                    Trainer.startPVP(this.myRole, this.currentCode, data.bet);
+                }, 1000);
             }
-            
-            // Списываем ставку
-            DB.user.coins -= data.bet;
-            Data.save(); App.updateUI();
-
-            // Вписываем себя как p2 и меняем статус на "START"
-            await window.DB_Online.updateDoc(window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode), {
-                p2: DB.user.name,
-                p2_id: Auth.currentUser.id,
-                status: 'playing' // 🔥 СТАРТ!
-            });
-        }
-
-        // 🚀 ЗАПУСК ИГРЫ (Оба игрока видят статус playing)
-        if (data.status === 'playing') {
-            // Отписываемся от лобби, чтобы не мешало
-            if (this.listener) this.listener(); 
-            
-            document.getElementById('battle-modal').classList.remove('show');
-            
-            // Запускаем Тренажер в спец режиме
-            // Передаем роль: 'p1' или 'p2'
-            const myRole = (data.p1_id === Auth.currentUser.id) ? 'p1' : 'p2';
-            Trainer.startPVP(myRole, this.currentCode, data.bet);
-        }
+        });
     },
 
-    // Выход из лобби
     leaveLobby() {
-        if (this.listener) this.listener(); // Остановить прослушку
-        // Если успели списать деньги - вернуть (сложная логика, пока просто перезагрузка)
-        location.reload(); 
+        if (this.listener) this.listener();
+        location.reload(); // Самый простой способ сбросить всё
     }
 };
 
@@ -5133,18 +5167,19 @@ Transfer.pasteCode = function(code) {
         </div>
 
         <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
-        <div id="battle-lobby-view" style="display: none;">
-            <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
-            <h3>Ожидание соперника...</h3>
-            <p id="lobby-status" style="font-size: 14px; color: var(--text-light);">Ты первый. Ждем второго игрока...</p>
-            
-            <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px;">
-                <div>👤 Игрок 1: <b id="p1-name">...</b></div>
-                <div>👤 Игрок 2: <b id="p2-name">...</b></div>
-            </div>
+<div id="battle-lobby-view" style="display: none;">
+    <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
+    <h3>Подготовка к битве...</h3>
+    
+    <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
+        <div style="margin-bottom: 5px;">🔴 Игрок 1: <b id="p1-name">...</b></div>
+        <div>🔵 Игрок 2: <b id="p2-name">...</b></div>
+    </div>
+    
+    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Игра начнется автоматически, когда войдет второй игрок.</p>
 
-            <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">❌ Покинуть комнату</button>
-        </div>
+    <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">❌ Выйти</button>
+</div>
     </div>
 </div>
 
