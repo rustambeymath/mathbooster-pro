@@ -53,6 +53,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+       // ДОБАВЛЕНЫ: onSnapshot, deleteDoc
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
         // 🔥  КОНФИГ ИЗ FIREBASE CONSOLE 🔥
         const firebaseConfig = {
   	  apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
@@ -68,10 +72,16 @@
             if (firebaseConfig.apiKey) {
                 const app = initializeApp(firebaseConfig);
                 const db = getFirestore(app);
-                // Делаем доступным глобально
-            window.DB_Online = { db, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, orderBy, limit, getCountFromServer };                console.log("✅ Firebase подключен успешно");
+                
+                // 👇 ДОБАВЛЯЕМ ИХ В ГЛОБАЛЬНЫЙ ОБЪЕКТ
+                window.DB_Online = { 
+                    db, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, // <--- ВАЖНО!
+                    collection, getDocs, query, orderBy, limit, getCountFromServer 
+                };
+                
+                console.log("✅ Firebase подключен успешно");
             } else {
-                console.log("⚠️ Firebase конфиг отсутствует. Работает оффлайн режим.");
+                console.log("⚠️ Firebase конфиг отсутствует.");
             }
         } catch(e) { 
             console.error("Ошибка подключения Firebase:", e); 
@@ -3725,20 +3735,27 @@ const Trainer = {
     // Внутри const Trainer = { ... }
 
     // --- REALTIME PVP ---
-    pvpRole: null, // 'p1' или 'p2'
+    pvpRole: null, 
     pvpCode: null,
-    pvpBet: 0,
     pvpListener: null,
+
 
     startPVP(role, code, bet) {
         this.pvpRole = role;
         this.pvpCode = code;
-        this.pvpBet = bet;
-        this.isDuel = true; // Флаг для функции end()
+        
+        this.duelBet = bet; 
+        
+        this.isDuel = true; 
+        this.mode = 'standard'; // Для ПВП всегда классика (чтобы было честно)
 
         App.toast("⚔️ БОЙ НАЧАЛСЯ!");
-        this.start('standard'); // Всегда классика для простоты
+        
+        document.getElementById('battle-modal').classList.remove('show');
+        
+        this.start('standard'); 
     },
+
 
     // Эта функция вызывается из end(), если isDuel = true
     async handleDuelEnd() {
