@@ -3213,199 +3213,118 @@ const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()
 
 const BattleSys = {
     bet: 50,
-    currentBattleId: null,
+    currentCode: null,
+    listener: null, // Ссылка на слушатель базы
 
     openMenu() {
-        if (!window.DB_Online) return App.toast("Нужен интернет для битв!");
-        document.getElementById('battle-menu-view').style.display = 'block';
-        document.getElementById('battle-create-view').style.display = 'none';
-        document.getElementById('battle-join-view').style.display = 'none';
+        if (!window.DB_Online) return App.toast("Нужен интернет!");
         document.getElementById('battle-modal').classList.add('show');
+        document.getElementById('battle-login-view').style.display = 'block';
+        document.getElementById('battle-lobby-view').style.display = 'none';
     },
 
-    showCreate() {
-        document.getElementById('battle-menu-view').style.display = 'none';
-        document.getElementById('battle-create-view').style.display = 'block';
-    },
-
-    showJoin() {
-        document.getElementById('battle-menu-view').style.display = 'none';
-        document.getElementById('battle-join-view').style.display = 'block';
-    },
-
-    setBet(amount) {
+    setBet(amount, btn) {
         this.bet = amount;
-        App.toast(`Ставка: ${amount} монет`);
+        document.querySelectorAll('#battle-modal .diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
     },
 
-    // 1. СОЗДАТЕЛЬ НАЧИНАЕТ
-    async create() {
+    // 1. ВХОД В КОМНАТУ
+    async connect() {
+        const code = document.getElementById('battle-code-input').value.trim();
+        if (code.length < 3) return App.toast("Введите код (мин 3 цифры)");
         if (DB.user.coins < this.bet) return App.toast("Недостаточно монет!");
+
+        this.currentCode = code;
         
-        App.toast("⏳ Генерация кода...");
+        // Показываем лобби
+        document.getElementById('battle-login-view').style.display = 'none';
+        document.getElementById('battle-lobby-view').style.display = 'block';
+        document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
+        document.getElementById('p2-name').innerText = "Ожидание...";
 
-        // Генерируем код ТУТ
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+        // 🔥 ПОДПИСЫВАЕМСЯ НА ИЗМЕНЕНИЯ В БАЗЕ 🔥
+        // onSnapshot запускается каждый раз, когда кто-то меняет этот документ
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code); // battles_v2 чтобы не путать со старыми
 
-        try {
-            // Создаем битву со статусом 'playing' (Создатель играет)
-            await window.DB_Online.setDoc(window.DB_Online.doc(window.DB_Online.db, "battles", code), {
-                creator: DB.user.name,
-                bet: this.bet,
-                scoreA: 0, // Пока 0
-                mode: Trainer.mode, // Текущий режим тренажера
-                difficulty: Trainer.difficulty,
-                status: 'playing', // ВАЖНО: Статус "В процессе"
-                date: new Date().toISOString()
-            });
-
-            // Списываем деньги
-            DB.user.coins -= this.bet;
-            Data.save();
-            App.updateUI();
-
-            // Показываем код
-            document.getElementById('battle-modal').classList.remove('show');
-            
-            // Копируем в буфер
-            navigator.clipboard.writeText(code).catch(()=>{});
-            
-            // Показываем окно с кодом перед стартом
-            prompt(`✅ БИТВА СОЗДАНА!\nСкопируй код и скинь другу, пока играешь:\n\nКОД: ${code}\n\nНажми ОК, чтобы начать бой!`, code);
-
-            // Запускаем игру, передавая код
-            Trainer.startDuel('creator', this.bet, code);
-
-        } catch (e) {
-            console.error(e);
-            App.toast("Ошибка сети");
-        }
-    },
-    
-    // 2. ВТОРОЙ ИГРОК (ПРОВЕРКА СТАТУСА)
-    async join() {
-        const code = document.getElementById('battle-code-input').value.trim().toUpperCase();
-        if (code.length < 4) return App.toast("Введите код!");
-
-        App.toast("⏳ Поиск битвы...");
-        
-        try {
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", code);
-            const snap = await window.DB_Online.getDoc(docRef);
-
-            if (!snap.exists()) return App.toast("❌ Битва не найдена");
-            
-            const battle = snap.data();
-            
-            // Если создатель еще играет
-            if (battle.status === 'playing') {
-                return alert(`⏳ Подожди!\nИгрок ${battle.creator} еще не закончил свой раунд.\n\nПопробуй через минуту.`);
+        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                this.handleUpdate(data);
+            } else {
+                // Если комнаты нет - создаем её
+                this.createRoom(docRef);
             }
+        });
+    },
 
-            if (battle.status !== 'waiting') return App.toast("⛔️ Битва уже завершена");
+    // 2. СОЗДАНИЕ КОМНАТЫ (Если ты первый)
+    async createRoom(docRef) {
+        // Списываем ставку
+        DB.user.coins -= this.bet;
+        Data.save(); App.updateUI();
+
+        await window.DB_Online.setDoc(docRef, {
+            p1: DB.user.name,
+            p1_id: Auth.currentUser.id,
+            p1_score: -1, // -1 значит еще не сыграл
             
-            if (DB.user.coins < battle.bet) return App.toast(`Нужно ${battle.bet} монет`);
-
-            // Списываем
-            DB.user.coins -= battle.bet;
-            Data.save();
-            App.updateUI();
-
-            this.currentBattleId = code;
+            p2: null,
+            p2_id: null,
+            p2_score: -1,
             
-            // Настройки игры как у создателя
-            Trainer.difficulty = battle.difficulty;
-            Trainer.mode = battle.mode; 
+            bet: this.bet,
+            status: 'waiting', // waiting -> playing -> finished
+            date: new Date().toISOString()
+        });
+        document.getElementById('lobby-status').innerText = "Комната создана. Ждем друга...";
+    },
+
+    // 3. ОБРАБОТКА ИЗМЕНЕНИЙ (Когда кто-то зашел)
+    async handleUpdate(data) {
+        // Обновляем имена в лобби
+        document.getElementById('p1-name').innerText = data.p1;
+        document.getElementById('p2-name').innerText = data.p2 || "Ожидание...";
+
+        // Если я - второй игрок, и я еще не записан -> Записываемся
+        if (data.p1_id !== Auth.currentUser.id && !data.p2) {
+            if (DB.user.coins < data.bet) {
+                this.leaveLobby();
+                return alert(`Ставка в этой комнате: ${data.bet}. У вас не хватает.`);
+            }
+            
+            // Списываем ставку
+            DB.user.coins -= data.bet;
+            Data.save(); App.updateUI();
+
+            // Вписываем себя как p2 и меняем статус на "START"
+            await window.DB_Online.updateDoc(window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode), {
+                p2: DB.user.name,
+                p2_id: Auth.currentUser.id,
+                status: 'playing' // 🔥 СТАРТ!
+            });
+        }
+
+        // 🚀 ЗАПУСК ИГРЫ (Оба игрока видят статус playing)
+        if (data.status === 'playing') {
+            // Отписываемся от лобби, чтобы не мешало
+            if (this.listener) this.listener(); 
             
             document.getElementById('battle-modal').classList.remove('show');
             
-            // Запуск (код передаем, хотя челленджеру он не так важен для записи)
-            Trainer.startDuel('challenger', battle.bet, code);
-
-        } catch (e) {
-            console.error(e);
-            App.toast("Ошибка сети");
+            // Запускаем Тренажер в спец режиме
+            // Передаем роль: 'p1' или 'p2'
+            const myRole = (data.p1_id === Auth.currentUser.id) ? 'p1' : 'p2';
+            Trainer.startPVP(myRole, this.currentCode, data.bet);
         }
     },
-    async checkRewards() {
-        // Проверка на наличие активных битв
-        if (!DB.user.activeBattles || DB.user.activeBattles.length === 0) {
-            return alert("У вас нет активных созданных битв.");
-        }
 
-        App.toast("⏳ Анализ ваших битв...");
-        let activeBattlesCount = DB.user.activeBattles.length;
-        let processedCount = 0;
-
-        // Проходим по каждой битве
-        for (let i = 0; i < activeBattlesCount; i++) {
-            let code = DB.user.activeBattles[i];
-            
-            try {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", code);
-                const snap = await window.DB_Online.getDoc(docRef);
-                
-                if (snap.exists()) {
-                    const data = snap.data();
-                    
-                    // СЦЕНАРИЙ 1: БИТВА ЗАКОНЧЕНА (Есть результат)
-                    if (data.status === 'finished') {
-                        if (data.winner === DB.user.name) {
-                            const winAmount = data.bet * 2;
-                            DB.user.coins += winAmount;
-                            SoundSys.play('win');
-                            FX.confetti();
-                            alert(`🎉 Битва ${code} завершена!\n\nВЫ ПОБЕДИЛИ!\nВаш куш: ${winAmount} монет 💰`);
-                        } else if (!data.winner) {
-                            DB.user.coins += data.bet;
-                            alert(`🤝 Битва ${code}: Ничья.\nСтавка возвращена.`);
-                        } else {
-                            alert(`💀 Битва ${code}: Вы проиграли.\nПобедитель: ${data.winner}`);
-                        }
-                        // Удаляем из списка
-                        this.removeBattleFromList(code);
-                    } 
-                    
-                    // СЦЕНАРИЙ 2: ЗАВИСЛА ИЛИ НИКТО НЕ ЗАХОДИТ
-                    else {
-                        // Спрашиваем игрока, что делать
-                        let statusText = (data.status === 'playing') ? "ошибка (статус: играет)" : "ожидание игрока";
-                        
-                        if (confirm(`Битва ${code} (${data.bet}💰).\nСтатус: ${statusText}.\n\nХотите ОТМЕНИТЬ её и вернуть деньги?`)) {
-                            // Возврат денег
-                            DB.user.coins += data.bet;
-                            
-                            // Удаляем из базы, чтобы никто не зашел
-                            await window.DB_Online.deleteDoc(docRef);
-                            
-                            // Удаляем из локального списка
-                            this.removeBattleFromList(code);
-                            
-                            App.toast(`✅ Битва ${code} отменена. +${data.bet} монет.`);
-                            Data.save();
-                            App.updateUI();
-                        }
-                    }
-                } else {
-                    // Битвы нет в базе (удалена) - просто чистим список
-                    this.removeBattleFromList(code);
-                }
-            } catch (e) { console.error(e); }
-        }
-        
-        Data.save();
-        App.updateUI();
-    },
-
-    // Вспомогательная функция для удаления из списка
-    removeBattleFromList(code) {
-        DB.user.activeBattles = DB.user.activeBattles.filter(c => c !== code);
+    // Выход из лобби
+    leaveLobby() {
+        if (this.listener) this.listener(); // Остановить прослушку
+        // Если успели списать деньги - вернуть (сложная логика, пока просто перезагрузка)
+        location.reload(); 
     }
-
-
-
 };
 
 const Trainer = {  
@@ -3421,17 +3340,7 @@ const Trainer = {
     duelCode: null, // <--- НОВАЯ ПЕРЕМЕННАЯ
 
     // ФУНКЦИЯ ЗАПУСКА ДУЭЛИ
-    startDuel(role, bet, code) { 
-        this.isDuel = true;
-        this.duelRole = role;
-        this.duelBet = bet;
-        this.duelCode = code; // <--- Запоминаем код
-        
-        // Запускаем игру в нужном режиме
-        this.start(this.mode);
-        
-        App.toast(role === 'creator' ? "⚠️ Твой счет запишется в битву!" : "⚠️ Побей рекорд соперника!");
-    },
+    
 
     // 1. Выбор режима
     selectMode(mode, btn) {
@@ -3781,103 +3690,84 @@ const Trainer = {
     },
     // Внутри const Trainer = { ... }
 
+    // --- REALTIME PVP ---
+    pvpRole: null, // 'p1' или 'p2'
+    pvpCode: null,
+    pvpBet: 0,
+    pvpListener: null,
+
+    startPVP(role, code, bet) {
+        this.pvpRole = role;
+        this.pvpCode = code;
+        this.pvpBet = bet;
+        this.isDuel = true; // Флаг для функции end()
+
+        App.toast("⚔️ БОЙ НАЧАЛСЯ!");
+        this.start('standard'); // Всегда классика для простоты
+    },
+
+    // Эта функция вызывается из end(), если isDuel = true
     async handleDuelEnd() {
         const score = this.score;
         
-        // Показываем экран
+        // 1. Показываем экран ожидания
         document.getElementById('trainer-game').style.display = 'none';
         document.getElementById('trainer-result').style.display = 'block';
+        document.getElementById('result-score').innerText = score;
+        document.querySelector('#trainer-result h2').innerText = "Ждем соперника... ⏳";
+        document.getElementById('result-coins').innerText = "???";
+
+        // 2. Отправляем свой счет в базу
+        const updateData = {};
+        updateData[`${this.pvpRole}_score`] = score; // p1_score или p2_score
         
-        const codeArea = document.getElementById('duel-code-area');
-        if(codeArea) codeArea.style.display = 'none';
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.pvpCode);
+        await window.DB_Online.updateDoc(docRef, updateData);
 
-        // 1. ЕСЛИ ТЫ СОЗДАТЕЛЬ
-        if (this.duelRole === 'creator') {
-            // 🔥 МЕНЯЕМ ЗАГОЛОВОК, ЧТОБЫ НЕ ПУТАТЬ
-            document.querySelector('#trainer-result h2').innerText = "Результат записан! 📝";
-            document.getElementById('result-score').innerText = score;
-            document.getElementById('result-xp').innerText = "PvP";
-            document.getElementById('result-coins').innerText = "Ждем...";
-
-            App.toast("⏳ Отправка в облако...");
+        // 3. Слушаем базу: когда появятся ОБА счета?
+        this.pvpListener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            const data = docSnap.data();
             
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let code = '';
-            for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-
-            try {
-                await window.DB_Online.setDoc(window.DB_Online.doc(window.DB_Online.db, "battles", code), {
-                    creator: DB.user.name,
-                    bet: this.duelBet,
-                    scoreA: score,
-                    mode: this.mode,
-                    difficulty: this.difficulty,
-                    status: 'waiting',
-                    date: new Date().toISOString()
-                });
-
-                // 🔥 ЗАПОМИНАЕМ БИТВУ, ЧТОБЫ ПОТОМ ЗАБРАТЬ НАГРАДУ
-                if(!DB.user.activeBattles) DB.user.activeBattles = [];
-                DB.user.activeBattles.push(code);
-                Data.save();
-
-                // Показываем код
-                const codeText = document.getElementById('duel-code-text');
-                if(codeArea) codeArea.style.display = 'block'; 
-                if(codeText) codeText.innerText = code;        
-                
-                App.toast("✅ Битва создана!");
-                navigator.clipboard.writeText(code).catch(()=>{});
-
-            } catch (e) {
-                console.error(e);
-                App.toast("Ошибка сети");
+            // Если оба сыграли (счет не -1)
+            if (data.p1_score !== -1 && data.p2_score !== -1) {
+                this.finishPVP(data);
             }
+        });
+    },
+
+    // Финал: оба закончили
+    finishPVP(data) {
+        if (this.pvpListener) this.pvpListener(); // Выключаем слушатель
+
+        const myScore = (this.pvpRole === 'p1') ? data.p1_score : data.p2_score;
+        const oppScore = (this.pvpRole === 'p1') ? data.p2_score : data.p1_score;
+        const oppName = (this.pvpRole === 'p1') ? data.p2 : data.p1;
+
+        let msg = "";
+        
+        if (myScore > oppScore) {
+            msg = "🏆 ПОБЕДА!";
+            SoundSys.play('win');
+            FX.confetti();
+            DB.user.coins += data.bet * 2; // Забираем банк
+        } else if (myScore < oppScore) {
+            msg = "💀 Поражение";
+            SoundSys.play('error');
+        } else {
+            msg = "🤝 Ничья";
+            DB.user.coins += data.bet; // Возврат
         }
 
-        // 2. ЕСЛИ ТЫ ЧЕЛЛЕНДЖЕР (Тут всё ок, результат сразу)
-        else if (this.duelRole === 'challenger') {
-            App.toast("⏳ Судейство...");
-            try {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles", this.duelCode);
-                const snap = await window.DB_Online.getDoc(docRef);
-                const battle = snap.data();
-
-                let msg = "";
-                let win = false;
-
-                // СРАВНЕНИЕ
-                if (score > battle.scoreA) {
-                    msg = `🏆 ПОБЕДА!`;
-                    DB.user.coins += battle.bet * 2; 
-                    win = true;
-                    SoundSys.play('win');
-                    FX.confetti();
-                } else if (score < battle.scoreA) {
-                    msg = `💀 Поражение...`;
-                    SoundSys.play('error');
-                } else {
-                    msg = `🤝 Ничья`;
-                    DB.user.coins += battle.bet;
-                }
-                
-                document.querySelector('#trainer-result h2').innerText = msg;
-                document.getElementById('result-score').innerText = score;
-                document.getElementById('result-xp').innerText = `VS: ${battle.scoreA}`;
-                document.getElementById('result-coins').innerText = win ? `+${battle.bet*2}` : (score < battle.scoreA ? `-${battle.bet}` : `+${battle.bet}`);
-
-                // Закрываем битву
-                await window.DB_Online.updateDoc(docRef, { 
-                    status: 'finished', 
-                    winner: win ? DB.user.name : battle.creator, // Записываем имя победителя
-                    loserScore: score 
-                });
-                
-                Data.save();
-                App.updateUI();
-
-            } catch (e) { console.error(e); }
-        }
+        document.querySelector('#trainer-result h2').innerText = msg;
+        document.getElementById('result-xp').innerText = `Ты: ${myScore}`;
+        document.getElementById('result-coins').innerText = `${oppName}: ${oppScore}`;
+        
+        // Добавляем красивую кнопку выхода
+        const btn = document.querySelector('#trainer-result button');
+        btn.innerText = "Забрать награду и выйти";
+        
+        Data.save();
+        App.updateUI();
     }
 };
 
@@ -5217,44 +5107,44 @@ Transfer.pasteCode = function(code) {
     </div>
 </div>
 
-<!-- BATTLE MODAL -->
+<!-- BATTLE MODAL (LOBBY SYSTEM) -->
 <div id="battle-modal" class="modal" style="z-index: 12000;">
     <div class="modal-content" style="text-align: center;">
-        <h2 style="color: #FF4B2B;">⚔️ Арена</h2>
-        <p style="font-size: 13px; color: var(--text-light); margin-bottom: 20px;">Сразись с другом на монеты!</p>
+        <h2 style="color: #FF4B2B;">⚔️ Арена PVP</h2>
+        
+        <!-- ЭКРАН 1: ВХОД -->
+        <div id="battle-login-view">
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">
+                Придумайте код (например <b>123</b>) и введите его <b>ОБА</b> одновременно.
+            </p>
 
-        <!-- Меню выбора -->
-        <div id="battle-menu-view">
-            <button class="btn" onclick="BattleSys.showCreate()" style="background: var(--bg); border: 2px solid var(--text); color: var(--text); margin-bottom: 10px;">
-                ➕ Создать вызов
-            </button>
-            <button class="btn" onclick="BattleSys.showJoin()" style="background: var(--primary); color: white;">
-                🚀 Ввести код битвы
-            </button>
-            <button class="btn" onclick="BattleSys.checkRewards()" style="background: #00d26a; color: white; border: none; box-shadow: 0 5px 15px rgba(0,210,106,0.3);">
-                🎁 Проверить результат
-            </button>
-        </div>
-
-        <!-- Создание -->
-        <div id="battle-create-view" style="display: none;">
-            <p>Выберите ставку:</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                <button class="btn diff-btn" onclick="BattleSys.setBet(50)">50 💰</button>
-                <button class="btn diff-btn" onclick="BattleSys.setBet(100)">100 💰</button>
-                <button class="btn diff-btn" onclick="BattleSys.setBet(500)">500 💰</button>
-                <button class="btn diff-btn" onclick="BattleSys.setBet(1000)">1000 💰</button>
+            <input type="number" id="battle-code-input" class="input-field" placeholder="Код комнаты (цифры)" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px;">
+            
+            <div style="margin: 15px 0;">
+                <p style="font-size: 12px; margin-bottom: 5px;">Ставка:</p>
+                <div class="diff-switch">
+                    <div class="diff-btn active" onclick="BattleSys.setBet(50, this)">50</div>
+                    <div class="diff-btn" onclick="BattleSys.setBet(100, this)">100</div>
+                    <div class="diff-btn" onclick="BattleSys.setBet(500, this)">500</div>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="BattleSys.create()">Начать бой 🔥</button>
+
+            <button class="btn btn-primary" onclick="BattleSys.connect()">🚀 ПОДКЛЮЧИТЬСЯ</button>
         </div>
 
-        <!-- Вход -->
-        <div id="battle-join-view" style="display: none;">
-            <input type="text" id="battle-code-input" class="input-field" placeholder="Код (например: A1B2)" style="text-align: center; text-transform: uppercase;">
-            <button class="btn btn-primary" onclick="BattleSys.join()">Найти и Сразиться ⚔️</button>
-        </div>
+        <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
+        <div id="battle-lobby-view" style="display: none;">
+            <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
+            <h3>Ожидание соперника...</h3>
+            <p id="lobby-status" style="font-size: 14px; color: var(--text-light);">Ты первый. Ждем второго игрока...</p>
+            
+            <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px;">
+                <div>👤 Игрок 1: <b id="p1-name">...</b></div>
+                <div>👤 Игрок 2: <b id="p2-name">...</b></div>
+            </div>
 
-        <button class="btn btn-outline" onclick="document.getElementById('battle-modal').classList.remove('show')" style="margin-top: 15px;">Отмена</button>
+            <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">❌ Покинуть комнату</button>
+        </div>
     </div>
 </div>
 
