@@ -3227,7 +3227,11 @@ const BattleSys = {
     listener: null,
     myRole: null, // 'p1' или 'p2'
     gameStarted: false, // Чтобы игра не запускалась дважды
-
+genRandom() {
+        // Генерируем число от 100 до 999
+        const rand = Math.floor(Math.random() * 900) + 100;
+        document.getElementById('battle-code-input').value = rand;
+    },
     openMenu() {
         if (!window.DB_Online) return App.toast("Нужен интернет!");
         document.getElementById('battle-modal').classList.add('show');
@@ -3330,7 +3334,8 @@ const BattleSys = {
     showLobby() {
         document.getElementById('battle-login-view').style.display = 'none';
         document.getElementById('battle-lobby-view').style.display = 'block';
-        
+        document.getElementById('lobby-code-display').innerText = this.currentCode;
+
         // Сразу пишем себя
         if (this.myRole === 'p1') {
             document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
@@ -5158,21 +5163,36 @@ Transfer.pasteCode = function(code) {
     </div>
 </div>
 
-<!-- BATTLE MODAL (LOBBY SYSTEM) -->
+<!-- BATTLE MODAL (Исправленный UI) -->
 <div id="battle-modal" class="modal" style="z-index: 12000;">
-    <div class="modal-content" style="text-align: center;">
-        <h2 style="color: #FF4B2B;">⚔️ Арена PVP</h2>
+    <div class="modal-content" style="text-align: center; position: relative;">
         
-        <!-- ЭКРАН 1: ВХОД -->
+        <!-- КНОПКА ЗАКРЫТЬ (Крестик) -->
+        <button onclick="document.getElementById('battle-modal').classList.remove('show')" 
+                style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer;">
+            ✕
+        </button>
+
+        <h2 style="color: #FF4B2B; margin-top: 0;">⚔️ Арена PVP</h2>
+        
+        <!-- ЭКРАН 1: ВХОД / СОЗДАНИЕ -->
         <div id="battle-login-view">
-            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">
-                Придумайте код (например <b>123</b>) и введите его <b>ОБА</b> одновременно.
+            <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">
+                Введи код друга или создай свой:
             </p>
 
-            <input type="number" id="battle-code-input" class="input-field" placeholder="Код комнаты (цифры)" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px;">
+            <!-- Группа ввода кода -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="number" id="battle-code-input" class="input-field" placeholder="123" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 3px; margin: 0;">
+                
+                <!-- Кнопка генерации кода -->
+                <button class="btn btn-outline" onclick="BattleSys.genRandom()" style="width: auto; padding: 0 15px; border-color: var(--primary); color: var(--primary);">
+                    🎲 Создать
+                </button>
+            </div>
             
-            <div style="margin: 15px 0;">
-                <p style="font-size: 12px; margin-bottom: 5px;">Ставка:</p>
+            <div style="margin: 20px 0;">
+                <p style="font-size: 12px; margin-bottom: 8px; font-weight: bold;">Ставка:</p>
                 <div class="diff-switch">
                     <div class="diff-btn active" onclick="BattleSys.setBet(50, this)">50</div>
                     <div class="diff-btn" onclick="BattleSys.setBet(100, this)">100</div>
@@ -5180,23 +5200,27 @@ Transfer.pasteCode = function(code) {
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="BattleSys.connect()">🚀 ПОДКЛЮЧИТЬСЯ</button>
+            <button class="btn btn-primary" onclick="BattleSys.connect()" style="width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);">
+                🚀 В БОЙ
+            </button>
         </div>
 
         <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
-<div id="battle-lobby-view" style="display: none;">
-    <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
-    <h3>Подготовка к битве...</h3>
-    
-    <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
-        <div style="margin-bottom: 5px;">🔴 Игрок 1: <b id="p1-name">...</b></div>
-        <div>🔵 Игрок 2: <b id="p2-name">...</b></div>
-    </div>
-    
-    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Игра начнется автоматически, когда войдет второй игрок.</p>
+        <div id="battle-lobby-view" style="display: none;">
+            <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
+            <h3>Ожидание соперника...</h3>
+            
+            <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
+                <div style="margin-bottom: 5px;">🔴 Игрок 1: <b id="p1-name">...</b></div>
+                <div>🔵 Игрок 2: <b id="p2-name">...</b></div>
+            </div>
+            
+            <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Код комнаты: <b id="lobby-code-display" style="font-size: 16px; color: var(--text);">---</b></p>
 
-    <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">❌ Выйти</button>
-</div>
+            <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">
+                ❌ Выйти
+            </button>
+        </div>
     </div>
 </div>
 
