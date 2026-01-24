@@ -1451,11 +1451,16 @@ window.addEventListener('load', () => {
         </div>
     </div>
 </div>
-        <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
-            <h3>ℹ️ О приложении</h3>
-            <p style="color: var(--text-light); font-size: 12px;">Версия 1.0 PRO </p>
-        </div>
-
+        
+<!-- Кнопка Поделиться -->
+<div class="card" onclick="App.shareApp()" style="margin-top: 10px; display: flex; align-items: center; gap: 15px; cursor: pointer; background: linear-gradient(135deg, #6C63FF, #8B7EFF); color: white;">
+    <div style="font-size: 26px;">🚀</div>
+    <div>
+        <div style="font-weight: bold; font-size: 16px;">Позвать друзей</div>
+        <div style="font-size: 12px; opacity: 0.9;">Скинуть ссылку на игру</div>
+    </div>
+    <div style="margin-left: auto; font-size: 20px;">➜</div>
+</div>
 <!-- Карточка Premium с Прайс-листом -->
 <div style="background:linear-gradient(135deg, #FFD700, #FFA500); padding:20px; border-radius:20px; color:#333; margin:20px 0; text-align:center; position:relative; overflow:hidden; box-shadow:0 10px 20px rgba(255,215,0,0.3);">
     
@@ -1561,8 +1566,10 @@ window.addEventListener('load', () => {
             Ввод кода доступен только на главном экране входа.
         </p>
     </div>
-    
-    <!-- Кнопка сброса УДАЛЕНА -->
+    <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
+            <h3>ℹ️ О приложении</h3>
+            <p style="color: var(--text-light); font-size: 12px;">Версия 1.0 PRO </p>
+        </div>
 </div>
     </section>
     
@@ -2886,8 +2893,8 @@ const Auth = {
     },
 
     createAccount() {
-        // 1. ПРОВЕРКА ЛИМИТА (Максимум 3 аккаунта)
-        const MAX_ACCOUNTS = 2;
+        // 1. ПРОВЕРКА ЛИМИТА (Максимум 1 аккаунт)
+        const MAX_ACCOUNTS = 1;
         
         if (this.users.length >= MAX_ACCOUNTS) {
             App.toast(`⛔ Достигнут лимит: ${MAX_ACCOUNTS} профиля!`);
@@ -3883,31 +3890,18 @@ const AchievementSys = {
     }
 };
 const App = {
-    async init() { Auth.init(); },
-    
-    setText(id, text) {
-        const el = document.getElementById(id);
-        if (el) el.innerText = text;
-    },
+    async init() { 
+        Auth.init();
+        InstallSys.init(); // Если есть
 
-    // 🔥 ИСПРАВЛЕНИЕ ЗАВИСАНИЯ ПРИ ВХОДЕ 🔥
-    initAfterLogin() {
-        // 1. Сначала обновляем только шапку (Имя, Монеты) - это мгновенно
-        this.updateUI();
-        
-        // 2. Даем телефону 100мс передохнуть, потом грузим Тренажер и Предметы
+        // 👇 ДОБАВИТЬ ЭТОТ БЛОК 👇
+        // Если галочка включена - запускаем таймер проверки времени
         setTimeout(() => {
-            this.renderSubjects();
-            SubjectSys.render();
-            if (window.Trainer) Trainer.init();
-        }, 100);
-
-        // 3. Еще через 300мс проверяем бонусы и историю
-        setTimeout(() => {
-            this.renderHistory();
-            DailySys.check(); 
-            AchievementSys.check();
-        }, 400);
+            if (DB && DB.settings && DB.settings.notifications) {
+                Notify.startDailyCheck();
+            }
+        }, 2000);
+        // 👆 ------------------ 👆
     },
 
     changeNickname() {
@@ -4368,6 +4362,28 @@ this.setText('profile-league-big', statusText);        this.setText('profile-lea
         if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
     },
     
+// Внутри App:
+
+    shareApp() {
+        const shareData = {
+            title: 'MathBooster PRO 🇺🇿',
+            text: 'Я качаю мозги в Math Booster Pro! 🧠\nЗдесь можно зарабатывать монеты за учебу и сражаться в PVP дуэлях.\n\nЗаходи, попробуй побить мой рекорд! 🏆',
+            url: window.location.href // Автоматически берет твою ссылку
+        };
+
+        // 1. Если браузер умеет делиться (Телефон)
+        if (navigator.share) {
+            navigator.share(shareData)
+                .then(() => App.toast("🚀 Спасибо, что поделился!"))
+                .catch((e) => console.log("Отмена")); // Если передумал
+        } 
+        // 2. Если это компьютер (Копируем ссылку)
+        else {
+            navigator.clipboard.writeText(shareData.url + "\n\n" + shareData.text);
+            alert("🔗 Ссылка скопирована!\nОтправь её друзьям в Телеграм.");
+        }
+    },
+
     renderStats() {
         const statsSection = document.getElementById('stats');
         // Если вкладка закрыта или не активна - сразу выходим, экономим память
@@ -4515,9 +4531,6 @@ this.setText('profile-league-big', statusText);        this.setText('profile-lea
         }
     }
 };
-
-
-
 
 const Transfer = {
     generateTransferID() {
@@ -4697,10 +4710,10 @@ const InstallSys = {
     }
 };
 const Notify = {
-    // Проверяем, поддерживает ли телефон уведомления
     isSupported: 'Notification' in window,
+    checkInterval: null, // Ссылка на интервал проверки времени
 
-    // Обработка переключателя (ВКЛ/ВЫКЛ)
+    // Главный переключатель (ВКЛ/ВЫКЛ)
     async toggle(isChecked) {
         if (!this.isSupported) {
             alert("Ваш браузер не поддерживает уведомления.");
@@ -4709,57 +4722,80 @@ const Notify = {
         }
 
         if (isChecked) {
-            // Если включили -> Просим разрешение
             const permission = await Notification.requestPermission();
             
             if (permission === 'granted') {
                 DB.settings.notifications = true;
                 App.toast("✅ Уведомления включены!");
                 
-                // Пробное уведомление
-                this.send("MathBooster", "Супер! Теперь я напомню, когда таймер закончится.");
+                // Сразу отправляем тест
+                this.send("MathBooster", "Таймер и напоминалки активированы! 🚀");
+                
+                // Запускаем слежку за временем
+                this.startDailyCheck();
             } else {
-                // Если пользователь запретил -> Выключаем галочку обратно
-                alert("Вы запретили уведомления в настройках телефона. Разрешите их вручную.");
+                alert("Вы запретили уведомления в настройках телефона.");
                 document.getElementById('notify-toggle').checked = false;
                 DB.settings.notifications = false;
             }
         } else {
-            // Если выключили -> Просто сохраняем
             DB.settings.notifications = false;
             App.toast("🔕 Уведомления выключены");
+            // Интервал можно не останавливать, он сам проверит флаг и ничего не сделает
         }
         
         Data.save();
     },
 
-    // Отправка самого уведомления
+    // Отправка пуша
     send(title, body) {
-        // Если выключено в настройках игры или не разрешено телефоном - не отправляем
+        // Главная проверка: если галочка выключена — молчим
         if (!DB.settings.notifications || Notification.permission !== 'granted') return;
 
         try {
-            // Способ для Android/PWA (Service Worker)
             if (navigator.serviceWorker && navigator.serviceWorker.ready) {
                 navigator.serviceWorker.ready.then(reg => {
                     reg.showNotification(title, {
                         body: body,
                         icon: 'icon-192.png',
                         vibrate: [200, 100, 200],
-                        tag: 'math-timer' // Чтобы не спамить кучей уведомлений
+                        tag: 'math-app'
                     });
                 });
-            } 
-            // Способ для ПК и iOS Safari
-            else {
-                new Notification(title, {
-                    body: body,
-                    icon: 'icon-192.png'
-                });
+            } else {
+                new Notification(title, { body: body, icon: 'icon-192.png' });
             }
-        } catch (e) {
-            console.error("Ошибка отправки пуша:", e);
-        }
+        } catch (e) { console.error(e); }
+    },
+
+    // 🕒 ЕЖЕДНЕВНАЯ ПРОВЕРКА (В 19:00)
+    startDailyCheck() {
+        if (this.checkInterval) return; // Чтобы не запустить дважды
+
+        // Проверяем каждую минуту
+        this.checkInterval = setInterval(() => {
+            // Если уведомления выключили в настройках — ничего не делаем
+            if (!DB.settings.notifications) return;
+
+            const now = new Date();
+            
+            // Настраиваем время: 19:00
+            // (Часы: 19, Минуты: 0)
+            if (now.getHours() === 19 && now.getMinutes() === 0) {
+                
+                const today = getUZDate();
+                
+                // Если сегодня еще не учился (дата последней учебы не совпадает с сегодня)
+                // И если мы еще не отправляли напоминание в этой сессии (sessionStorage)
+                if (DB.user.lastStudyDate !== today && !sessionStorage.getItem('dailySent')) {
+                    
+                    this.send("📅 Пора учиться!", "Ты сегодня еще не заходил! Стрик под угрозой 🔥");
+                    
+                    // Запоминаем, что уже отправили, чтобы не спамить каждую секунду в течение этой минуты
+                    sessionStorage.setItem('dailySent', 'true');
+                }
+            }
+        }, 60000); // Проверка раз в 1 минуту
     }
 };
 
@@ -5194,9 +5230,9 @@ Transfer.pasteCode = function(code) {
             <div style="margin: 20px 0;">
                 <p style="font-size: 12px; margin-bottom: 8px; font-weight: bold;">Ставка:</p>
                 <div class="diff-switch">
-                    <div class="diff-btn active" onclick="BattleSys.setBet(50, this)">50</div>
-                    <div class="diff-btn" onclick="BattleSys.setBet(100, this)">100</div>
-                    <div class="diff-btn" onclick="BattleSys.setBet(500, this)">500</div>
+                    <div class="diff-btn active" onclick="BattleSys.setBet(5, this)">5</div>
+                    <div class="diff-btn" onclick="BattleSys.setBet(10, this)">10</div>
+                    <div class="diff-btn" onclick="BattleSys.setBet(50, this)">50</div>
                 </div>
             </div>
 
