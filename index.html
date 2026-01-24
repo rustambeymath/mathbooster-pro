@@ -2893,8 +2893,8 @@ const Auth = {
     },
 
     createAccount() {
-        // 1. ПРОВЕРКА ЛИМИТА (Максимум 1 аккаунт)
-        const MAX_ACCOUNTS = 1;
+        // 1. ПРОВЕРКА ЛИМИТА (Максимум 3 аккаунта)
+        const MAX_ACCOUNTS = 2;
         
         if (this.users.length >= MAX_ACCOUNTS) {
             App.toast(`⛔ Достигнут лимит: ${MAX_ACCOUNTS} профиля!`);
