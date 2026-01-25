@@ -50,14 +50,12 @@
 <noscript><div><img src="https://mc.yandex.ru/watch/105919372" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
     <!-- FIREBASE (База Данных) -->
-    <!-- FIREBASE (База Данных) -->
+    <!-- FIREBASE (База Данных - ADMIN READY) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        
-        // 👇 Весь список импортов в ОДНОЙ строке (без дублей)
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 🔥 КОНФИГ
+        // КОНФИГ
         const firebaseConfig = {
             apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
             authDomain: "mathbooster-pro.firebaseapp.com",
@@ -69,22 +67,19 @@
         };
 
         try {
-            if (firebaseConfig.apiKey) {
-                const app = initializeApp(firebaseConfig);
-                const db = getFirestore(app);
-                
-                // Делаем доступным глобально
-                window.DB_Online = { 
-                    db, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, 
-                    collection, getDocs, query, orderBy, limit, getCountFromServer 
-                };
-                
-                console.log("✅ Firebase подключен успешно");
-            } else {
-                console.log("⚠️ Firebase конфиг отсутствует.");
-            }
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            
+            // 🔥 САМОЕ ГЛАВНОЕ: Делаем базу доступной для консоли
+            window.DB_Online = { 
+                db, doc, setDoc, getDoc, updateDoc, deleteDoc, 
+                onSnapshot, runTransaction, 
+                collection, getDocs, query, orderBy, limit, getCountFromServer 
+            };
+            
+            console.log("✅ Firebase подключен и доступен для Админа!");
         } catch(e) { 
-            console.error("Ошибка подключения Firebase:", e); 
+            console.error("Ошибка подключения:", e); 
         }
     </script>
     
@@ -1461,41 +1456,87 @@ window.addEventListener('load', () => {
     </div>
     <div style="margin-left: auto; font-size: 20px;">➜</div>
 </div>
-<!-- Карточка Premium с Прайс-листом -->
-<div style="background:linear-gradient(135deg, #FFD700, #FFA500); padding:20px; border-radius:20px; color:#333; margin:20px 0; text-align:center; position:relative; overflow:hidden; box-shadow:0 10px 20px rgba(255,215,0,0.3);">
+<!-- PREMIUM CARD (Новый дизайн прайса) -->
+<div style="background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); padding: 20px; border-radius: 24px; color: #333; margin: 20px 0; text-align: center; box-shadow: 0 10px 30px rgba(253, 185, 49, 0.3); position: relative; overflow: hidden;">
     
-    <div style="font-size:40px; margin-bottom:5px;">💎</div>
-    <h3 style="margin:0; font-weight:800; text-transform:uppercase; color: #2B3674;">Premium</h3>
-    <p style="font-size:12px; margin:5px 0;">Поддержи проект и сэкономь время!</p>
+    <!-- Декор на фоне -->
+    <div style="position: absolute; top: -10px; right: -10px; font-size: 80px; opacity: 0.15; transform: rotate(15deg);">💎</div>
 
-    <!-- 👇 НОВЫЙ ПРАЙС ЛИСТ 👇 -->
-    <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 12px; margin: 15px 0; color: #333; font-size: 13px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-        <div style="font-weight: bold; margin-bottom: 8px; text-align: center; color: #2B3674; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">Прайс-лист (UZS)</div>
-        
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
-            <span>300 💰</span> <b>5 000 UZS</b>
-        </div>
-        
-        <!-- Выделяем ХИТ продаж -->
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; background: rgba(255, 215, 0, 0.25); border-radius: 6px; margin: 2px -6px; padding-left: 6px; padding-right: 6px;">
-            <span style="font-weight:800; color:#2B3674;">1 000 💰</span> <b style="color: #d35400;">15 000 UZS 🔥</b>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
-            <span>3 000 💰</span> <b>35 000 UZS</b>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; padding: 6px 0;">
-            <span>5 000 💰</span> <b>50 000 UZS 👑</b>
-        </div>
-    </div>
-    <!-- 👆 КОНЕЦ ПРАЙС ЛИСТА 👆 -->
+    <h3 style="margin: 0; font-weight: 900; font-size: 24px; color: #2B3674; text-transform: uppercase; letter-spacing: 1px;">Premium Shop</h3>
+    <p style="font-size: 13px; margin: 5px 0 15px 0; opacity: 0.8; font-weight: 600;">Ускорь свой прогресс!</p>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
-        <button class="btn" style="background:white; color:#2B3674; font-size:12px; font-weight:bold;" onclick="Donation.payUz()">🇺🇿 UZB (Humo)</button>
-        <button class="btn" style="background:#2B3674; color:white; font-size:12px; font-weight:bold;" onclick="Donation.payWorld()">🌍 World (Visa)</button>
+    <!-- ТАБЛИЦА ЦЕН -->
+    <div style="background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 5px 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        
+        <!-- 1. Старт -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee;">
+            <div style="text-align: left;">
+                <div style="font-weight: 800; color: #2B3674; font-size: 15px;">300 💰</div>
+                <div style="font-size: 10px; color: #777;">Начальный пак</div>
+            </div>
+            <div style="font-weight: 700; font-size: 14px; background: #eee; padding: 4px 10px; border-radius: 8px;">
+                5 000 UZS
+            </div>
+        </div>
+
+        <!-- 2. ХИТ ПРОДАЖ (Выделяем) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; position: relative;">
+            <!-- Бейджик ХИТ -->
+            <div style="position: absolute; top: 0; left: 0; background: #FF416C; color: white; font-size: 8px; font-weight: bold; padding: 2px 6px; border-radius: 0 0 6px 0;">ХИТ 🔥</div>
+            
+            <div style="text-align: left; margin-top: 5px;">
+                <div style="font-weight: 900; color: #FF416C; font-size: 16px;">1 000 💰</div>
+                <div style="font-size: 10px; color: #FF416C;">Хватает на Золото!</div>
+            </div>
+            <div style="font-weight: 800; font-size: 15px; background: #FF416C; color: white; padding: 6px 12px; border-radius: 10px; box-shadow: 0 4px 10px rgba(255, 65, 108, 0.3);">
+                15 000 UZS
+            </div>
+        </div>
+
+        <!-- 3. VIP -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee;">
+            <div style="text-align: left;">
+                <div style="font-weight: 900; color: #6C63FF; font-size: 16px;">3 000 💰 + <span style="font-size: 12px; background: #6C63FF; color: white; padding: 1px 4px; border-radius: 4px;">VIP</span></div>
+                <div style="font-size: 10px; color: #6C63FF;">Статус виден всем</div>
+            </div>
+            <div style="font-weight: 700; font-size: 14px; border: 1px solid #6C63FF; color: #6C63FF; padding: 4px 10px; border-radius: 8px;">
+                35 000 UZS
+            </div>
+        </div>
+
+        <!-- 4. KING -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+            <div style="text-align: left;">
+                <div style="font-weight: 900; color: #FFD700; text-shadow: 0 1px 1px rgba(0,0,0,0.2); font-size: 16px;">5 000 💰 + 👑</div>
+                <div style="font-size: 10px; color: #997b00;">Статус легенды</div>
+            </div>
+            <div style="font-weight: 700; font-size: 14px; background: #2B3674; color: #FFD700; padding: 4px 10px; border-radius: 8px;">
+                50 000 UZS
+            </div>
+        </div>
+
     </div>
-    <button class="btn" style="background:rgba(255,255,255,0.3); color:white; margin-top:10px; font-weight:bold;" onclick="Donation.enterCode()">🔑 Ввести код</button>
+
+    <!-- Инструкция -->
+    <p style="font-size: 11px; color: #333; margin-top: 15px; opacity: 0.8; line-height: 1.4;">
+        1. Нажми кнопку оплаты ниже (скопируй карту).<br>
+        2. Скинь чек в Telegram.<br>
+        3. Введи полученный код.
+    </p>
+
+    <!-- Кнопки действий -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+        <button class="btn" style="background:white; color:#2B3674; font-size:11px; font-weight:bold; padding: 10px;" onclick="Donation.payUz()">
+            💳 HUMO / UZCARD
+        </button>
+        <button class="btn" style="background:#2B3674; color:white; font-size:11px; font-weight:bold; padding: 10px;" onclick="Donation.payWorld()">
+            🌍 VISA / MASTERCARD
+        </button>
+    </div>
+    
+    <button class="btn" style="background:rgba(255,255,255,0.4); border: 2px solid rgba(255,255,255,0.5); color:#2B3674; margin-top:10px; font-weight:bold; width: 100%;" onclick="Donation.enterCode()">
+        🔑 Активировать код
+    </button>
 </div>
 
 <!-- Кнопка вызова соглашения -->
@@ -2178,7 +2219,10 @@ const SHOP_TITLES = [
     { id: 'boss', name: 'Big Boss 😎', price: 500 },
     { id: 'sigma', name: 'SIGMA 🗿', price: 1000 },
     { id: 'khan', name: 'ХАН 👑', price: 2000 },
-    { id: 'future', name: 'Future Millionaire 💼', price: 5000 }
+    { id: 'future', name: 'Future Millionaire 💼', price: 5000 },
+    
+    // ЭКСКЛЮЗИВНЫЙ СТАТУС
+    { id: 'vip', name: 'VIP', price: -1 } 
 ];
 
 // 🖼️ РАМКИ
@@ -2394,6 +2438,8 @@ const Data = {
                     avatar: DB.user.avatar || "😎",
                     level: DB.user.level || 1,
                     xp: DB.user.xp || 0,
+                    isVip: DB.user.isVip || false,
+                    isKing: DB.user.isKing || false,  
                     currentFrame: DB.user.currentFrame || null,
                     currentTitle: DB.user.currentTitle || null,
                     totalSec: DB.user.totalSec || 0
@@ -2602,52 +2648,113 @@ const Donation = {
         prompt("Скопируйте номер карты для перевода (Visa):", this.worldCard);
         alert("После перевода скинь скриншот мне в тг @rustambey708, чтобы получить код!");
     },
-    enterCode() {
-        const c = prompt("Введите полученный промокод:"); if(!c) return;
-        const code = c.trim().toUpperCase();
-        if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) return App.toast("Этот код уже использован!");
+    async enterCode() {
+        const c = prompt("Введите ваш промокод:"); 
+        if(!c) return;
+        const code = c.trim().toUpperCase(); // Делаем буквы большими
         
-        // 💰 СПИСОК КОДОВ И НАГРАД 💰
-        const rewards = { 
-            // // --- ТАРИФ "СТАРТ" (5 000 сум -> 300 монет) ---
-            "START123":      { c: 100, msg: "Удачный старт! 🚀" },
-            // "COFFEE":     { c: 300, msg: "Спасибо! ☕️ (Тариф 5k)" },
-            // "UZ_5000":    { c: 300, msg: "Оплата 5.000 сум принята! ✅" },
-
-            // // --- ТАРИФ "СТУДЕНТ" (15 000 сум -> 1 000 монет) ---
-            // "PRO123":        { c: 1000, msg: "Теперь ты PRO! Хватит на Золотую тему 🥇" },
-            // "GOLD123":       { c: 1000, msg: "Золотой запас пополнен! 💰" },
-            // "CLICK_15":   { c: 1000, msg: "Оплата через Click принята! ✅" },
-            // "PAYME_15":   { c: 1000, msg: "Оплата через Payme принята! ✅" },
-
-            // // --- ТАРИФ "МАГНАТ" (35 000 сум -> 3 000 монет) ---
-            // "MAGNAT123":     { c: 3000, msg: "Серьезный баланс для серьезных дел 💼" },
-            // "RICH123":       { c: 3000, msg: "Ничего себе! Спасибо за поддержку 💎" },
-            // "BIG_BRAIN":  { c: 3000, msg: "Инвестиция в знания! 🧠" },
-
-            // // --- ТАРИФ "ЛЕГЕНДА" (50 000 сум -> 5 000 монет) ---
-            // "LEGEND123":     { c: 5000, msg: "ТЫ — ЛЕГЕНДА! Огромное спасибо 👑" },
-            // "KING123":       { c: 5000, msg: "Королевская казна пополнена! 🏰" },
-            // "SPONSOR123":    { c: 5000, msg: "Генеральный спонсор MathBooster 🤝" },
-            // "UZ_POWER123":   { c: 5000, msg: "O'zbekiston kuch! 🇺🇿💪" },
-
-            // // --- СПЕЦИАЛЬНЫЕ / ДЛЯ ДРУЗЕЙ ---
-            // "ADMIN_708":  { c: 10000, msg: "Режим разработчика активирован ⚡️" }, // Для тебя
-            // "BRO":        { c: 500, msg: "Подарок для брата/друга 🤜🤛" },
-            // "SORRY":      { c: 200, msg: "Извини за баг! Вот компенсация 🔧" },
-            // "WELCOME":    { c: 100, msg: "Бонус новичка! Добро пожаловать" }
-        };
-        
-        if(rewards[code]) {
-            DB.user.coins += rewards[code].c;
-            if(!DB.user.usedCodes) DB.user.usedCodes = [];
-            DB.user.usedCodes.push(code);
-            Data.save(); App.updateUI(); FX.confetti(); SoundSys.play('win'); 
-            alert(`✅ КОД ПРИНЯТ!\n\n${rewards[code].msg}\nНачислено: ${rewards[code].c} монет`);
-        } else { 
-            SoundSys.play('error');
-            App.toast("❌ Неверный код"); 
+        // 1. ПРОВЕРКА: Не вводил ли я этот код раньше?
+        if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) {
+            return App.toast("Вы уже активировали этот код!");
         }
+
+        // 2. СПИСОК ВЕЧНЫХ КОДОВ (Оставим для новичков)
+        // Эти коды работают для всех, но 1 раз на аккаунт
+        const staticRewards = { 
+            "START314":    { c: 300, msg: "Бонус новичка!" },
+            "WELCOME271":  { c: 100, msg: "Добро пожаловать!" }
+        };
+
+        if (staticRewards[code]) {
+            this.applyReward(code, staticRewards[code]);
+            return;
+        }
+
+        // 3. ПРОВЕРКА ОДНОРАЗОВОГО КОДА В ОБЛАКЕ
+        if (!window.DB_Online) return App.toast("Нужен интернет для проверки!");
+        
+        App.toast("⏳ Проверяем билет...");
+
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "promo_codes", code);
+            
+            // Запускаем "Транзакцию" (чтобы два человека не активировали одновременно)
+            await window.DB_Online.runTransaction(window.DB_Online.db, async (transaction) => {
+                const sfDoc = await transaction.get(docRef);
+                
+                // Если такого билета в базе нет
+                if (!sfDoc.exists()) {
+                    throw "Код не существует";
+                }
+
+                const data = sfDoc.data();
+                
+                // Если билет уже "прокомпостирован"
+                if (data.isUsed) {
+                    throw "Код уже кем-то активирован!";
+                }
+
+                // ВСЁ ОК! СТАВИМ ШТАМП "ИСПОЛЬЗОВАН"
+                transaction.update(docRef, { 
+                    isUsed: true, // Билет сгорел
+                    usedBy: DB.user.name + " (ID: " + Auth.currentUser.id + ")", // Кто активировал
+                    usedAt: new Date().toISOString() // Когда
+                });
+                
+                return data; // Возвращаем данные о награде
+            }).then((data) => {
+                // ВЫДАЕМ НАГРАДУ
+                const rewardData = {
+                    c: data.coins || 0, // Сколько монет
+                    vip: data.vip || false, // Дать ли VIP
+                    msg: data.msg || "Уникальный код принят!"
+                };
+                this.applyReward(code, rewardData);
+            });
+
+        } catch (e) {
+            console.error(e);
+            if (e === "Код не существует" || e === "Код уже кем-то активирован!") {
+                alert("❌ Ошибка: " + e);
+            } else {
+                App.toast("Ошибка сети или код не найден.");
+            }
+        }
+    },
+
+    // Вспомогательная функция (чтобы не писать одно и то же 2 раза)
+    applyReward(code, reward) {
+        DB.user.coins += reward.c;
+        
+        // Если это VIP код
+        if (reward.vip) {
+            if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+            if (!DB.user.ownedTitles.includes('vip')) DB.user.ownedTitles.push('vip');
+            DB.user.currentTitle = "VIP";
+            App.toast("💎 Статус VIP получен!");
+        }
+if (reward.isKing) {
+            DB.user.isKing = true; // Главная метка
+            DB.user.isVip = true;  // Король тоже VIP
+            
+            // Даем титул LEGEND
+            if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+            if (!DB.user.ownedTitles.includes('khan')) DB.user.ownedTitles.push('khan'); // Дарим Хана
+            DB.user.currentTitle = "LEGEND 👑"; // Автоматически ставим крутую подпись
+            
+            App.toast("👑 КОРОЛЕВСКИЙ СТАТУС ПОЛУЧЕН!");
+        }
+
+        if(!DB.user.usedCodes) DB.user.usedCodes = [];
+        DB.user.usedCodes.push(code);
+        
+        Data.save(); 
+        App.updateUI(); 
+        App.renderShop(); 
+        
+        FX.confetti(); 
+        SoundSys.play('win'); 
+        alert(`✅ УСПЕШНО!\n\n${reward.msg}\nНачислено: +${reward.c} 💰`);
     }
 };
 
@@ -2692,8 +2799,16 @@ const Online = {
                 const level = u.level || 1;
                 const xp = u.xp || 0;
                 const avatar = u.avatar || "😎";
+// 🔥 ОПРЕДЕЛЕНИЕ СТАТУСА
+                let vipBadge = '';
                 
-                // 1. ПОЛУЧАЕМ РАМКУ
+                if (u.isKing) {
+                    // Если Король - ставим Корону
+                    vipBadge = '<span style="margin-right:4px;">👑</span>';
+                } else if (u.isVip) {
+                    // Если просто VIP - ставим Бриллиант
+                    vipBadge = '<span style="margin-right:4px;">💎</span>';
+                }                // 1. ПОЛУЧАЕМ РАМКУ
                 // Если есть рамка, добавляем её класс, иначе просто базовый класс
                 const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
                 
@@ -2736,7 +2851,7 @@ const Online = {
 
                         <div style="overflow:hidden;">
                             <b style="display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px;">
-                                ${name} ${isMe ? "(Вы)" : ""}
+                                ${vipBadge} ${name} ${isMe ? "(Вы)" : ""}
                             </b>
                             <!-- СТАТУС -->
                             <small style="font-size:11px; opacity:0.8;">${subText}</small>
@@ -3993,9 +4108,20 @@ const App = {
         let cl = LEAGUES[0]; 
         for(let l of LEAGUES) { if(DB.user.level >= l.min) cl = l; }
         
-        const statusText = DB.user.currentTitle ? `★ ${DB.user.currentTitle}` : cl.name;
+        // 👇 ОБНОВЛЕННАЯ ЛОГИКА ОТОБРАЖЕНИЯ
+        let statusText = cl.name; // По умолчанию - название лиги
+        
+        if (DB.user.currentTitle) {
+            if (DB.user.currentTitle === 'VIP') {
+                statusText = "VIP"; // Просто чистое слово VIP
+            } else {
+                statusText = `★ ${DB.user.currentTitle}`; // Для остальных добавляем звездочку
+            }
+        }
+        
         this.setText('header-league', statusText);
         this.setText('profile-league-big', statusText);
+
         
         // Аватарки с рамками
         const headerBox = document.getElementById('header-avatar-box');
@@ -4069,15 +4195,46 @@ const App = {
         // Статусы
         const titleList = document.getElementById('title-shop-list');
         if (titleList) {
+            // Защита от отсутствия массива
             const userTitles = DB.user.ownedTitles || [];
+            
             titleList.innerHTML = SHOP_TITLES.map(t => {
                 const owned = userTitles.includes(t.id);
                 const active = DB.user.currentTitle === t.name;
                 const priceClass = (DB.user.coins >= t.price) ? 'affordable' : '';
-                if (active) return `<div class="shop-item active" onclick="App.equipTitle(null)" style="border-color:var(--success);"><div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div><small style="color:var(--success);">Выбрано (Снять)</small></div>`;
-                return `<div class="shop-item" onclick="App.buyTitle('${t.id}')"><div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>${owned ? '<small style="color:var(--text-light);">Надеть</small>' : `<small class="shop-price-tag ${priceClass}">${t.price} 💰</small>`}</div>`;
+
+                // 1. Если статус активен (надет)
+                if (active) {
+                    return `<div class="shop-item active" onclick="App.equipTitle(null)" style="border-color:var(--success);">
+                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
+                        <small style="color:var(--success);">Выбрано (Снять)</small>
+                    </div>`;
+                }
+                
+                // 2. Если статус уже куплен/получен (можно надеть)
+                if (owned) {
+                    return `<div class="shop-item" onclick="App.equipTitle('${t.name}')">
+                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
+                        <small style="color:var(--text-light);">Надеть</small>
+                    </div>`;
+                }
+
+                // 3. Если статус ЭКСКЛЮЗИВНЫЙ (Цена -1) - Покупка запрещена
+                if (t.price === -1) {
+                    return `<div class="shop-item" style="opacity:0.7; cursor:not-allowed; border: 1px dashed var(--accent);">
+                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px; color:var(--accent);">${t.name}</div>
+                        <small style="color:var(--accent);">Только за донат</small>
+                    </div>`;
+                }
+
+                // 4. Обычная покупка за монеты
+                return `<div class="shop-item" onclick="App.buyTitle('${t.id}')">
+                    <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
+                    <small class="shop-price-tag ${priceClass}">${t.price} 💰</small>
+                </div>`;
             }).join('');
         }
+
         // Рамки
         const frameList = document.getElementById('frame-shop-list');
         if (frameList) {
