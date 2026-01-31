@@ -1749,15 +1749,30 @@ window.addEventListener('load', () => {
         <div id="available-subjects-list" class="subject-manage-grid"></div>
     </div>    
     
-    <!-- ЭКСПОРТ (Только создание кода) -->
-    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
-        <h4 style="margin-bottom: 15px;">📤 Сохранить прогресс в облако</h4>
-        <button class="btn btn-primary" onclick="Transfer.generateTransferID()" style="width: 100%;">
-            Создать код переноса (8 символов)
+    <!-- 🛡️ БЛОК БЕЗОПАСНОСТИ (NEW) -->
+    <div class="card" style="border: 2px solid #FF4757; background: rgba(255, 71, 87, 0.05);">
+        <h3 style="color: #FF4757; display: flex; align-items: center; gap: 10px;">
+            ⚠️ ВАЖНО: Твой Прогресс
+        </h3>
+        
+        <p style="font-size: 13px; line-height: 1.5; margin: 10px 0;">
+            Твой аккаунт хранится в памяти телефона. <br>
+            <b style="color: #FF4757;">ЕСЛИ ТЫ ОЧИСТИШЬ КЭШ ИЛИ ИСТОРИЮ БРАУЗЕРА — АККАУНТ ИСЧЕЗНЕТ!</b>
+        </p>
+
+        <div style="background: white; padding: 15px; border-radius: 12px; border: 1px dashed #2B3674; margin: 15px 0;">
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: bold;">Твой Код Спасения (Скриншоть!)</div>
+            <div id="rescue-code-display" style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-top: 5px; user-select: all;">
+                ...
+            </div>
+        </div>
+
+        <button class="btn" onclick="App.copyRescueCode()" style="background: #2B3674; color: white; width: 100%;">
+            📋 Скопировать и сохранить
         </button>
-        <p style="font-size: 12px; color: var(--text-light); margin-top: 10px; text-align: center;">
-            Нажмите это, если хотите перенести этот аккаунт <b>НА ДРУГОЙ</b> телефон.<br>
-            Ввод кода доступен только на главном экране входа.
+        
+        <p style="font-size: 11px; color: var(--text-light); margin-top: 10px; text-align: center;">
+            Запиши этот код в Заметки. Только он вернет аккаунт.
         </p>
     </div>
     <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
@@ -2486,9 +2501,13 @@ const Data = {
         
         // Грузим локально
         const raw = localStorage.getItem(this.currentKey); 
-        if (raw) { 
-            try { DB = JSON.parse(raw); } catch(e) { DB = null; }
+        if (raw) {
+        try {
+            loaded = JSON.parse(raw);
+        } catch(e) {
+            console.warn("Битый localStorage — игнорируем", e);
         }
+    }
 
         if (!DB || !DB.user) {
             this.initNewData(userId);
@@ -2606,7 +2625,16 @@ const Data = {
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
-
+        if (DB.user.rescueCode) {
+                const rescueRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
+                // Сохраняем "в фоне", не дожидаясь ответа (чтобы не тормозить)
+                window.DB_Online.setDoc(rescueRef, {
+                    userId: Auth.currentUser.id,
+                    data: DB,
+                    isPermanent: true,
+                    updatedAt: new Date().toISOString()
+                }).catch(e => console.log("Backup error (ignore)"));
+            }
             window.DB_Online.setDoc(docRef, {
                 user: { 
                     ...DB.user, 
@@ -4345,7 +4373,7 @@ const App = {
         quoteEl.innerText = `"${randomQuote}"`;
     }
     },
-copyId() {
+    copyId() {
         if (Auth.currentUser && Auth.currentUser.id) {
             navigator.clipboard.writeText(Auth.currentUser.id)
                 .then(() => App.toast("✅ ID скопирован!"))
@@ -4359,7 +4387,7 @@ copyId() {
         const newName = prompt(`Смена ника стоит ${COST} монет.\nВведите новое имя:`, DB.user.name);
         if (!newName) return;
         const cleanName = newName.trim();
-const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
+        const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
         if (!validChars.test(cleanName)) {
             return alert("⛔️ Эмодзи и спецсимволы запрещены!\nИспользуйте только буквы и цифры.");
         }
@@ -4410,6 +4438,34 @@ const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
 
         const notifyToggle = document.getElementById('notify-toggle');
         if (notifyToggle && DB.settings) notifyToggle.checked = DB.settings.notifications;
+
+        const rescueEl = document.getElementById('rescue-code-display');
+        
+        if (rescueEl && DB.user) {
+            // 1. Если кода еще нет — создаем его один раз и навсегда
+            if (!DB.user.rescueCode) {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let code = '';
+                for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+                
+                DB.user.rescueCode = code;
+                Data.save();
+
+                // 2. Резервируем его в Firebase (чтобы он там лежал вечно)
+                if(window.DB_Online) {
+                    const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
+                    window.DB_Online.setDoc(docRef, {
+                        userId: Auth.currentUser.id,
+                        data: DB,
+                        isPermanent: true, // Метка, что это вечный код
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                }
+            }
+
+            // 3. Показываем код на экране
+            rescueEl.innerText = DB.user.rescueCode;
+        }
 
         // Обновление текстов
         this.setText('coin-display', DB.user.coins);
@@ -4493,7 +4549,28 @@ const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
             }).join('');
         }
     },
+// Внутри объекта App:
 
+    copyRescueCode() {
+        const code = DB.user.rescueCode;
+        if (!code) return;
+        
+        navigator.clipboard.writeText(code).then(() => {
+            alert(`✅ КОД СКОПИРОВАН: ${code}\n\nСрочно отправь его себе в Телеграм (в Избранное) или запиши в Заметки!\n\nЕсли приложение удалится, нажми "У меня есть код" и введи его.`);
+        }).catch(() => {
+            prompt("Скопируй этот код и сохрани:", code);
+        });
+        
+        // Принудительно обновляем резервную копию в облаке прямо сейчас
+        if(window.DB_Online) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
+            window.DB_Online.setDoc(docRef, {
+                userId: Auth.currentUser.id,
+                data: DB,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    },
     // МАГАЗИН (Отрисовка)
     renderShop() {
         // Темы
@@ -5103,34 +5180,71 @@ const Transfer = {
         if (!inputID) return;
         const cleanID = inputID.trim().toUpperCase();
 
-        App.toast("⏳ Поиск...");
+        App.toast("⏳ Поиск данных...");
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
 
         window.DB_Online.getDoc(docRef).then(docSnap => {
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                DB = data.data;
+                const transferData = docSnap.data();
+                
+                // 🔥 ПРОВЕРКА СРОКА ГОДНОСТИ
+                // Если код НЕ вечный И у него истек срок
+                if (!transferData.isPermanent && transferData.expiresAt) {
+                    if (new Date() > new Date(transferData.expiresAt)) {
+                        alert("❌ Срок действия этого кода истек (24 часа).");
+                        return;
+                    }
+                }
+
+                // Если код Вечный — мы его НЕ удаляем после использования
+                // Если код Временный — удаляем
+                const shouldDelete = !transferData.isPermanent;
+
+                DB = transferData.data;
+
+                // Лечение имени
+                if (!DB.user.name || DB.user.name === "Восстановленный") {
+                    let newName = prompt("Введите имя для профиля:", "Игрок");
+                    DB.user.name = newName || "Игрок";
+                }
                 
                 // Восстановление списка
-                let users = JSON.parse(localStorage.getItem('MathUsers') || '[]');
-                users = users.filter(u => u.id !== DB.user.id);
-                users.unshift({ id: DB.user.id, name: DB.user.name, avatar: DB.user.avatar || '😎', gender: 'male' });
-                localStorage.setItem('MathUsers', JSON.stringify(users));
+                let usersList = [];
+                try {
+                    let stored = localStorage.getItem('MathUsers');
+                    if (stored) usersList = JSON.parse(stored);
+                } catch (e) { usersList = []; }
+
+                usersList = usersList.filter(u => u.id !== DB.user.id);
                 
-                localStorage.setItem('MathData_' + DB.user.id, JSON.stringify(DB));
-                
-                alert("✅ Успешно! Перезагрузка...");
-                location.reload();
+                usersList.unshift({ 
+                    id: DB.user.id, 
+                    name: DB.user.name, 
+                    avatar: DB.user.avatar || "😎", 
+                    gender: DB.user.gender || 'male' 
+                });
+
+                localStorage.setItem('MathUsers', JSON.stringify(usersList));
+                Data.currentKey = 'MathData_' + DB.user.id; 
+                localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+
+                // Если код был временный — удаляем его, чтобы никто не украл
+                if (shouldDelete) {
+                    window.DB_Online.deleteDoc(docRef).catch(() => {});
+                } else {
+                    console.log("✅ Вечный код восстановления использован. Не удаляем.");
+                }
+
+                alert(`✅ УСПЕШНО!\nПрофиль "${DB.user.name}" восстановлен.`);
+                setTimeout(() => location.reload(), 500);
+
             } else {
-                alert("❌ Код не найден");
+                alert("❌ Код не найден.\nПроверьте правильность ввода.");
             }
         }).catch(e => {
-            if (e.code === 'resource-exhausted') {
-                alert("🛑 Сервер перегружен. Попробуйте завтра.");
-            } else {
-                alert("Ошибка сети");
-            }
+            console.error(e);
+            alert("❌ Ошибка соединения.");
         });
     }
 };
