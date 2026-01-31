@@ -875,8 +875,7 @@ body.zen-active #timer {
 #eco-timer-display {
     font-size: 80px;
     font-weight: bold;
-    color: #444444; /* <--- ТЕПЕРЬ ОН БУДЕТ ВИДЕН */
-    font-family: monospace;
+    color: #1a1a1a; /* Очень темный серый, чтобы едва светился */
 }
 
 
@@ -1247,12 +1246,11 @@ window.addEventListener('load', () => {
                 
                 <div id="timer" class="timer-display">00:00:00</div>
                 <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
-                    🔥 <b>5 → 20 монет</b> за каждые 10 минут
-                </div>
-                <div style="font-size: 10px; color: var(--primary); font-weight: bold; margin-bottom: 15px; opacity: 0.8;">
-                    Чем дольше учишься без паузы — тем больше награда! 📈
-                </div>
-
+    5 монет 💰 за каждые 10 минут
+</div>
+<div style="font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 15px; opacity: 0.8;">
+    "Время — это материал, из которого сделана жизнь."
+</div>
                 
                 <!-- SESSION GOAL -->
                 <input type="text" id="session-goal" class="input-field" placeholder="🎯 Цель на сессию (опционально)..." style="text-align: center; font-size: 14px; padding: 10px;">
@@ -1749,30 +1747,15 @@ window.addEventListener('load', () => {
         <div id="available-subjects-list" class="subject-manage-grid"></div>
     </div>    
     
-    <!-- 🛡️ БЛОК БЕЗОПАСНОСТИ (NEW) -->
-    <div class="card" style="border: 2px solid #FF4757; background: rgba(255, 71, 87, 0.05);">
-        <h3 style="color: #FF4757; display: flex; align-items: center; gap: 10px;">
-            ⚠️ ВАЖНО: Твой Прогресс
-        </h3>
-        
-        <p style="font-size: 13px; line-height: 1.5; margin: 10px 0;">
-            Твой аккаунт хранится в памяти телефона. <br>
-            <b style="color: #FF4757;">ЕСЛИ ТЫ ОЧИСТИШЬ КЭШ ИЛИ ИСТОРИЮ БРАУЗЕРА — АККАУНТ ИСЧЕЗНЕТ!</b>
-        </p>
-
-        <div style="background: white; padding: 15px; border-radius: 12px; border: 1px dashed #2B3674; margin: 15px 0;">
-            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: bold;">Твой Код Спасения (Скриншоть!)</div>
-            <div id="rescue-code-display" style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-top: 5px; user-select: all;">
-                ...
-            </div>
-        </div>
-
-        <button class="btn" onclick="App.copyRescueCode()" style="background: #2B3674; color: white; width: 100%;">
-            📋 Скопировать и сохранить
+    <!-- ЭКСПОРТ (Только создание кода) -->
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--bg);">
+        <h4 style="margin-bottom: 15px;">📤 Сохранить прогресс в облако</h4>
+        <button class="btn btn-primary" onclick="Transfer.generateTransferID()" style="width: 100%;">
+            Создать код переноса (8 символов)
         </button>
-        
-        <p style="font-size: 11px; color: var(--text-light); margin-top: 10px; text-align: center;">
-            Запиши этот код в Заметки. Только он вернет аккаунт.
+        <p style="font-size: 12px; color: var(--text-light); margin-top: 10px; text-align: center;">
+            Нажмите это, если хотите перенести этот аккаунт <b>НА ДРУГОЙ</b> телефон.<br>
+            Ввод кода доступен только на главном экране входа.
         </p>
     </div>
     <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
@@ -1799,11 +1782,8 @@ window.addEventListener('load', () => {
 <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:10px;">
     <h2 id="profile-name-big" style="margin:0;">Игрок</h2>
     <button onclick="App.changeNickname()" style="background:none; border:none; font-size:18px; cursor:pointer; opacity:0.6;">✏️</button>
-</div>            
-<div onclick="App.copyId()" style="font-size: 11px; color: var(--text-light); margin-top: 5px; cursor: pointer; opacity: 0.7; background: rgba(0,0,0,0.05); display: inline-block; padding: 4px 10px; border-radius: 10px;">
-    ID: <span id="profile-id-text">...</span> 📋
-</div>
-        <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>    
+</div>            <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>
+            
             <div class="stats-row">
                 <div class="stat-pill"><div class="stat-val" id="prof-lvl">1</div><div class="stat-label">Уровень</div></div>
                 <div class="stat-pill"><div class="stat-val" id="prof-xp">0</div><div class="stat-label">Опыт</div></div>
@@ -2307,16 +2287,7 @@ const AVATARS = [
     {id:'wizard',icon:'🧙‍♂️',price:300}, 
     {id:'king',icon:'👑',price:500}
 ];
-const QUOTES = [
-    "Время — это материал, из которого сделана жизнь.",
-    "Учение — свет, а неучение — тьма.",
-    "Инвестиции в знания платят лучшие дивиденды.",
-    "Тяжело в учении — легко в бою.",
-    "Не откладывай на завтра то, что можно выучить сегодня.",
-    "Каждый час учебы приближает твою мечту.",
-    "Дисциплина — это решение делать то, что не хочется.",
-    "Сделай сегодня то, что другие не хотят, завтра будешь жить так, как другие не могут."
-];
+
 const THEMES = [
     // Бесплатные и Дешевые
     { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
@@ -2481,7 +2452,6 @@ const NameGuard = {
 let DB = null; 
 const Data = {
     currentKey: null,
-    listener: null,
     isBusy: false,
 
     initNewData(userId) { 
@@ -2492,131 +2462,149 @@ const Data = {
             sign:     { easy: 0, medium: 0, hard: 0 },
             square:   { easy: 0, medium: 0, hard: 0 }
         };
+        // Добавляем метку времени для новых профилей
         newDB.user.lastSaveTime = Date.now();
+        
         localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
     },
 
     load(userId) { 
         this.currentKey = 'MathData_' + userId; 
         
-        // Грузим локально
+        // Блокировка облака на старте (защита от перезаписи админом)
+        window.CLOUD_LOCKED = true;
+        setTimeout(() => { window.CLOUD_LOCKED = false; }, 5000);
+
         const raw = localStorage.getItem(this.currentKey); 
-        if (raw) {
-        try {
-            loaded = JSON.parse(raw);
-        } catch(e) {
-            console.warn("Битый localStorage — игнорируем", e);
-        }
-    }
+        
+        if (raw) { 
+            let loaded;
+            try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
 
-        if (!DB || !DB.user) {
-            this.initNewData(userId);
-            DB = JSON.parse(localStorage.getItem(this.currentKey));
-        }
+            // 🔥 ПРОВЕРКА: Существуют ли данные?
+            if(loaded && loaded.user) { 
+                DB = loaded; // <-- СНАЧАЛА ПРИСВАИВАЕМ DB
+                
+                // 👇 ТЕПЕРЬ МОЖНО БЕЗОПАСНО ПРОВЕРЯТЬ
+                if (DB.user.lastSaveTime === undefined) {
+                    DB.user.lastSaveTime = 0;
+                }
+                // 👆 ---------------------------------
 
-        // Лечение полей
-        if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
-        if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
-        if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
-        if (!DB.user.activeBattles) DB.user.activeBattles = [];
-        if (!DB.achievements) DB.achievements = GenAch();
-        if (DB.user.coins === undefined) DB.user.coins = 0;
-        if (!DB.user.lastSaveTime) DB.user.lastSaveTime = 0;
+                // Лечение структуры (Тренажер)
+                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
+                    let oldRec = (DB.user.trainerRecords && DB.user.trainerRecords.easy) || DB.user.trainerRecord || 0;
+                    DB.user.trainerRecords = {
+                        standard: { easy: oldRec, medium: 0, hard: 0 },
+                        sign:     { easy: 0, medium: 0, hard: 0 },
+                        square:   { easy: 0, medium: 0, hard: 0 }
+                    };
+                }
+                // Долечивание режимов
+                if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
+                if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
 
-        // Запускаем слушатель
-        if(window.DB_Online) this.startListening(userId);
+                // Лечение массивов и настроек
+                if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+                if (DB.user.currentTitle === undefined) DB.user.currentTitle = null;
+                if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
+                if (DB.user.currentFrame === undefined) DB.user.currentFrame = null;
+                if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
+                if (!DB.user.soundPack) DB.user.soundPack = 'standard';
+                if (!DB.user.activeBattles) DB.user.activeBattles = [];
+                
+                // Лечение настроек
+                if (!DB.settings) DB.settings = { sfx: true, notifications: false };
+                if (DB.settings.notifications === undefined) DB.settings.notifications = false;
+
+                // Лечение достижений
+                if (!DB.achievements || DB.achievements.length === 0) DB.achievements = GenAch();
+
+                // Прочие проверки
+                if(DB.user.coins === undefined) DB.user.coins = 0;
+                if(!DB.user.avatar) DB.user.avatar = '😎';
+                if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
+                if(DB.sessions === undefined) DB.sessions = []; 
+                if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
+                
+                // Запуск синхронизации
+                if(window.DB_Online) this.syncWithCloud(userId);
+            } else { 
+                // Если файл есть, но он битый
+                this.initNewData(userId); 
+                DB = JSON.parse(localStorage.getItem(this.currentKey)); 
+            }
+        } else { 
+            // Если файла нет
+            this.initNewData(userId); 
+            DB = JSON.parse(localStorage.getItem(this.currentKey)); 
+        } 
     },
 
-    // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
-    startListening(userId) {
-        if (this.listener) this.listener(); // Отключаем старый
-
-        const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
-
-        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+    async syncWithCloud(userId) {
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
+            const docSnap = await window.DB_Online.getDoc(docRef);
+            
             if (docSnap.exists()) {
                 const cloud = docSnap.data();
 
-                // 1. Проверка на админский сброс
+                // 1. ПРОВЕРКА НАКАЗАНИЯ (Админский сброс)
                 if (cloud.user && cloud.user.forceUpdate === true) {
-                    if (typeof cloud.user.adminCoins === 'number') {
-                        cloud.user.coins = cloud.user.adminCoins;
-                    }
-                    DB = cloud;
-                    DB.user.forceUpdate = false;
-                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                    window.CLOUD_LOCKED = false;
-                    this.save();
-                    alert("⚠️ Профиль синхронизирован.");
-                    location.reload();
-                    return;
+                    // ... (ваш код сброса, если он есть) ...
+                    // Если нет, просто копируем DB = cloud; return;
                 }
 
-                // 2. Сравнение времени (Кто новее?)
+                // 🔥 2. УМНОЕ СЛИЯНИЕ ПОКУПОК (FIX ПРОПАЖИ ВЕЩЕЙ) 🔥
+                // Функция, которая объединяет два массива и убирает дубликаты
+                const merge = (localArr, cloudArr) => {
+                    return [...new Set([...(localArr || []), ...(cloudArr || [])])];
+                };
+
+                // Объединяем всё, что куплено
+                DB.user.ownedThemes  = merge(DB.user.ownedThemes, cloud.user.ownedThemes);
+                DB.user.ownedAvatars = merge(DB.user.ownedAvatars, cloud.user.ownedAvatars);
+                DB.user.ownedFrames  = merge(DB.user.ownedFrames, cloud.user.ownedFrames); // <--- ВОТ ЭТО ВЕРНЕТ РАМКИ
+                DB.user.ownedSounds  = merge(DB.user.ownedSounds, cloud.user.ownedSounds);
+                DB.user.ownedTitles  = merge(DB.user.ownedTitles, cloud.user.ownedTitles);
+                DB.user.usedCodes    = merge(DB.user.usedCodes, cloud.user.usedCodes);
+                DB.user.activeBattles = merge(DB.user.activeBattles, cloud.user.activeBattles);
+
+                // 3. СИНХРОНИЗАЦИЯ ПРОГРЕССА (Монеты, XP, Время)
+                // Тут мы верим тому сохранению, которое НОВЕЕ по времени
                 const localTime = DB.user.lastSaveTime || 0;
-                const cloudTime = cloud.user.lastSaveTime || 0;
+                const cloudTime = (cloud.user && cloud.user.lastSaveTime) || 0;
 
-                // Если наше сохранение точно такое же, как в облаке — игнорируем (это мы и сохранили)
-                if (localTime === cloudTime) return;
-
-                // 🔥 СЛИЯНИЕ ПОКУПОК (Чтобы ничего не пропало)
-                const merge = (l, c) => [...new Set([...(l||[]), ...(c||[])])];
-                
-                // Объединяем списки покупок с обоих устройств
-                const mergedAvatars = merge(DB.user.ownedAvatars, cloud.user.ownedAvatars);
-                const mergedThemes = merge(DB.user.ownedThemes, cloud.user.ownedThemes);
-                const mergedFrames = merge(DB.user.ownedFrames, cloud.user.ownedFrames);
-                const mergedSounds = merge(DB.user.ownedSounds, cloud.user.ownedSounds);
-                const mergedTitles = merge(DB.user.ownedTitles, cloud.user.ownedTitles);
-                const mergedCodes = merge(DB.user.usedCodes, cloud.user.usedCodes);
-                const mergedBattles = merge(DB.user.activeBattles, cloud.user.activeBattles);
-
-                // 3. РЕШЕНИЕ КОНФЛИКТА
                 if (cloudTime > localTime) {
-                    console.log("☁️ Пришли новые данные. Применяем.");
+                    console.log("☁️ Облако свежее. Обновляем прогресс.");
+                    DB.user.coins = cloud.user.coins;
+                    DB.user.xp = cloud.user.xp;
+                    DB.user.level = cloud.user.level;
+                    DB.user.totalSec = cloud.user.totalSec;
+                    // Рамки и аватары не трогаем, мы их уже объединили выше!
                     
-                    // Берем прогресс из облака (так как он свежее)
-                    DB = cloud;
-                    
-                    // Но списки покупок ставим ОБЪЕДИНЕННЫЕ
-                    DB.user.ownedAvatars = mergedAvatars;
-                    DB.user.ownedThemes = mergedThemes;
-                    DB.user.ownedFrames = mergedFrames;
-                    DB.user.ownedSounds = mergedSounds;
-                    DB.user.ownedTitles = mergedTitles;
-                    DB.user.usedCodes = mergedCodes;
-                    DB.user.activeBattles = mergedBattles;
-
                     localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                    
-                    if (window.App) {
-                        App.updateUI();
-                        // Если открыт магазин — обновляем его тоже
-                        const shop = document.getElementById('shop');
-                        if (shop && shop.classList.contains('active')) App.renderShop();
-                    }
-                } 
-                else {
-                    // Если локальное время НОВЕЕ, чем в облаке — значит, мы ушли вперед.
-                    // Ничего не делаем, просто ждем, когда сработает наш save() и отправит данные.
-                    // НО! Если разница огромная (например, пришли старые данные), можно принудительно обновить списки.
-                    console.log("💾 Локальные данные свежее. Игнорируем входящие.");
+                    if (window.App) App.updateUI();
+                } else {
+                    // Если локально новее — отправляем объединенные данные в облако
+                    this.save();
                 }
+            } else {
+                this.save(); // Если облако пустое
             }
-        });
-    },
-
-    stopListening() {
-        if (this.listener) {
-            this.listener();
-            this.listener = null;
+        } catch(e) {
+            console.error("Sync error:", e);
+        } finally {
+            window.CLOUD_LOCKED = false;
         }
     },
 
     save() {
-        // Обновляем время
-        if (DB && DB.user) DB.user.lastSaveTime = Date.now();
-        
+        // Обновляем время сохранения
+        if (DB && DB.user) {
+            DB.user.lastSaveTime = Date.now();
+        }
+
         // Сохраняем локально
         if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
         
@@ -2625,29 +2613,20 @@ const Data = {
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
-        if (DB.user.rescueCode) {
-                const rescueRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
-                // Сохраняем "в фоне", не дожидаясь ответа (чтобы не тормозить)
-                window.DB_Online.setDoc(rescueRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    isPermanent: true,
-                    updatedAt: new Date().toISOString()
-                }).catch(e => console.log("Backup error (ignore)"));
-            }
+
             window.DB_Online.setDoc(docRef, {
-                user: { 
-                    ...DB.user, 
+                user: {
+                    ...DB.user,
                     name: currentName,
-                    // Гарантируем отправку полей для Топа
-                    avatar: DB.user.avatar,
-                    level: DB.user.level,
-                    xp: DB.user.xp,
-                    isKing: DB.user.isKing || false,
+                    avatar: DB.user.avatar || "😎",
+                    // Поля для топа
+                    level: DB.user.level || 1,
+                    xp: DB.user.xp || 0,
                     isVip: DB.user.isVip || false,
+                    isKing: DB.user.isKing || false,
                     currentFrame: DB.user.currentFrame || null,
                     currentTitle: DB.user.currentTitle || null,
-                    totalSec: DB.user.totalSec
+                    totalSec: DB.user.totalSec || 0
                 },
                 subjects: DB.subjects,
                 history: DB.history,
@@ -2655,7 +2634,7 @@ const Data = {
             }, { merge: true }).catch(e => console.log(e));
         }
     },
-     
+    
     export() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB)); const node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", `${Auth.currentUser.name}_MathData.json`); document.body.appendChild(node); node.click(); node.remove(); },
     import(el) { const fr = new FileReader(); fr.onload = (e) => { try { DB = JSON.parse(e.target.result); this.save(); location.reload(); } catch(x) { alert("Ошибка файла"); } }; fr.readAsText(el.files[0]); }
 };
@@ -3293,7 +3272,9 @@ this.login(user.id);
         this.currentUser = user; 
         Data.load(user.id); 
         
+        // 👇 ЗАПОМИНАЕМ ПОСЛЕДНЕГО ПОЛЬЗОВАТЕЛЯ
         localStorage.setItem('LastUserId', id); 
+        // 👆 ---------------------------------
 
         if(DB && DB.user) {
             DB.user.name = user.name;
@@ -3316,9 +3297,7 @@ this.login(user.id);
 
     logout() { 
         if(confirm("Выйти из профиля?")) { 
-            if(window.Timer) Timer.stop(false);
-            if (window.Data) Data.stopListening();            
-            localStorage.removeItem('LastUserId'); 
+            Timer.stop(false); 
             location.reload(); 
         } 
     },
@@ -3482,44 +3461,30 @@ const Timer = {
                     return; 
                 }
 
-                // 5. НАГРАДА МОНЕТКАМИ (ПРОГРЕССИВНАЯ)
-            // Каждые 10 минут (600 секунд)
-            if (this.sec > 0 && this.sec % 600 === 0) { 
+                // 5. НАГРАДА ЗА ПРОШЕДШЕЕ ВРЕМЯ (Даже если спал)
+                // Мы проверяем, сколько 10-минутных отрезков мы "перешагнули"
+                const prevMilestone = Math.floor((this.sec - diff) / 600);
+                const currentMilestone = Math.floor(this.sec / 600);
                 
-                // 1. Считаем, сколько часов прошло
-                const hoursPassed = Math.floor(this.sec / 3600);
-                
-                // 2. Рассчитываем награду (База 5 + 5 за каждый час)
-                let currentReward = 5 + (hoursPassed * 5);
-                
-                // 3. Ставим лимит (чтобы не сломать экономику), например макс 20
-                if (currentReward > 20) currentReward = 20;
+                if (currentMilestone > prevMilestone) {
+                    // Если проспал 30 минут, дадим награду 3 раза
+                    const milestonesPassed = currentMilestone - prevMilestone;
+                    const coinsReward = 5 * milestonesPassed; 
+                    
+                    DB.user.coins += coinsReward;
+                    this.sessionCoins += coinsReward;
+                    SoundSys.play('coin');
+                    
+                    const coinEl = document.getElementById('coin-display'); 
+                    if(coinEl) {
+                        const rect = coinEl.getBoundingClientRect(); 
+                        FX.floatText(rect.left, rect.top, `+${coinsReward} 💰`); 
+                    }
+                    App.updateUI();
+                }
 
-                // Начисляем
-                DB.user.coins += currentReward; 
-                this.sessionCoins += currentReward; 
-                SoundSys.play('coin'); 
-                
-                // Анимация
-                const coinEl = document.getElementById('coin-display'); 
-                if(coinEl) {
-                    const rect = coinEl.getBoundingClientRect(); 
-                    
-                    // Если это повышенная награда - добавляем огонек
-                    let text = `+${currentReward} 💰`;
-                    if (hoursPassed > 0) text += " 🔥";
-                    
-                    FX.floatText(rect.left, rect.top, text); 
-                }
-                
-                // Тост-подсказка
-                if (hoursPassed > 0 && this.sec % 3600 === 0) {
-                     App.toast(`🚀 Вы учитесь уже ${hoursPassed}ч! Награда увеличена!`);
-                }
-                
-                Data.save(); 
-                App.updateUI(); 
-            }
+                // 6. СОХРАНЕНИЕ
+                Data.save();
                 
                 // Обновляем "последнее известное время"
                 this.lastKnownTime = now;
@@ -4366,20 +4331,8 @@ const App = {
                 Notify.startDailyCheck();
             }
         }, 2000);
-        const quoteEl = document.querySelector('#dashboard .text-light i') || document.querySelector('#dashboard .card div[style*="opacity: 0.8"]');
-    if (quoteEl) {
-        // Берем случайную
-        const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-        quoteEl.innerText = `"${randomQuote}"`;
-    }
     },
-    copyId() {
-        if (Auth.currentUser && Auth.currentUser.id) {
-            navigator.clipboard.writeText(Auth.currentUser.id)
-                .then(() => App.toast("✅ ID скопирован!"))
-                .catch(() => prompt("Скопируй ID:", Auth.currentUser.id));
-        }
-    },
+
     changeNickname() {
         const COST = 500;
         if (DB.user.coins < COST) return App.toast(`❌ Нужно ${COST} монет`);
@@ -4387,7 +4340,7 @@ const App = {
         const newName = prompt(`Смена ника стоит ${COST} монет.\nВведите новое имя:`, DB.user.name);
         if (!newName) return;
         const cleanName = newName.trim();
-        const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
+const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
         if (!validChars.test(cleanName)) {
             return alert("⛔️ Эмодзи и спецсимволы запрещены!\nИспользуйте только буквы и цифры.");
         }
@@ -4439,34 +4392,6 @@ const App = {
         const notifyToggle = document.getElementById('notify-toggle');
         if (notifyToggle && DB.settings) notifyToggle.checked = DB.settings.notifications;
 
-        const rescueEl = document.getElementById('rescue-code-display');
-        
-        if (rescueEl && DB.user) {
-            // 1. Если кода еще нет — создаем его один раз и навсегда
-            if (!DB.user.rescueCode) {
-                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-                let code = '';
-                for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-                
-                DB.user.rescueCode = code;
-                Data.save();
-
-                // 2. Резервируем его в Firebase (чтобы он там лежал вечно)
-                if(window.DB_Online) {
-                    const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                    window.DB_Online.setDoc(docRef, {
-                        userId: Auth.currentUser.id,
-                        data: DB,
-                        isPermanent: true, // Метка, что это вечный код
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true });
-                }
-            }
-
-            // 3. Показываем код на экране
-            rescueEl.innerText = DB.user.rescueCode;
-        }
-
         // Обновление текстов
         this.setText('coin-display', DB.user.coins);
         this.setText('streak-display', DB.user.streak);
@@ -4474,7 +4399,6 @@ const App = {
         this.setText('header-avatar', DB.user.avatar || '😎');
         this.setText('profile-name-big', DB.user.name || 'Игрок');
         this.setText('profile-avatar-big', DB.user.avatar || '😎');
-        this.setText('profile-id-text', Auth.currentUser ? Auth.currentUser.id : "...");
 
         // --- СТАТУСЫ И ЛИГИ (FIX) ---
         let cl = LEAGUES[0]; 
@@ -4549,28 +4473,7 @@ const App = {
             }).join('');
         }
     },
-// Внутри объекта App:
 
-    copyRescueCode() {
-        const code = DB.user.rescueCode;
-        if (!code) return;
-        
-        navigator.clipboard.writeText(code).then(() => {
-            alert(`✅ КОД СКОПИРОВАН: ${code}\n\nСрочно отправь его себе в Телеграм (в Избранное) или запиши в Заметки!\n\nЕсли приложение удалится, нажми "У меня есть код" и введи его.`);
-        }).catch(() => {
-            prompt("Скопируй этот код и сохрани:", code);
-        });
-        
-        // Принудительно обновляем резервную копию в облаке прямо сейчас
-        if(window.DB_Online) {
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-            window.DB_Online.setDoc(docRef, {
-                userId: Auth.currentUser.id,
-                data: DB,
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
-        }
-    },
     // МАГАЗИН (Отрисовка)
     renderShop() {
         // Темы
@@ -5180,71 +5083,34 @@ const Transfer = {
         if (!inputID) return;
         const cleanID = inputID.trim().toUpperCase();
 
-        App.toast("⏳ Поиск данных...");
+        App.toast("⏳ Поиск...");
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
 
         window.DB_Online.getDoc(docRef).then(docSnap => {
             if (docSnap.exists()) {
-                const transferData = docSnap.data();
-                
-                // 🔥 ПРОВЕРКА СРОКА ГОДНОСТИ
-                // Если код НЕ вечный И у него истек срок
-                if (!transferData.isPermanent && transferData.expiresAt) {
-                    if (new Date() > new Date(transferData.expiresAt)) {
-                        alert("❌ Срок действия этого кода истек (24 часа).");
-                        return;
-                    }
-                }
-
-                // Если код Вечный — мы его НЕ удаляем после использования
-                // Если код Временный — удаляем
-                const shouldDelete = !transferData.isPermanent;
-
-                DB = transferData.data;
-
-                // Лечение имени
-                if (!DB.user.name || DB.user.name === "Восстановленный") {
-                    let newName = prompt("Введите имя для профиля:", "Игрок");
-                    DB.user.name = newName || "Игрок";
-                }
+                const data = docSnap.data();
+                DB = data.data;
                 
                 // Восстановление списка
-                let usersList = [];
-                try {
-                    let stored = localStorage.getItem('MathUsers');
-                    if (stored) usersList = JSON.parse(stored);
-                } catch (e) { usersList = []; }
-
-                usersList = usersList.filter(u => u.id !== DB.user.id);
+                let users = JSON.parse(localStorage.getItem('MathUsers') || '[]');
+                users = users.filter(u => u.id !== DB.user.id);
+                users.unshift({ id: DB.user.id, name: DB.user.name, avatar: DB.user.avatar || '😎', gender: 'male' });
+                localStorage.setItem('MathUsers', JSON.stringify(users));
                 
-                usersList.unshift({ 
-                    id: DB.user.id, 
-                    name: DB.user.name, 
-                    avatar: DB.user.avatar || "😎", 
-                    gender: DB.user.gender || 'male' 
-                });
-
-                localStorage.setItem('MathUsers', JSON.stringify(usersList));
-                Data.currentKey = 'MathData_' + DB.user.id; 
-                localStorage.setItem(Data.currentKey, JSON.stringify(DB));
-
-                // Если код был временный — удаляем его, чтобы никто не украл
-                if (shouldDelete) {
-                    window.DB_Online.deleteDoc(docRef).catch(() => {});
-                } else {
-                    console.log("✅ Вечный код восстановления использован. Не удаляем.");
-                }
-
-                alert(`✅ УСПЕШНО!\nПрофиль "${DB.user.name}" восстановлен.`);
-                setTimeout(() => location.reload(), 500);
-
+                localStorage.setItem('MathData_' + DB.user.id, JSON.stringify(DB));
+                
+                alert("✅ Успешно! Перезагрузка...");
+                location.reload();
             } else {
-                alert("❌ Код не найден.\nПроверьте правильность ввода.");
+                alert("❌ Код не найден");
             }
         }).catch(e => {
-            console.error(e);
-            alert("❌ Ошибка соединения.");
+            if (e.code === 'resource-exhausted') {
+                alert("🛑 Сервер перегружен. Попробуйте завтра.");
+            } else {
+                alert("Ошибка сети");
+            }
         });
     }
 };
@@ -5909,7 +5775,7 @@ Transfer.pasteCode = function(code) {
                 <div class="diff-switch">
                     <div class="diff-btn active" onclick="BattleSys.setBet(5, this)">5</div>
                     <div class="diff-btn" onclick="BattleSys.setBet(10, this)">10</div>
-                    <div class="diff-btn" onclick="BattleSys.setBet(20, this)">20</div>
+                    <div class="diff-btn" onclick="BattleSys.setBet(50, this)">50</div>
                 </div>
             </div>
 
