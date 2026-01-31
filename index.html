@@ -2452,7 +2452,8 @@ const NameGuard = {
 let DB = null; 
 const Data = {
     currentKey: null,
-    isBusy: false,
+    listener: null,
+    isBusy: false, // Флаг защиты
 
     initNewData(userId) { 
         const newDB = JSON.parse(JSON.stringify(DefaultDB)); 
@@ -2462,176 +2463,137 @@ const Data = {
             sign:     { easy: 0, medium: 0, hard: 0 },
             square:   { easy: 0, medium: 0, hard: 0 }
         };
-        // Добавляем метку времени для новых профилей
         newDB.user.lastSaveTime = Date.now();
-        
         localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
     },
 
     load(userId) { 
         this.currentKey = 'MathData_' + userId; 
         
-        // Блокировка облака на старте (защита от перезаписи админом)
-        window.CLOUD_LOCKED = true;
-        setTimeout(() => { window.CLOUD_LOCKED = false; }, 5000);
-
+        // 1. Сначала грузим то, что есть в телефоне
         const raw = localStorage.getItem(this.currentKey); 
         
         if (raw) { 
-            let loaded;
-            try { loaded = JSON.parse(raw); } catch(e) { loaded = null; }
-
-            // 🔥 ПРОВЕРКА: Существуют ли данные?
-            if(loaded && loaded.user) { 
-                DB = loaded; // <-- СНАЧАЛА ПРИСВАИВАЕМ DB
-                
-                // 👇 ТЕПЕРЬ МОЖНО БЕЗОПАСНО ПРОВЕРЯТЬ
-                if (DB.user.lastSaveTime === undefined) {
-                    DB.user.lastSaveTime = 0;
-                }
-                // 👆 ---------------------------------
-
-                // Лечение структуры (Тренажер)
-                if (!DB.user.trainerRecords || !DB.user.trainerRecords.standard) {
-                    let oldRec = (DB.user.trainerRecords && DB.user.trainerRecords.easy) || DB.user.trainerRecord || 0;
-                    DB.user.trainerRecords = {
-                        standard: { easy: oldRec, medium: 0, hard: 0 },
-                        sign:     { easy: 0, medium: 0, hard: 0 },
-                        square:   { easy: 0, medium: 0, hard: 0 }
-                    };
-                }
-                // Долечивание режимов
-                if (!DB.user.trainerRecords.sign) DB.user.trainerRecords.sign = { easy: 0, medium: 0, hard: 0 };
-                if (!DB.user.trainerRecords.square) DB.user.trainerRecords.square = { easy: 0, medium: 0, hard: 0 };
-
-                // Лечение массивов и настроек
-                if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
-                if (DB.user.currentTitle === undefined) DB.user.currentTitle = null;
-                if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
-                if (DB.user.currentFrame === undefined) DB.user.currentFrame = null;
-                if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
-                if (!DB.user.soundPack) DB.user.soundPack = 'standard';
-                if (!DB.user.activeBattles) DB.user.activeBattles = [];
-                
-                // Лечение настроек
-                if (!DB.settings) DB.settings = { sfx: true, notifications: false };
-                if (DB.settings.notifications === undefined) DB.settings.notifications = false;
-
-                // Лечение достижений
-                if (!DB.achievements || DB.achievements.length === 0) DB.achievements = GenAch();
-
-                // Прочие проверки
-                if(DB.user.coins === undefined) DB.user.coins = 0;
-                if(!DB.user.avatar) DB.user.avatar = '😎';
-                if(DB.user.dailyStreak === undefined) { DB.user.dailyStreak = 0; DB.user.lastDailyClaim = null; }
-                if(DB.sessions === undefined) DB.sessions = []; 
-                if(DB.user.usedCodes === undefined) DB.user.usedCodes = [];
-                
-                // Запуск синхронизации
-                if(window.DB_Online) this.syncWithCloud(userId);
-            } else { 
-                // Если файл есть, но он битый
-                this.initNewData(userId); 
-                DB = JSON.parse(localStorage.getItem(this.currentKey)); 
+            try { 
+                DB = JSON.parse(raw); 
+            } catch(e) { 
+                console.error("Ошибка чтения файла:", e);
+                DB = null; 
             }
-        } else { 
-            // Если файла нет
-            this.initNewData(userId); 
-            DB = JSON.parse(localStorage.getItem(this.currentKey)); 
-        } 
+        }
+
+        // Если файла нет или он сломан - создаем новый
+        if (!DB || !DB.user) {
+            this.initNewData(userId);
+            DB = JSON.parse(localStorage.getItem(this.currentKey));
+        }
+
+        // Лечение (добавляем недостающие поля)
+        if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+        if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
+        if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
+        if (!DB.user.activeBattles) DB.user.activeBattles = [];
+        if (!DB.achievements) DB.achievements = GenAch();
+        if (DB.user.coins === undefined) DB.user.coins = 0;
+        if (!DB.user.lastSaveTime) DB.user.lastSaveTime = 0;
+
+        // 2. Включаем слушатель облака (НО БЕЗ АВТО-СОХРАНЕНИЯ)
+        if(window.DB_Online) this.startListening(userId);
     },
 
-    async syncWithCloud(userId) {
-        try {
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
-            const docSnap = await window.DB_Online.getDoc(docRef);
-            
+    // 📡 БЕЗОПАСНЫЙ СЛУШАТЕЛЬ
+    startListening(userId) {
+        if (this.listener) this.listener(); // Отключаем старый
+
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
+
+        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            // Если мы сейчас сами сохраняем данные - игнорируем входящий сигнал (чтобы не было петли)
+            if (this.isBusy) return;
+
             if (docSnap.exists()) {
                 const cloud = docSnap.data();
 
-                // 1. ПРОВЕРКА НАКАЗАНИЯ (Админский сброс)
+                // Проверка на админский сброс
                 if (cloud.user && cloud.user.forceUpdate === true) {
-                    // ... (ваш код сброса, если он есть) ...
-                    // Если нет, просто копируем DB = cloud; return;
+                    if (typeof cloud.user.adminCoins === 'number') cloud.user.coins = cloud.user.adminCoins;
+                    DB = cloud;
+                    DB.user.forceUpdate = false;
+                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
+                    this.save(); // Сохраняем снятие галочки forceUpdate
+                    alert("⚠️ Профиль обновлен сервером.");
+                    location.reload();
+                    return;
                 }
 
-                // 🔥 2. УМНОЕ СЛИЯНИЕ ПОКУПОК (FIX ПРОПАЖИ ВЕЩЕЙ) 🔥
-                // Функция, которая объединяет два массива и убирает дубликаты
-                const merge = (localArr, cloudArr) => {
-                    return [...new Set([...(localArr || []), ...(cloudArr || [])])];
-                };
-
-                // Объединяем всё, что куплено
-                DB.user.ownedThemes  = merge(DB.user.ownedThemes, cloud.user.ownedThemes);
-                DB.user.ownedAvatars = merge(DB.user.ownedAvatars, cloud.user.ownedAvatars);
-                DB.user.ownedFrames  = merge(DB.user.ownedFrames, cloud.user.ownedFrames); // <--- ВОТ ЭТО ВЕРНЕТ РАМКИ
-                DB.user.ownedSounds  = merge(DB.user.ownedSounds, cloud.user.ownedSounds);
-                DB.user.ownedTitles  = merge(DB.user.ownedTitles, cloud.user.ownedTitles);
-                DB.user.usedCodes    = merge(DB.user.usedCodes, cloud.user.usedCodes);
-                DB.user.activeBattles = merge(DB.user.activeBattles, cloud.user.activeBattles);
-
-                // 3. СИНХРОНИЗАЦИЯ ПРОГРЕССА (Монеты, XP, Время)
-                // Тут мы верим тому сохранению, которое НОВЕЕ по времени
+                // Сравнение времени
                 const localTime = DB.user.lastSaveTime || 0;
                 const cloudTime = (cloud.user && cloud.user.lastSaveTime) || 0;
 
-                if (cloudTime > localTime) {
-                    console.log("☁️ Облако свежее. Обновляем прогресс.");
+                // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ:
+                // Мы обновляем локальные данные ТОЛЬКО если облако РЕАЛЬНО новее (> 1 секунды разницы)
+                // И мы НИКОГДА не отправляем данные обратно в ответ на этот сигнал.
+                
+                if (cloudTime > localTime + 1000) { 
+                    console.log("☁️ Облако новее. Обновляем телефон.");
+                    
+                    // Слияние покупок
+                    const merge = (l, c) => [...new Set([...(l||[]), ...(c||[])])];
+                    DB.user.ownedThemes = merge(DB.user.ownedThemes, cloud.user.ownedThemes);
+                    DB.user.ownedAvatars = merge(DB.user.ownedAvatars, cloud.user.ownedAvatars);
+                    DB.user.ownedFrames = merge(DB.user.ownedFrames, cloud.user.ownedFrames);
+                    DB.user.ownedSounds = merge(DB.user.ownedSounds, cloud.user.ownedSounds);
+                    DB.user.ownedTitles = merge(DB.user.ownedTitles, cloud.user.ownedTitles);
+                    DB.user.usedCodes = merge(DB.user.usedCodes, cloud.user.usedCodes);
+                    DB.user.activeBattles = merge(DB.user.activeBattles, cloud.user.activeBattles);
+
+                    // Копируем прогресс
                     DB.user.coins = cloud.user.coins;
                     DB.user.xp = cloud.user.xp;
                     DB.user.level = cloud.user.level;
                     DB.user.totalSec = cloud.user.totalSec;
-                    // Рамки и аватары не трогаем, мы их уже объединили выше!
-                    
+                    DB.user.lastSaveTime = cloudTime;
+
                     localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                    if (window.App) App.updateUI();
-                } else {
-                    // Если локально новее — отправляем объединенные данные в облако
-                    this.save();
-                }
-            } else {
-                this.save(); // Если облако пустое
+                    if (window.App) {
+                        App.updateUI();
+                        // Если открыт магазин - обновить
+                        if(document.getElementById('shop').classList.contains('active')) App.renderShop();
+                    }
+                } 
+                // ИНАЧЕ - ПРОСТО МОЛЧИМ. Никаких this.save() здесь быть не должно!
             }
-        } catch(e) {
-            console.error("Sync error:", e);
-        } finally {
-            window.CLOUD_LOCKED = false;
-        }
+        });
     },
 
     save() {
-        // Обновляем время сохранения
-        if (DB && DB.user) {
-            DB.user.lastSaveTime = Date.now();
-        }
-
-        // Сохраняем локально
-        if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
+        this.isBusy = true; // Ставим флаг "Я пишу", чтобы слушатель не реагировал на это изменение
         
-        if (window.CLOUD_LOCKED) return;
+        if (DB && DB.user) DB.user.lastSaveTime = Date.now();
+        if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
 
             window.DB_Online.setDoc(docRef, {
-                user: {
-                    ...DB.user,
-                    name: currentName,
-                    avatar: DB.user.avatar || "😎",
-                    // Поля для топа
-                    level: DB.user.level || 1,
-                    xp: DB.user.xp || 0,
-                    isVip: DB.user.isVip || false,
-                    isKing: DB.user.isKing || false,
-                    currentFrame: DB.user.currentFrame || null,
-                    currentTitle: DB.user.currentTitle || null,
-                    totalSec: DB.user.totalSec || 0
+                user: { 
+                    ...DB.user, 
+                    name: currentName
                 },
                 subjects: DB.subjects,
                 history: DB.history,
                 sessions: DB.sessions
-            }, { merge: true }).catch(e => console.log(e));
+            }, { merge: true })
+            .then(() => {
+                setTimeout(() => { this.isBusy = false; }, 500); // Снимаем флаг через полсекунды
+            })
+            .catch(e => {
+                console.log(e);
+                this.isBusy = false;
+            });
+        } else {
+            this.isBusy = false;
         }
     },
     
