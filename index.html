@@ -241,7 +241,22 @@
             --bg: #05000a;
             --surface: #120021;
         }
+/* Исправление модалок для темной темы */
+body.dark-mode .modal-content {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
 
+body.dark-mode #wheel-canvas {
+    filter: brightness(0.8) contrast(1.2); /* Немного приглушаем яркость колеса */
+}
+
+/* Исправление поля ввода для восстановления */
+body.dark-mode #transfer-code-display {
+    background: var(--bg) !important;
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
         /* === ТЕМНЫЙ РЕЖИМ === */
         body.dark-mode { --bg: #1A1A2E; --surface: #16213E; --text: #EAEAEA; --text-light: #8892B0; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
         body.dark-mode.theme-gold { --primary: #FFEA80; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
@@ -2016,12 +2031,12 @@ window.addEventListener('load', () => {
             <b style="color: #FF4757;">ЕСЛИ ТЫ ОЧИСТИШЬ КЭШ ИЛИ ИСТОРИЮ БРАУЗЕРА — АККАУНТ ИСЧЕЗНЕТ!</b>
         </p>
 
-        <div style="background: white; padding: 15px; border-radius: 12px; border: 1px dashed #2B3674; margin: 15px 0;">
-            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: bold;">Твой Код Спасения (Скриншоть!)</div>
-            <div id="rescue-code-display" style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-top: 5px; user-select: all;">
-                ...
-            </div>
-        </div>
+        <div style="background: var(--bg); padding: 15px; border-radius: 12px; border: 1px dashed var(--primary); margin: 15px 0;">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: bold;">Твой Код Спасения (Скриншоть!)</div>
+    <div id="rescue-code-display" style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-top: 5px; user-select: all;">
+        ...
+    </div>
+</div>
 
         <button class="btn" onclick="App.copyRescueCode()" style="background: #2B3674; color: white; width: 100%;">
             📋 Скопировать и сохранить
@@ -3918,6 +3933,10 @@ const Timer = {
                     Data.save(); 
                     App.updateUI(); 
                 }
+                // Обновляем магазин, если он открыт, чтобы видеть тиканье бустера
+                if (document.getElementById('shop').classList.contains('active')) {
+                    this.renderShop(); 
+                }
                 this.lastKnownTime = now;
             }
 
@@ -5662,13 +5681,29 @@ renderMonthlyWidget() {
         if (itemList) {
             itemList.innerHTML = SHOP_ITEMS.map(item => {
                 const count = (DB.user.inventory && DB.user.inventory[item.id]) || 0;
+                let actionText = `${item.price} 💰`;
+                let isAffeat = (DB.user.coins >= item.price);
+
+                // Специальная логика для отображения времени бустера
+                if (item.id === 'booster') {
+                    const now = Date.now();
+                    const expiry = DB.user.boosterExpiry || 0;
+                    if (now < expiry) {
+                        const diff = expiry - now;
+                        const h = Math.floor(diff / (1000 * 60 * 60));
+                        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        actionText = `⚡ ${h}ч ${m}м`;
+                        isAffeat = false; // Отключаем подсветку цены
+                    }
+                }
+
                 return `
                     <div class="shop-item" onclick="App.buyItem('${item.id}', ${item.price})">
                         <div style="font-size: 32px;">${item.icon}</div>
                         <div style="font-weight:bold; font-size:12px;">${item.name}</div>
-                        <div style="font-size:10px; color:var(--text-light);">${item.desc}</div>
-                        <div class="shop-price-tag">${item.price} 💰</div>
-                        ${count > 0 ? `<div style="background:var(--primary); color:white; border-radius:10px; font-size:10px; margin-top:5px;">У тебя: ${count}</div>` : ''}
+                        <div style="font-size:9px; color:var(--text-light); line-height:1.1; margin: 5px 0;">${item.desc}</div>
+                        <div class="shop-price-tag ${isAffeat ? 'affordable' : ''}" style="font-size:11px;">${actionText}</div>
+                        ${item.id === 'shield' && count > 0 ? `<div style="background:var(--primary); color:white; border-radius:10px; font-size:10px; margin-top:5px;">Запас: ${count}</div>` : ''}
                     </div>`;
             }).join('');
         }
