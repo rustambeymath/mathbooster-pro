@@ -492,7 +492,6 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
         .card { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); transition: 0.2s; }
         .btn { padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; font-size: 16px; display:flex; justify-content:center; align-items:center; gap:5px; -webkit-tap-highlight-color: transparent; }
-        .btn:active { transform: scale(0.97); }
         .btn-primary { background: var(--primary); color: white; }
         .btn-outline { background: transparent; border: 2px solid var(--text-light); color: var(--text-light); }
         .input-field { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--bg); background: var(--bg); color: var(--text); font-size: 16px; margin-bottom: 15px; outline: none; -webkit-appearance: none; }
@@ -501,7 +500,6 @@ body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A
         .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
         .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
         .shop-item { padding: 15px; border-radius: 15px; background: var(--bg); cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; position:relative; overflow:hidden;}
-        .shop-item:active { transform: scale(0.95); }
         .shop-item.active { border-color: var(--primary); background: rgba(0,0,0,0.03); box-shadow: var(--shadow); }
         .shop-price-tag { font-size:12px; font-weight:bold; margin-top:5px; color:var(--text-light); }
         .shop-price-tag.affordable { color: var(--primary); }
@@ -1254,19 +1252,7 @@ body.zen-active #timer {
     text-shadow: 0 0 20px var(--primary);
     }
     /* Эффект нажатия для всех кликабельных элементов */
-.card, .btn, .shop-item, .nav-btn, .avatar-option {
-    transition: transform 0.1s active, box-shadow 0.2s;
-}
 
-.card:active, .btn:active, .shop-item:active, .nav-btn:active {
-    transform: scale(0.96) !important;
-}
-
-/* Красивое свечение для карточки активного предмета */
-.card-active-glow {
-    box-shadow: 0 0 20px rgba(108, 99, 255, 0.4);
-    border: 2px solid var(--primary) !important;
-}
 
 /* Элитное свечение для ветеранов (14+ дней) */
 @keyframes veteran-glow {
@@ -1310,6 +1296,22 @@ body.dark-mode #wheel-modal .modal-content {
     height: 25px;
     cursor: pointer;
     accent-color: #FF4757; /* Делаем галочку красной */
+}
+/* Отключаем любые шевеления при нажатии */
+.card:active, 
+.btn:active, 
+.shop-item:active, 
+.nav-btn:active, 
+.subject-item:active,
+.avatar-option:active {
+    transform: none !important; /* Убирает уменьшение/увеличение */
+    transition: none !important; /* Убирает плавность, делает отклик мгновенным */
+}
+
+/* Убираем синее выделение (вспышку) при нажатии на смартфонах */
+* {
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
 }
     </style>
     
@@ -2915,6 +2917,8 @@ const Data = {
             try {
                 // Присваиваем считанные данные глобальной переменной DB
                 DB = JSON.parse(raw);
+                this.cleanSubjects();
+
                 console.log("✅ Данные загружены из памяти телефона");
             } catch(e) {
                 console.error("Ошибка парсинга JSON:", e);
@@ -3006,33 +3010,58 @@ const Data = {
 
     // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
     startListening(userId) {
-        if (this.listener) this.listener(); // Отключаем старый
+        if (this.listener) this.listener(); 
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
 
-    this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const cloud = docSnap.data();
-                    
-                    // 👇 ДОБАВЛЯЕМ ПРОВЕРКУ: Если таймер СЕЙЧАС ИДЕТ, не перезаписываем DB целиком 👇
-                    if (Timer.active) {
-                        // Обновляем только покупки, но не трогаем секунды таймера
-                        DB.user.coins = cloud.user.coins;
-                        DB.user.ownedAvatars = cloud.user.ownedAvatars;
-                        DB.user.inventory = cloud.user.inventory;
-                        App.updateUI(); 
-                        return; 
-                    }
+        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const cloud = docSnap.data();
 
-                    // Если таймер НЕ идет — обновляем всё жестко
-                    if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
-                        DB = cloud;
-                        localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                        App.updateUI();
-                        if (document.getElementById('shop').classList.contains('active')) App.renderShop();
-                    }
+                // 🛡️ ШАГ 1: ГАРАНТИЯ ЦЕЛОСТНОСТИ (Защита от undefined)
+                // Если в облаке почему-то нет этих полей, создаем их, чтобы код не упал
+                if (!cloud.settings) cloud.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
+                if (!cloud.user.inventory) cloud.user.inventory = { shield: 0, booster: 0 };
+                if (!cloud.user.ownedAvatars) cloud.user.ownedAvatars = [];
+                if (!cloud.user.ownedThemes) cloud.user.ownedThemes = ['standard'];
+
+                // 🛡️ ШАГ 2: ОБНОВЛЕНИЕ ПРИ АКТИВНОМ ТАЙМЕРЕ
+                if (Timer.active) {
+                    console.log("⏳ Таймер запущен: обновляем только прогресс и покупки...");
+                    
+                    // Синхронизируем критически важные для магазина и настроек поля
+                    DB.user.coins = cloud.user.coins;
+                    DB.user.ownedAvatars = cloud.user.ownedAvatars;
+                    DB.user.ownedThemes = cloud.user.ownedThemes;
+                    DB.user.ownedFrames = cloud.user.ownedFrames || [];
+                    DB.user.ownedTitles = cloud.user.ownedTitles || [];
+                    DB.user.inventory = cloud.user.inventory;
+                    
+                    // Синхронизируем настройки, чтобы переключатели не сбрасывались
+                    DB.settings = cloud.settings;
+
+                    App.updateUI(); 
+                    return; // Выходим, не трогая секунды и историю, чтобы таймер не прыгал
                 }
-            });
+
+                // 🛡️ ШАГ 3: ЖЕСТКАЯ СИНХРОНИЗАЦИЯ (Когда таймер спит)
+                // Сравниваем объекты через JSON строку, чтобы не частить с обновлениями
+                if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
+                    console.log("⚡ Синхронизация: данные на устройствах объединены");
+                    
+                    DB = cloud;
+                    
+                    // После объединения еще раз прогоняем "чистку предметов" (которую мы делали раньше)
+                    this.cleanSubjects(); 
+
+                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
+                    App.updateUI();
+                    
+                    // Если открыт магазин — перерисовываем его
+                    if (document.getElementById('shop').classList.contains('active')) App.renderShop();
+                }
+            }
+        });
     },
 
     stopListening() {
@@ -3041,18 +3070,64 @@ const Data = {
             this.listener = null;
         }
     },
+    cleanSubjects() {
+        if (!DB || !DB.subjects) return;
+        const seenNames = {};
+        const keys = Object.keys(DB.subjects);
 
+        keys.forEach(key => {
+            const s = DB.subjects[key];
+            if (!s || !s.name) { delete DB.subjects[key]; return; }
+            const n = s.name.trim();
+
+            if (seenNames[n]) {
+                const originalKey = seenNames[n];
+                DB.subjects[originalKey].sec = (DB.subjects[originalKey].sec || 0) + (s.sec || 0);
+                if (DB.user.subject === key) DB.user.subject = originalKey;
+                delete DB.subjects[key];
+            } else {
+                seenNames[n] = key;
+            }
+        });
+    },
     async save() {
         if (!DB || !Auth.currentUser) return;
-        DB.user.lastActive = Date.now();
 
-        // Используем window.DB_Online
+        // --- ОБНОВЛЕННЫЙ АНТИ-ЧИТ (Безопасен для донатеров) ---
+        const totalHours = (DB.user.totalSec || 0) / 3600;
+        const currentLevel = DB.user.level || 1;
+
+        // Проверяем ТОЛЬКО уровень и время. 
+        // Невозможно достичь 10 уровня, имея 0 минут учебы.
+        // Но при этом мы не трогаем монеты (их можно купить или выиграть).
+        if (currentLevel > 5 && totalHours < (currentLevel * 0.05)) { 
+            // 0.05 - это примерно 3 минуты на уровень. Это очень лояльный порог.
+            console.error("🚨 Аномальный уровень замечен. Проверка...");
+            
+            // Вместо жесткого бана, просто обнуляем XP до разумного предела
+            if (totalHours < 0.1) { // Если времени почти 0, а лвл высокий
+                DB.user.level = 1;
+                DB.user.xp = 0;
+                App.toast("⚠️ Прогресс уровня скорректирован");
+            }
+        }
+        // -----------------------------------------------------
+
+        DB.user.lastSaveTime = Date.now();
+        DB.user.lastSeenTime = Date.now();
+        DB.user.lastActive = Date.now(); // Для точки "Онлайн"
+
+        localStorage.setItem(this.currentKey, JSON.stringify(DB));
+
         if (window.DB_Online) {
             const dbRef = window.DB_Online;
             const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
-            await dbRef.setDoc(docRef, DB, { merge: true });
+            try {
+                await dbRef.setDoc(docRef, DB, { merge: true });
+            } catch (e) {
+                console.error("Cloud Save Error", e);
+            }
         }
-        localStorage.setItem(this.currentKey, JSON.stringify(DB));
     },
      
     export() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB)); const node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", `${Auth.currentUser.name}_MathData.json`); document.body.appendChild(node); node.click(); node.remove(); },
@@ -3883,8 +3958,18 @@ const Timer = {
                     DB.user.lifetimeStrictSec = (DB.user.lifetimeStrictSec || 0) + diff;
                 }
 
-                if (DB.subjects && DB.subjects[DB.user.subject]) 
-                    DB.subjects[DB.user.subject].sec += diff;
+                // 🛡️ МАКСИМАЛЬНАЯ ЗАЩИТА ПРЕДМЕТА
+                // Проверяем: существует ли база, список предметов и конкретно выбранный предмет
+                if (DB && DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) {
+                    DB.subjects[DB.user.subject].sec = (DB.subjects[DB.user.subject].sec || 0) + diff;
+                } else {
+                    // Если предмет пропал (например, удален с другого устройства)
+                    // Мы не даем приложению упасть, а просто фиксируем ошибку в консоль
+                    console.error("⚠️ Ошибка: Текущий предмет '" + DB.user.subject + "' не найден в базе.");
+                    // Автоматически переключаем на первый доступный предмет, чтобы не терять время
+                    const fallback = Object.keys(DB.subjects)[0];
+                    if (fallback) DB.user.subject = fallback;
+                }
 
                 // КВЕСТЫ (Исправлено: прибавляем только раз в 60 сек)
                 if (this.sec > 0 && this.sec % 60 === 0) {
@@ -4013,53 +4098,71 @@ const Timer = {
     },
 
     stop(manual = true) {
-        // Если таймер не активен, но в нем остались секунды (после паузы) - мы всё равно должны его остановить
-        if (this.ref) clearInterval(this.ref);
+        // 1. ПЕРВЫМ ДЕЛОМ останавливаем интервал, чтобы он больше не вызывал ошибки
+        if (this.ref) {
+            clearInterval(this.ref);
+            this.ref = null;
+        }
+        
         this.active = false;
         this.isStrict = false;
 
         document.removeEventListener("visibilitychange", this.handleVisibility);
         this.releaseWakeLock();
-        SoundSys.play('click');
+        
+        try { SoundSys.play('click'); } catch(e) {}
 
-        // Закрываем математическое окно, если оно висит
-        document.getElementById('math-modal').classList.remove('show');
-
-        // Сохранение истории (только если поучились больше 5 секунд)
-        if (this.sec > 5) {
+        // 2. Сохранение прогресса (только если DB на месте)
+        if (this.sec > 2 && DB && DB.user) {
             const k = getUZDate(); 
+            if (!DB.history) DB.history = {};
             DB.history[k] = (DB.history[k] || 0) + this.sec; 
             
+            const currentSubName = (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) 
+                                    ? DB.subjects[DB.user.subject].name : 'Учеба';
+
             const log = { 
                 date: new Date().toISOString(), 
-                subject: DB.subjects[DB.user.subject]?.name || 'Предмет', 
+                subject: currentSubName, 
                 sec: this.sec, 
-                coins: this.sessionCoins 
+                coins: this.sessionCoins || 0
             }; 
+            if (!DB.sessions) DB.sessions = [];
             DB.sessions.unshift(log); 
             if (DB.sessions.length > 50) DB.sessions.pop(); 
             
             Data.save();
         }
 
-        // ПОЛНЫЙ СБРОС ИНТЕРФЕЙСА
+        // 3. БЕЗОПАСНОЕ ОБНОВЛЕНИЕ UI (проверяем каждый элемент)
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            timerEl.style.color = "var(--text)";
+            timerEl.classList.remove('timer-active-anim');
+            timerEl.innerText = "00:00:00";
+        }
+
+        const btnStart = document.getElementById('btn-start');
+        if (btnStart) btnStart.innerText = "🚀 СТАРТ";
+        
+        const strictToggle = document.getElementById('strict-mode-toggle');
+        if (strictToggle) strictToggle.disabled = false;
+
+        const mathModal = document.getElementById('math-modal');
+        if (mathModal) mathModal.classList.remove('show');
+
+        // Сброс счетчиков
         this.sec = 0;
         this.sessionDuration = 0;
         this.sessionCoins = 0;
         this.idleMinutes = 0;
 
-        document.getElementById('btn-start').innerText = "🚀 СТАРТ";
-        document.getElementById('timer').style.color = "var(--text)";
-        document.getElementById('timer').classList.remove('timer-active-anim');
-        document.getElementById('timer').innerText = "00:00:00";
-        
-        // Разблокируем переключатель хардкора
-        const strictToggle = document.getElementById('strict-mode-toggle');
-        if (strictToggle) strictToggle.disabled = false;
-
-        App.updateUI(); 
-        App.renderHistory();
-        App.renderSubjects();
+        // Если мы не выходим из аккаунта (manual === true), обновляем интерфейс
+        if (manual && typeof App !== 'undefined') {
+            App.updateUI(); 
+            App.renderHistory();
+            App.renderSubjects();
+        }
     }
 };
 const QuestSys = {
@@ -5302,6 +5405,7 @@ const App = {
             // Жестко заменяем локальные данные облачными
             // (Так как мы теперь строго онлайн, облако — это и есть правда)
             DB = cloud;
+            this.cleanSubjects();
             localStorage.setItem(this.currentKey, JSON.stringify(DB));
             App.updateUI();
             console.log("☁️ Облачная синхронизация завершена");
@@ -6220,11 +6324,14 @@ const App = {
         }
             //  3. СТАТИСТИКА ПО ПРЕДМЕТАМ 
         const breakdownEl = document.getElementById('subject-breakdown');
-        if (breakdownEl && DB.subjects) {
+        if (breakdownEl && DB && DB.subjects) {
             const subjectsArray = Object.keys(DB.subjects).map(key => ({
                 id: key,
-                ...DB.subjects[key]
+                name: DB.subjects[key].name || 'Без названия',
+                icon: DB.subjects[key].icon || '📚',
+                sec: DB.subjects[key].sec || 0
             }));
+
             
             // Сортируем: сначала самые прокачанные
             subjectsArray.sort((a, b) => b.sec - a.sec);
@@ -6270,48 +6377,43 @@ const App = {
         const grid = document.getElementById('subjects-grid');
         if (!grid || !DB || !DB.subjects) return;
 
-        grid.innerHTML = Object.keys(DB.subjects).map(k => {
-            const s = DB.subjects[k];
-            if (!s) return ''; 
+        // Чистим мусор перед отрисовкой
+        Data.cleanSubjects();
 
+        const subjectsKeys = Object.keys(DB.subjects).sort((a, b) => {
+            const nameA = DB.subjects[a].name.toLowerCase();
+            const nameB = DB.subjects[b].name.toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
+        grid.innerHTML = subjectsKeys.map(k => {
+            const s = DB.subjects[k];
             const isActive = DB.user.subject === k;
             
-            // --- РАСЧЕТ МАСТЕРСТВА ---
-            // 1 уровень = 3600 секунд (1 час)
-            const masteryLevel = Math.floor(s.sec / 3600);
-            const nextLevelSec = (masteryLevel + 1) * 3600;
-            const progressPct = Math.min(100, (s.sec % 3600) / 3600 * 100);
+            // Расчет ранга для отображения
+            const rank = Math.floor((s.sec || 0) / 3600);
+            const progress = Math.min(100, ((s.sec || 0) % 3600) / 3600 * 100);
 
-            let style = 'padding:12px; text-align:center; cursor:pointer; transition:0.2s; border:2px solid transparent; position:relative; overflow:hidden;';
-            let clickAction = `onclick="App.selectSubject('${k}')"`;
-
+            // Стиль карточки
+            let cardStyle = `padding:15px; text-align:center; cursor:pointer; transition:0.2s; border:2px solid transparent; position:relative;`;
+            
             if (isActive) {
-                style += 'border-color:var(--primary); background:rgba(108,99,255,0.05); transform:scale(1.02);';
+                cardStyle += 'border-color:var(--primary); background:rgba(108,99,255,0.05); transform:scale(1.02);';
             } else if (Timer.active) {
-                style += 'opacity: 0.3; cursor: not-allowed; filter: grayscale(1);';
+                // Если таймер идет — блокируем остальные визуально
+                cardStyle += 'opacity: 0.3; cursor: not-allowed; filter: grayscale(1);';
             }
 
             return `
-            <div ${clickAction} class="card" style="${style}">
+            <div class="card" style="${cardStyle}" onclick="${Timer.active ? '' : `App.selectSubject('${k}')`}">
                 <div style="font-size:24px">${s.icon}</div>
-                <div style="font-weight:bold; font-size:13px; margin-top:5px;">${s.name}</div>
-                
-                <!-- Метка уровня мастерства -->
-                <div style="font-size:9px; color:var(--primary); font-weight:900; margin-top:3px; text-transform:uppercase;">
-                    Ранг: ${masteryLevel}
-                </div>
-
-                <!-- Мини прогресс-бар мастерства -->
-                <div style="height:4px; background:rgba(0,0,0,0.05); border-radius:2px; margin-top:5px; width:100%; overflow:hidden;">
-                    <div style="height:100%; width:${progressPct}%; background:var(--primary); transition:0.3s;"></div>
+                <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
+                <div style="font-size:9px; color:var(--primary); font-weight:900; margin-top:3px;">РАНГ ${rank}</div>
+                <div style="height:3px; background:rgba(0,0,0,0.05); border-radius:2px; margin-top:5px; width:100%; overflow:hidden;">
+                    <div style="height:100%; width:${progress}%; background:var(--primary);"></div>
                 </div>
             </div>`;
         }).join('');
-        
-        const currentSub = DB.subjects[DB.user.subject];
-        if (currentSub && document.getElementById('subject-title')) {
-            document.getElementById('subject-title').innerText = currentSub.name;
-        }
     },
 
     selectSubject(key) {
@@ -6648,6 +6750,11 @@ const Notify = {
         if (isChecked) {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
+                if (!DB.settings) DB.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
+                
+                DB.settings.notifications = true;
+                App.toast("✅ Напоминания включены");
+                // ... остальной код
                 DB.settings.notifications = true;
                 App.toast("✅ Напоминания включены");
                 this.send("MathBooster PRO", "Уведомления успешно настроены! 🚀");
@@ -6722,16 +6829,64 @@ const Notify = {
     window.SecretSys = SecretSys;
     window.WeeklyReportSys = WeeklyReportSys;
     window.AchievementSys = AchievementSys;
-// === УМНЫЙ ЭКРАН ЗАГРУЗКИ ===
+
+    // === УМНЫЙ ЭКРАН ЗАГРУЗКИ ===
 window.onload = () => {
+    const bar = document.getElementById('splash-bar');
+    const screen = document.getElementById('splash-screen');
+    const text = document.getElementById('splash-text');
+    let progress = 0;
+
+    // 1. Анимация прогресса
+    const loadingInterval = setInterval(() => {
+        // Прибавляем по чуть-чуть для плавности
+        if (progress < 90) {
+            progress += Math.random() * 1.5; // Случайный шаг от 0 до 1.5%
+        }
+        
+        if (bar) bar.style.width = progress + "%";
+
+        // Меняем тексты в зависимости от процента
+        if (progress > 10 && progress < 40) if (text) text.innerText = "Инициализация модулей...";
+        if (progress > 40 && progress < 70) if (text) text.innerText = "Подключение к облаку...";
+        if (progress > 70 && progress < 90) if (text) text.innerText = "Проверка синхронизации...";
+    }, 50); // Частое обновление (20 раз в секунду) для идеальной плавности
+
+    // 2. Логика запуска систем
     Auth.init();
     InstallSys.init();
 
-    const lastId = localStorage.getItem('LastUserId');
-    if (lastId) {
-        // Просто вызываем логин. Внутри него теперь есть умное ожидание базы!
-        Auth.login(lastId);
-    }
+    const startApp = async () => {
+        const lastId = localStorage.getItem('LastUserId');
+        
+        try {
+            if (lastId) {
+                // Пытаемся войти (функция login сама подождет базу внутри)
+                await Auth.login(lastId);
+            }
+        } catch (e) {
+            console.error("Ошибка авто-входа:", e);
+        }
+
+        // Когда всё готово (база ответила и логин прошел)
+        clearInterval(loadingInterval); // Останавливаем медленный таймер
+        
+        if (bar) bar.style.width = "100%"; // Мгновенно доводим до конца
+        if (text) text.innerText = "Вход выполнен! 🚀";
+
+        // Плавно скрываем экран
+        setTimeout(() => {
+            if (screen) {
+                screen.style.transition = "opacity 0.8s ease-out, visibility 0.8s";
+                screen.style.opacity = '0';
+                screen.style.visibility = 'hidden';
+                // Удаляем из DOM через 1 секунду после начала затухания
+                setTimeout(() => screen.remove(), 1000);
+            }
+        }, 400);
+    };
+
+    startApp();
 };
 
 // ===== АНТИ-АФК: проверка каждые 20 минут =====
@@ -6868,54 +7023,47 @@ function cleanSubjects() {
 function updateSubjectLists() {
     const my = document.getElementById('my-subjects-list');
     const avail = document.getElementById('available-subjects-list');
-
     if (!my || !avail) return;
 
     my.innerHTML = '';
     avail.innerHTML = '';
 
-    if (!DB.subjects) DB.subjects = {};
+    // 1. Сортируем "Мои предметы" перед выводом
+    const mySortedKeys = Object.keys(DB.subjects).sort((a, b) => {
+        return DB.subjects[a].name.localeCompare(DB.subjects[b].name);
+    });
 
-    // Используем Эталонный список, чтобы ничего не потерять
-    if (typeof ALL_SUBJECTS !== 'undefined') {
-        ALL_SUBJECTS.forEach(subj => {
-            // Проверяем по ID: есть ли такой ключ в базе пользователя?
-            const isAdded = DB.subjects[subj.id] !== undefined;
+    mySortedKeys.forEach(key => {
+        const subj = DB.subjects[key];
+        const div = document.createElement('div');
+        div.className = 'subject-item added';
+        if (Timer.active) { div.style.opacity = "0.4"; div.style.cursor = "not-allowed"; }
+        
+        div.innerHTML = `<div class="icon">${subj.icon}</div><div class="name">${subj.name}</div>`;
+        div.onclick = () => moveSubject(key, true);
+        my.appendChild(div);
+    });
 
-            const div = document.createElement('div');
-            // Добавляем класс added, если предмет уже есть
-            div.className = isAdded ? 'subject-item added' : 'subject-item';
-            
-            // Визуальное оформление
-            if (isAdded) {
-                div.style.borderColor = 'var(--success)';
-                div.style.background = 'rgba(0, 210, 106, 0.05)';
-            } else {
-                div.style.borderColor = 'var(--text-light)';
-                div.style.background = 'var(--surface)';
-                div.style.opacity = '0.8';
-            }
-
-            div.innerHTML = `
-                <div class="icon">${subj.icon}</div>
-                <div class="name">${subj.name}</div>
-            `;
-            
-            // При клике - перемещаем
-            div.onclick = () => moveSubject(subj.id, isAdded);
-
-            // РАСПРЕДЕЛЕНИЕ ПО КОЛОНКАМ
-            if (isAdded) {
-                my.appendChild(div); // В "Мои"
-            } else {
-                avail.appendChild(div); // В "Доступные"
-            }
-        });
-    }
+    // 2. Сортируем "Доступные" (из эталонного списка ALL_SUBJECTS)
+    ALL_SUBJECTS.filter(s => !DB.subjects[s.id]).forEach(subj => {
+        const div = document.createElement('div');
+        div.className = 'subject-item';
+        if (Timer.active) { div.style.opacity = "0.4"; div.style.cursor = "not-allowed"; }
+        
+        div.innerHTML = `<div class="icon">${subj.icon}</div><div class="name">${subj.name}</div>`;
+        div.onclick = () => moveSubject(subj.id, false);
+        avail.appendChild(div);
+    });
 }
 
 // 2. ПЕРЕМЕЩЕНИЕ ПРЕДМЕТА (ДОБАВИТЬ / УДАЛИТЬ)
 function moveSubject(id, isAlreadyAdded) {
+    // 🔒 БЛОКИРОВКА ПРИ РАБОТАЮЩЕМ ТАЙМЕРЕ
+    if (Timer.active) {
+        SoundSys.play('error');
+        App.toast("⛔️ Нельзя менять список предметов во время учебы!");
+        return; // Выходим из функции, не давая удалить
+    }
     // Если предмет уже есть — УДАЛЯЕМ
     if (isAlreadyAdded) {
         // Защита: Нельзя удалить последний предмет
