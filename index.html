@@ -50,7 +50,6 @@
 <noscript><div><img src="https://mc.yandex.ru/watch/105919372" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
     <!-- FIREBASE (База Данных) -->
-    <!-- FIREBASE (База Данных - ADMIN READY) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -65,22 +64,40 @@
             appId: "1:990295839020:web:ba5bb8cfa471c2c4a89c89",
             measurementId: "G-8N8MYJPCHR"
         };
+    
+        let DB_Online; 
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            
-            // 🔥 САМОЕ ГЛАВНОЕ: Делаем базу доступной для консоли
-            window.DB_Online = { 
-                db, doc, setDoc, getDoc, updateDoc, deleteDoc, 
-                onSnapshot, runTransaction, 
-                collection, getDocs, query, orderBy, limit, getCountFromServer 
-            };
-            
-            console.log("✅ Firebase подключен и доступен для Админа!");
-        } catch(e) { 
-            console.error("Ошибка подключения:", e); 
-        }
+        // 1. Инициализация (в самом начале скрипта)
+try {
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    // Привязываем КРАЙНЕ БЫСТРО
+    window.DB_Online = { 
+        db, doc, setDoc, getDoc, updateDoc, deleteDoc, 
+        onSnapshot, runTransaction, 
+        collection, getDocs, query, orderBy, limit, getCountFromServer 
+    };
+    
+    window.isFirebaseLoaded = true; // Сигнал готовности
+    console.log("✅ База данных подключена");
+} catch(e) {
+    console.error("Критическая ошибка Firebase:", e);
+}
+
+// Проверяем, не привязались ли переменные к window случайно
+delete window.DB;
+delete window.Data;
+delete window._internalState; // Если переименовал
+delete window._storageEngine; // Если переименовал
+
+// Создаем поддельные переменные-пустышки. 
+// Если хакер напишет DB.user.coins = 999, он изменит этот пустой объект, 
+// а не реальные деньги в приложении.
+window.DB = { user: { coins: 0, level: 0 }, msg: "Nice try, hacker!" };
+window.Data = { save: () => console.log("Save blocked by security system 🛡️") };
+
+console.log("%c🛡️ MathBooster Security Active", "color: green; font-weight: bold; font-size: 16px;");
     </script>
     
 <style>
@@ -1287,6 +1304,12 @@ body.dark-mode #wheel-modal .modal-content {
 #wheel-spin-btn:active {
     transform: scale(0.95);
     filter: brightness(0.9);
+}
+#strict-mode-toggle {
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    accent-color: #FF4757; /* Делаем галочку красной */
 }
     </style>
     
@@ -2863,6 +2886,7 @@ const NameGuard = {
         return true; // Имя ХОРОШЕЕ
     }
 };
+ 
 
 let DB = null; 
 const Data = {
@@ -2884,38 +2908,18 @@ const Data = {
 
     load(userId) { 
         this.currentKey = 'MathData_' + userId; 
-        const raw = localStorage.getItem(this.currentKey); 
         
+        // Грузим локально
+        const raw = localStorage.getItem(this.currentKey); 
         if (raw) {
             try {
+                // Присваиваем считанные данные глобальной переменной DB
                 DB = JSON.parse(raw);
-                
-                // 👇 ВОТ ЭТОТ БЛОК ЗАЩИТЫ ВСТАВЛЯЕМ СЮДА 👇
-                const now = Date.now();
-                // Если в базе есть время прошлого входа и текущее время меньше его (на 1 минуту)
-                if (DB.user.lastSeenTime && now < DB.user.lastSeenTime - 60000) { 
-                    alert("🚨 ОШИБКА ВРЕМЕНИ! \n\nВы перевели часы назад. Приложение заблокировано, пока вы не установите правильное время.");
-                    // Полностью очищаем экран, чтобы нельзя было пользоваться приложением
-                    document.body.innerHTML = `
-                        <div style="background:#000; color:#ff4d4d; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-family:sans-serif; padding:20px;">
-                            <h1>🚫 ДОСТУП ОГРАНИЧЕН</h1>
-                            <p>Обнаружена попытка манипуляции временем.</p>
-                            <p>Установите актуальное время в настройках телефона и перезапустите приложение.</p>
-                            <button onclick="location.reload()" style="background:#ff4d4d; color:#000; border:none; padding:15px 30px; border-radius:10px; font-weight:bold; margin-top:20px;">Я ИСПРАВИЛ ВРЕМЯ</button>
-                        </div>
-                    `;
-                    return; // Останавливаем загрузку приложения
-                }
-                // Если всё честно, обновляем время входа
-                DB.user.lastSeenTime = now;
-                // 👆 👆 👆 👆 👆 👆 👆
-
+                console.log("✅ Данные загружены из памяти телефона");
             } catch(e) {
-                console.error("Ошибка загрузки:", e);
+                console.error("Ошибка парсинга JSON:", e);
             }
         }
-        
-        // Дальше идет твой блок создания нового профиля (если !DB)...
 
         // Если данных нет ВООБЩЕ (первый вход), тогда создаем новые
         if (!DB || !DB.user) {
@@ -2932,7 +2936,21 @@ const Data = {
         if (!DB.achievements || DB.achievements.length < 5) DB.achievements = GenAch();
         if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0; // Время истечения (timestamp)
         if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = ""; // Дата последней покупки
-        
+        // --- ИСПРАВЛЕНИЕ СТАТИСТИКИ ---
+        let historyTotal = 0;
+        if (DB.history) {
+            // Складываем все секунды из каждого дня в истории
+            Object.values(DB.history).forEach(sec => {
+                if (typeof sec === 'number') historyTotal += sec;
+            });
+        }
+        if (DB.user.isLogoRewardClaimed === undefined) DB.user.isLogoRewardClaimed = false;
+        if (DB.user.isVersionRewardClaimed === undefined) DB.user.isVersionRewardClaimed = false;
+        // Если общее время в профиле меньше, чем сумма по дням в истории — исправляем
+        if (historyTotal > (DB.user.totalSec || 0)) {
+            console.log("🛠️ Статистика синхронизирована:", historyTotal);
+            DB.user.totalSec = historyTotal;
+        }
         // Инвентарь (добавляем все предметы)
         if (!DB.user.inventory) {
             DB.user.inventory = { shield: 0, booster: 0 };
@@ -2992,87 +3010,29 @@ const Data = {
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
 
-        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const cloud = docSnap.data();
-
-                // 1. Проверка на админский сброс
-                if (cloud.user && cloud.user.forceUpdate === true) {
-                    if (typeof cloud.user.adminCoins === 'number') {
-                        cloud.user.coins = cloud.user.adminCoins;
+    this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const cloud = docSnap.data();
+                    
+                    // 👇 ДОБАВЛЯЕМ ПРОВЕРКУ: Если таймер СЕЙЧАС ИДЕТ, не перезаписываем DB целиком 👇
+                    if (Timer.active) {
+                        // Обновляем только покупки, но не трогаем секунды таймера
+                        DB.user.coins = cloud.user.coins;
+                        DB.user.ownedAvatars = cloud.user.ownedAvatars;
+                        DB.user.inventory = cloud.user.inventory;
+                        App.updateUI(); 
+                        return; 
                     }
-                    DB = cloud;
-                    DB.user.forceUpdate = false;
-                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                    window.CLOUD_LOCKED = false;
-                    this.save();
-                    alert("⚠️ Профиль синхронизирован.");
-                    location.reload();
-                    return;
+
+                    // Если таймер НЕ идет — обновляем всё жестко
+                    if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
+                        DB = cloud;
+                        localStorage.setItem(this.currentKey, JSON.stringify(DB));
+                        App.updateUI();
+                        if (document.getElementById('shop').classList.contains('active')) App.renderShop();
+                    }
                 }
-
-                // 2. Сравнение времени (Кто новее?)
-                const localTime = DB.user.lastSaveTime || 0;
-                const cloudTime = cloud.user.lastSaveTime || 0;
-
-                // Если наше сохранение точно такое же, как в облаке — игнорируем (это мы и сохранили)
-                if (localTime === cloudTime) return;
-
-                // 🔥 СЛИЯНИЕ ПОКУПОК (Чтобы ничего не пропало)
-                const merge = (l, c) => [...new Set([...(l||[]), ...(c||[])])];
-                
-                // Объединяем списки покупок с обоих устройств
-                const mergedAvatars = merge(DB.user.ownedAvatars, cloud.user.ownedAvatars);
-                const mergedThemes = merge(DB.user.ownedThemes, cloud.user.ownedThemes);
-                const mergedFrames = merge(DB.user.ownedFrames, cloud.user.ownedFrames);
-                const mergedSounds = merge(DB.user.ownedSounds, cloud.user.ownedSounds);
-                const mergedTitles = merge(DB.user.ownedTitles, cloud.user.ownedTitles);
-                const mergedCodes = merge(DB.user.usedCodes, cloud.user.usedCodes);
-                const mergedBattles = merge(DB.user.activeBattles, cloud.user.activeBattles);
-
-                // 3. РЕШЕНИЕ КОНФЛИКТА
-                if (cloudTime > localTime) {
-    console.log("☁️ Облако свежее. Синхронизируем...");
-
-    // 1. Сохраняем локальный прогресс перед тем, как перезаписать DB
-    const localCoins = DB.user.coins || 0;
-    const localXP = DB.user.xp || 0;
-    const localTotalSec = DB.user.totalSec || 0;
-    const localLevel = DB.user.level || 1;
-
-    // 2. Берем базу из облака
-    DB = cloud;
-
-    // 3. Сравниваем: если локально прогресс ушел дальше — оставляем локальный
-    if (localCoins > (cloud.user.coins || 0)) DB.user.coins = localCoins;
-    if (localXP > (cloud.user.xp || 0)) DB.user.xp = localXP;
-    if (localTotalSec > (cloud.user.totalSec || 0)) DB.user.totalSec = localTotalSec;
-    if (localLevel > (cloud.user.level || 1)) DB.user.level = localLevel;
-
-    // 4. Применяем объединенные списки покупок (те, что ты вычислил выше)
-    DB.user.ownedAvatars = mergedAvatars;
-    DB.user.ownedThemes = mergedThemes;
-    DB.user.ownedFrames = mergedFrames;
-    DB.user.ownedSounds = mergedSounds;
-    DB.user.ownedTitles = mergedTitles;
-    DB.user.usedCodes = mergedCodes;
-    DB.user.activeBattles = mergedBattles;
-
-    // 5. Сохраняем финальный результат локально
-    localStorage.setItem(this.currentKey, JSON.stringify(DB));
-
-    // 6. Обновляем интерфейс один раз
-    if (window.App) {
-        App.updateUI();
-        const shop = document.getElementById('shop');
-        if (shop && shop.classList.contains('active')) App.renderShop();
-    }
-} 
-else {
-    console.log("💾 Локальные данные свежее или такие же. Облако обновится при следующем save().");
-}
-            }
-        });
+            });
     },
 
     stopListening() {
@@ -3082,54 +3042,17 @@ else {
         }
     },
 
-    save() {
-        // Обновляем время
-        if (DB && DB.user) DB.user.lastSaveTime = Date.now();
-        if (DB && DB.user) {
-        DB.user.lastSeenTime = Date.now();
-    }
-        // Сохраняем локально
-        if (this.currentKey && DB) localStorage.setItem(this.currentKey, JSON.stringify(DB));
-        
-        if (window.CLOUD_LOCKED) return;
+    async save() {
+        if (!DB || !Auth.currentUser) return;
+        DB.user.lastActive = Date.now();
 
-        if (window.DB_Online && Auth.currentUser) {
-            const syncLabel = document.getElementById('last-sync-text');
-            if (syncLabel) {
-                const now = new Date();
-                    syncLabel.innerText = `Последнее сохранение: в ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-            }
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-            const currentName = Auth.currentUser.name || DB.user.name || "Игрок";
-        if (DB.user.rescueCode) {
-                const rescueRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
-                // Сохраняем "в фоне", не дожидаясь ответа (чтобы не тормозить)
-                window.DB_Online.setDoc(rescueRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    isPermanent: true,
-                    updatedAt: new Date().toISOString()
-                }).catch(e => console.log("Backup error (ignore)"));
-            }
-            window.DB_Online.setDoc(docRef, {
-                user: { 
-                    ...DB.user, 
-                    name: currentName,
-                    // Гарантируем отправку полей для Топа
-                    avatar: DB.user.avatar,
-                    level: DB.user.level,
-                    xp: DB.user.xp,
-                    isKing: DB.user.isKing || false,
-                    isVip: DB.user.isVip || false,
-                    currentFrame: DB.user.currentFrame || null,
-                    currentTitle: DB.user.currentTitle || null,
-                    totalSec: DB.user.totalSec
-                },
-                subjects: DB.subjects,
-                history: DB.history,
-                sessions: DB.sessions
-            }, { merge: true }).catch(e => console.log(e));
+        // Используем window.DB_Online
+        if (window.DB_Online) {
+            const dbRef = window.DB_Online;
+            const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
+            await dbRef.setDoc(docRef, DB, { merge: true });
         }
+        localStorage.setItem(this.currentKey, JSON.stringify(DB));
     },
      
     export() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB)); const node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", `${Auth.currentUser.name}_MathData.json`); document.body.appendChild(node); node.click(); node.remove(); },
@@ -3475,57 +3398,33 @@ const Online = {
             list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Топ пуст 😔</div>';
             return;
         }
-
-        // Внутри Online.loadLeaderboard...
-
             list.innerHTML = '';
             let rank = 1;
             
             snap.forEach(doc => {
                 const data = doc.data();
                 const u = data.user || {};
-                
                 if (!u.totalSec && u.totalSec !== 0) return;
 
                 const name = u.name || "Игрок";
-                const level = u.level || 1;
-                const xp = u.xp || 0;
                 const avatar = u.avatar || "😎";
-// 🔥 ОПРЕДЕЛЕНИЕ СТАТУСА
-                let vipBadge = '';
-                
-                if (u.isKing) {
-                    // Если Король - ставим Корону
-                    vipBadge = '<span style="margin-right:4px;">👑</span>';
-                } else if (u.isVip) {
-                    // Если просто VIP - ставим Бриллиант
-                    vipBadge = '<span style="margin-right:4px;">💎</span>';
-                }                // 1. ПОЛУЧАЕМ РАМКУ
-                // Если есть рамка, добавляем её класс, иначе просто базовый класс
                 const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
                 
-                // 2. ПОЛУЧАЕМ СТАТУС
-                // Если есть статус, показываем его жирным цветом, иначе показываем XP
-                let subText = `Lvl ${level} • ${xp.toLocaleString()} XP`;
-                if (u.currentTitle) {
-                    subText = `<span style="color:var(--primary); font-weight:bold;">★ ${u.currentTitle}</span> • Lvl ${level}`;
-                }
+                // 👇 ЛОГИКА ОНЛАЙНА 👇
+                const now = Date.now();
+                const lastActive = u.lastActive || 0;
+                // Если активность была менее 5 минут (300 000 мс) назад
+                const isOnline = (now - lastActive) < 300000; 
+                
+                const onlineBadge = isOnline ? `
+                    <div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:10; box-shadow:0 0 5px rgba(0,210,106,0.5);"></div>
+                ` : '';
+                // 👆 👆 👆 👆 👆 👆 👆
 
-                // Время
-                const hours = Math.floor((u.totalSec || 0) / 3600);
-                const minutes = Math.floor(((u.totalSec || 0) % 3600) / 60);
-                const timeStr = `${hours}ч ${minutes}м`;
-
-                // Подсветка себя
+                const hours = Math.floor(u.totalSec / 3600);
+                const minutes = Math.floor((u.totalSec % 3600) / 60);
                 const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
                 const bgStyle = isMe ? "border: 2px solid var(--primary); background: rgba(108, 99, 255, 0.05);" : "";
-
-                // Медали
-                let rankIcon = `#${rank}`;
-                if (rank === 1) rankIcon = "🥇";
-                if (rank === 2) rankIcon = "🥈";
-                if (rank === 3) rankIcon = "🥉";
-                const rankFontSize = rank > 99 ? "10px" : "14px";
 
                 const item = document.createElement('div');
                 item.className = 'user-list-item';
@@ -3533,23 +3432,24 @@ const Online = {
 
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <div style="font-weight:bold; width:25px; text-align:center; font-size:${rankFontSize}; color:var(--text-light);">${rankIcon}</div>
+                        <div style="font-weight:bold; width:25px; text-align:center; color:var(--text-light);">#${rank}</div>
                         
-                        <!-- АВАТАР С РАМКОЙ -->
-                        <!-- Используем те же стили, что и в профиле -->
-                        <div class="${frameClass}" style="width:45px; height:45px; min-width:45px; min-height:45px; font-size:24px;">
-                            <div>${avatar}</div>
+                        <!-- ОБЕРТКА АВАТАРА ДЛЯ ОНЛАЙН ТОЧКИ -->
+                        <div style="position:relative; width:45px; height:45px;">
+                            <div class="${frameClass}" style="width:45px; height:45px; min-width:45px; font-size:24px; margin:0;">
+                                <div>${avatar}</div>
+                            </div>
+                            ${onlineBadge} <!-- Сюда вставится точка, если юзер онлайн -->
                         </div>
 
-                        <div style="overflow:hidden;">
+                        <div>
                             <b style="display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px;">
-                                ${vipBadge} ${name} ${isMe ? "(Вы)" : ""}
+                                ${u.isKing ? '👑 ' : (u.isVip ? '💎 ' : '')}${name}
                             </b>
-                            <!-- СТАТУС -->
-                            <small style="font-size:11px; opacity:0.8;">${subText}</small>
+                            <small style="font-size:10px; opacity:0.7;">Lvl ${u.level || 1} • ${u.currentTitle || 'Участник'}</small>
                         </div>
                     </div>
-                    <b style="color:var(--text); font-size:13px; white-space:nowrap; margin-left:5px; opacity:0.7;">${timeStr}</b>
+                    <b style="color:var(--primary); font-size:13px;">${hours}ч ${minutes}м</b>
                 `;
                 list.appendChild(item);
                 rank++;
@@ -3758,32 +3658,60 @@ this.login(user.id);
             Tutorial.startFlow(); 
         }, 800);
     },
-    login(id) { 
+    async login(id) { 
         const user = this.users.find(u => u.id === id); 
         if (!user) return; 
-        this.currentUser = user; 
-        localStorage.setItem('LastUserId', id); 
 
-        Data.load(user.id); 
+        const loginCard = document.getElementById('login-view');
+        const originalHTML = loginCard ? loginCard.innerHTML : "";
         
+        if(loginCard) loginCard.innerHTML = `
+            <div style="padding:40px; text-align:center;">
+                <div class="loader" style="margin:0 auto 20px auto; border-top-color:var(--primary);"></div>
+                <p style="font-weight:bold; color:var(--primary);">Облачная синхронизация...</p>
+                <p style="font-size:12px; opacity:0.6;">Загружаем твой прогресс</p>
+            </div>`;
 
-        if(DB && DB.user) {
-            DB.user.name = user.name;
-            DB.user.avatar = user.avatar;
-            Data.save();
+        try {
+            // 👇 ЦИКЛ ОЖИДАНИЯ БАЗЫ (до 5 секунд) 👇
+            let attempts = 0;
+            while (!window.DB_Online && attempts < 10) {
+                console.log("⏳ База еще не готова, ждем 500мс...");
+                await new Promise(res => setTimeout(res, 500)); // Ждем полсекунды
+                attempts++;
+            }
+
+            const dbRef = window.DB_Online; 
+            if (!dbRef) {
+                throw new Error("Не удалось подключиться к серверу. Проверьте интернет.");
+            }
+            
+            const docRef = dbRef.doc(dbRef.db, "users", id);
+            const docSnap = await dbRef.getDoc(docRef);
+
+            if (docSnap.exists()) {
+                DB = docSnap.data();
+                console.log("☁️ Профиль загружен из облака");
+            } else {
+                console.log("🆕 Облачного профиля нет, создаем новый");
+                Data.load(id); 
+            }
+
+            // Стандартный вход
+            this.currentUser = user; 
+            localStorage.setItem('LastUserId', id); 
+            document.getElementById('auth-screen').classList.add('hidden'); 
+            document.getElementById('app-container').style.display = 'block'; 
+            
+            App.initAfterLogin();
+            Data.startListening(id);
+            
+        } catch (e) {
+            console.error("Login Error:", e);
+            if(loginCard) loginCard.innerHTML = originalHTML;
+            this.renderUserList(); 
+            alert("❌ Ошибка: " + e.message);
         }
-        
-        document.getElementById('auth-screen').classList.add('hidden'); 
-        document.getElementById('app-container').style.display = 'block'; 
-        
-        App.setText('header-avatar', user.avatar);
-        App.setText('header-name', user.name);
-        App.setText('profile-avatar-big', user.avatar);
-        App.setText('profile-name-big', user.name);
-        
-        SoundSys.play('success'); 
-        App.initAfterLogin();
-        DailySys.check(); 
     },
 
     logout() { 
@@ -4015,6 +3943,9 @@ const Timer = {
             if(timerEl) timerEl.innerText = timeString;
             const ecoEl = document.getElementById('eco-timer-display');
             if(ecoEl) ecoEl.innerText = timeString;
+            if (this.sec % 120 === 0) { // Раз в 2 минуты
+            Data.save(); 
+            }
 
         }, 1000);
         
@@ -4291,10 +4222,15 @@ genRandom() {
 
     // ГЛАВНАЯ ФУНКЦИЯ ВХОДА
     async connect() {
-        // Проверка времени (8 часов = 28,800,000 миллисекунд)
+        const rawCode = document.getElementById('battle-code-input').value.trim();
+        if (rawCode.length < 3) return App.toast("Код слишком короткий!");
+        const code = rawCode.replace(/\s/g, ''); 
+        this.currentCode = code;
+
+        // 1. Ограничение 4 часа (14,400,000 мс)
         const lastBattle = DB.user.lastBattleTime || 0;
         const now = Date.now();
-        const waitTime = 8 * 60 * 60 * 1000;
+        const waitTime = 4 * 60 * 60 * 1000; 
 
         if (now - lastBattle < waitTime) {
             const remaining = waitTime - (now - lastBattle);
@@ -4302,14 +4238,10 @@ genRandom() {
             const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
             return alert(`🕒 Арена закрыта! \n\nСледующий бой через ${hours}ч ${mins}мин.`);
         }
-        const rawCode = document.getElementById('battle-code-input').value.trim();
-        if (rawCode.length < 3) return App.toast("Код слишком короткий!");
-        
-        // Убираем пробелы и делаем код строкой
-        const code = rawCode.replace(/\s/g, ''); 
-        this.currentCode = code;
 
-        if (DB.user.coins < this.bet) return App.toast("Недостаточно монет!");
+        // 2. Проверка фиксированной ставки 15 монет
+        this.bet = 15; 
+        if (DB.user.coins < this.bet) return App.toast("Нужно минимум 15 монет!");
 
         App.toast("⏳ Подключение...");
 
@@ -4342,9 +4274,7 @@ genRandom() {
     },
 
     async createRoom(docRef) {
-        DB.user.coins -= this.bet;
-        Data.save(); App.updateUI();
-
+        // МОНЕТЫ ТУТ НЕ СНИМАЕМ! Снимем когда начнется бой.
         await window.DB_Online.setDoc(docRef, {
             p1: DB.user.name,
             p1_id: Auth.currentUser.id,
@@ -4352,7 +4282,7 @@ genRandom() {
             p2: null,
             p2_id: null,
             p2_score: -1,
-            bet: this.bet,
+            bet: 15, // Фиксированная ставка
             mode: Trainer.mode,
             diff: Trainer.difficulty,
             status: 'waiting',
@@ -4361,25 +4291,17 @@ genRandom() {
     },
 
     async joinRoom(docRef, currentData) {
-        // Проверяем ставку (она должна совпадать с создателем)
-        if (this.bet !== currentData.bet) {
-            if(!confirm(`В этой комнате ставка ${currentData.bet} монет. Согласны?`)) return;
-            this.bet = currentData.bet;
-        }
+        // Проверяем, есть ли у входящего 15 монет
+        if (DB.user.coins < 15) return alert("Недостаточно монет для участия (нужно 15)!");
 
-        if (DB.user.coins < this.bet) return App.toast("Не хватает монет!");
-
-        // Списываем деньги
-        DB.user.coins -= this.bet;
-        Data.save(); App.updateUI();
-
-        // Записываем себя как P2
+        this.bet = 15;
         await window.DB_Online.updateDoc(docRef, {
             p2: DB.user.name,
             p2_id: Auth.currentUser.id,
-            status: 'ready' // Статус "Готовы к старту"
+            status: 'ready'
         });
     },
+
 
     showLobby() {
         document.getElementById('battle-login-view').style.display = 'none';
@@ -4835,18 +4757,26 @@ fail(el) {
 
 
     startPVP(role, code, bet, mode, diff) {
-        QuestSys.update('pvpDone', 1);
+        // 🔒 СПИСАНИЕ МОНЕТ ПРИ РЕАЛЬНОМ СТАРТЕ
+        if (DB.user.coins < 15) {
+            alert("Ошибка: Монеты кончились перед стартом!");
+            location.reload();
+            return;
+        }
+
+        DB.user.coins -= 15; // Снимаем 15 монет
+        Data.save();
+        App.updateUI();
 
         this.pvpRole = role;
         this.pvpCode = code;
-        this.duelBet = bet; 
+        this.duelBet = 15; 
         this.isDuel = true; 
         
-        // Применяем настройки из комнаты
         this.mode = mode || 'standard';
         this.difficulty = diff || 'easy';
 
-        App.toast(`⚔️ ДУЭЛЬ: ${this.mode} (${this.difficulty})`);
+        App.toast(`⚔️ БОЙ НАЧАЛСЯ! Ставка: 15 💰`);
         document.getElementById('battle-modal').classList.remove('show');
         this.start(); 
     },
@@ -5204,10 +5134,26 @@ const SecretSys = {
     // Вызов окна ввода кода
     triggerPrompt() {
         this.versionClicks++;
-        if (this.versionClicks >= 5) {
-            const code = prompt("💎ВЫ НАШЛИ ПАСХАЛКУ \n\nВведите  код: MATRIX или RAINBOW");
+        
+        // Маленькая подсказка при нажатиях
+        if (this.versionClicks < 5) {
+            App.toast(`Еще ${5 - this.versionClicks}...`);
+        }
+
+        if (this.versionClicks === 5) {
+            // Награда за открытие меню кодов
+            if (!DB.user.isVersionRewardClaimed) {
+                DB.user.coins += 100;
+                DB.user.isVersionRewardClaimed = true;
+                Data.save();
+                App.updateUI();
+                App.toast("💰 Меню взлома открыто: +100 монет!");
+                FX.confetti();
+            }
+
+            const code = prompt("Введите секретный код:");
             if (code) this.checkCode(code);
-            this.versionClicks = 0; // Сброс
+            this.versionClicks = 0; 
         }
     },
 
@@ -5248,6 +5194,17 @@ const SecretSys = {
 
         if (this.logoTaps === 10) {
             this.showCredits();
+            
+            // Награда за нахождение пасхалки
+            if (!DB.user.isLogoRewardClaimed) {
+                DB.user.coins += 100;
+                DB.user.isLogoRewardClaimed = true;
+                Data.save();
+                App.updateUI();
+                App.toast("💰 Награда за любопытство: +100 монет!");
+                FX.confetti();
+                SoundSys.play('win');
+            }
             this.logoTaps = 0;
         }
     },
@@ -5305,32 +5262,60 @@ const SecretSys = {
 
 const App = {
     async init() { 
+        // 1. Проверяем интернет перед запуском
+        if (!navigator.onLine) {
+            document.body.innerHTML = this.getOfflineScreen();
+            return;
+        }
+
         Auth.init(); 
         InstallSys.init(); 
-        if (window.TimeGuard) TimeGuard.verify();
+        TimeGuard.verify();
 
+        // Слушаем изменение состояния сети в реальном времени
+        window.addEventListener('online', () => location.reload());
+        window.addEventListener('offline', () => {
+            App.toast("❌ Связь потеряна. Приложение требует онлайн-режим.");
+            setTimeout(() => location.reload(), 2000);
+        });
+
+        // Синхронизация при возврате во вкладку
         document.addEventListener("visibilitychange", () => {
-            // Если вкладка стала видимой И таймер в этот момент запущен
-            if (!document.hidden && Timer.active) {
-                const now = Date.now();
-                // Вычисляем сколько секунд реально прошло с момента нажатия на "Старт"
-                const realElapsed = Math.floor((now - Timer.startTime) / 1000);
-                
-                // Принудительно обновляем счетчик таймера
-                Timer.sec = realElapsed;
-                
-                // Обновляем текст на экране сразу, не дожидаясь следующей секунды интервала
-                const timerEl = document.getElementById('timer');
-                if(timerEl) {
-                    timerEl.innerText = new Date(Timer.sec * 1000).toISOString().substr(11, 8);
-                }
-                console.log("⏱️ Таймер синхронизирован с реальным временем");
+            if (!document.hidden && Auth.currentUser) {
+                Data.syncWithCloud(); // Принудительно забираем данные из облака
             }
         });
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js?v=2').catch(err => console.log(err));
         }
+    },
+
+    async syncWithCloud() {
+        if (!Auth.currentUser || !window.DB_Online) return;
+
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+        const docSnap = await window.DB_Online.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const cloud = docSnap.data();
+            // Жестко заменяем локальные данные облачными
+            // (Так как мы теперь строго онлайн, облако — это и есть правда)
+            DB = cloud;
+            localStorage.setItem(this.currentKey, JSON.stringify(DB));
+            App.updateUI();
+            console.log("☁️ Облачная синхронизация завершена");
+        }
+    },
+    getOfflineScreen() {
+        return `
+            <div style="background:#1e1e2e; color:white; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
+                <div style="font-size:80px; margin-bottom:20px;">🌐</div>
+                <h1>Ой! Нужен интернет</h1>
+                <p style="opacity:0.7;">MathBooster PRO теперь работает строго онлайн,<br>чтобы твой прогресс всегда был синхронизирован.</p>
+                <button onclick="location.reload()" style="background:#6C63FF; color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; margin-top:20px;">ПОПРОБОВАТЬ СНОВА</button>
+            </div>
+        `;
     },
 
 
@@ -5701,6 +5686,16 @@ const App = {
                 streakEl.parentElement.style.borderColor = "";
             }
         }
+        // Блок принудительной разблокировки Хардкора
+        const strictToggle = document.getElementById('strict-mode-toggle');
+        if (strictToggle) {
+            // Если таймер НЕ активен — кнопка ДОЛЖНА нажиматься
+            if (!Timer.active) {
+                strictToggle.disabled = false;
+            } else {
+                strictToggle.disabled = true; // Блокируем только во время учебы
+            }
+        }
     },
 // Внутри объекта App:
 
@@ -5938,7 +5933,7 @@ const App = {
             }
         } else { App.toast("Недостаточно монет"); }
     },
-    buyItem(id, price) {
+    async buyItem(id, price) {
         if (DB.user.coins < price) return App.toast("Недостаточно монет");
 
         const today = getUZDate();
@@ -6200,23 +6195,30 @@ const App = {
                 });
             }
             
-            const heatmap = document.getElementById('heatmap');
-            if (heatmap) {
-                let html = '';
-                for (let i = 0; i < 30; i++) {
-                    const date = new Date(currentTimestamp - ((29-i) * 86400000));
-                    const sec = (DB.history && DB.history[getUZDate(date)]) || 0;
-                    const minutes = Math.round(sec / 60);
-                    let color = 'var(--bg)';
-                    if (minutes > 0) color = '#c6e48b'; if (minutes > 20) color = '#7bc96f'; 
-                    if (minutes > 60) color = '#239a3b'; if (minutes > 120) color = '#196127';
-                    const isToday = i === 29 ? 'border: 1px solid var(--text);' : '';
-                    html += `<div title="${minutes} мин" style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
-                }
-                heatmap.innerHTML = html;
+            // 3. СЕТКА АКТИВНОСТИ (HEATMAP)
+        const heatmap = document.getElementById('heatmap');
+        if (heatmap) {
+            let html = ''; // <--- ВОТ ЭТА СТРОКА ИСПРАВЛЯЕТ ОШИБКУ
+            const currentTimestamp = new Date().getTime();
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(currentTimestamp - ((29 - i) * 86400000));
+                const key = getUZDate(date);
+                const sec = (DB.history && DB.history[key]) || 0;
+                const minutes = Math.round(sec / 60);
+                
+                let color = 'var(--bg)';
+                if (minutes > 0) color = '#c6e48b'; 
+                if (minutes > 20) color = '#7bc96f'; 
+                if (minutes > 60) color = '#239a3b'; 
+                if (minutes > 120) color = '#196127';
+                
+                const isToday = i === 29 ? 'border: 1px solid var(--primary);' : '';
+                html += `<div title="${key}: ${minutes} мин" style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
             }
-            // 👇 3. СТАТИСТИКА ПО ПРЕДМЕТАМ (Новый блок) 👇
-        // Внутри renderStats():
+            heatmap.innerHTML = html;
+        }
+            //  3. СТАТИСТИКА ПО ПРЕДМЕТАМ 
         const breakdownEl = document.getElementById('subject-breakdown');
         if (breakdownEl && DB.subjects) {
             const subjectsArray = Object.keys(DB.subjects).map(key => ({
@@ -6705,37 +6707,31 @@ const Notify = {
         App.toast(`🕒 Время изменено на ${val}`);
     }
 };
-
+// Делаем эти объекты доступными для кнопок в HTML
+    window.App = App;
+    window.Auth = Auth;
+    window.Timer = Timer;
+    window.Trainer = Trainer;
+    window.QuestSys = QuestSys;
+    window.WheelSys = WheelSys;
+    window.DailySys = DailySys;
+    window.Donation = Donation;
+    window.Transfer = Transfer;
+    window.Whiteboard = Whiteboard;
+    window.Calc = Calc;
+    window.SecretSys = SecretSys;
+    window.WeeklyReportSys = WeeklyReportSys;
+    window.AchievementSys = AchievementSys;
 // === УМНЫЙ ЭКРАН ЗАГРУЗКИ ===
 window.onload = () => {
     Auth.init();
     InstallSys.init();
 
-    // ПРОВЕРКА: Если мы уже входили раньше, логинимся автоматически
     const lastId = localStorage.getItem('LastUserId');
     if (lastId) {
+        // Просто вызываем логин. Внутри него теперь есть умное ожидание базы!
         Auth.login(lastId);
     }
-
-    // Анимация сплэш-скрина (твоя существующая логика)
-    const bar = document.getElementById('splash-bar');
-    const text = document.getElementById('splash-text');
-    const screen = document.getElementById('splash-screen');
-    
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += 10;
-        if (bar) bar.style.width = progress + "%";
-        if (progress >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-                if (screen) {
-                    screen.style.opacity = '0';
-                    setTimeout(() => screen.remove(), 600);
-                }
-            }, 500);
-        }
-    }, 100);
 };
 
 // ===== АНТИ-АФК: проверка каждые 20 минут =====
@@ -7112,7 +7108,9 @@ Transfer.pasteCode = function(code) {
 };
 
 
+
 </script>
+
 <!-- ECO MODE OVERLAY -->
 <div id="eco-overlay" onclick="App.toggleEcoMode(false)">
     <div class="eco-floater">
@@ -7196,14 +7194,8 @@ Transfer.pasteCode = function(code) {
                 </button>
             </div>
             
-            <div style="margin: 20px 0;">
-                <p style="font-size: 12px; margin-bottom: 8px; font-weight: bold;">Ставка:</p>
-                <div class="diff-switch">
-                    <div class="diff-btn active" onclick="BattleSys.setBet(5, this)">5</div>
-                    <div class="diff-btn" onclick="BattleSys.setBet(10, this)">10</div>
-                    <div class="diff-btn" onclick="BattleSys.setBet(20, this)">20</div>
-                </div>
-            </div>
+            <p style="font-weight: bold; color: var(--gold); margin: 15px 0;">Ставка: 15 💰</p>
+
 
             <button class="btn btn-primary" onclick="BattleSys.connect()" style="width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);">
                 🚀 В БОЙ
