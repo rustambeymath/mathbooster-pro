@@ -2888,8 +2888,8 @@ const NameGuard = {
     }
 };
  
-
 let DB = null; 
+
 const Data = {
     currentKey: null,
     listener: null,
@@ -2913,49 +2913,65 @@ const Data = {
         
         if (raw) {
             try {
-                // 1. Присваиваем данные
                 DB = JSON.parse(raw);
 
-                // --- 🛡️ НАЧАЛО БЛОКА НАКАЗАНИЯ ДЛЯ ЧИТЕРОВ ---
+                // --- 🛡️ ЖЕСТКОЕ НАКАЗАНИЕ ЗА НАКРУТКУ ВРЕМЕНИ ---
                 const now = Date.now();
-                // Если текущее время телефона МЕНЬШЕ времени последнего сохранения (разница более 2 мин)
                 if (DB.user && DB.user.lastSaveTime && now < (DB.user.lastSaveTime - 120000)) {
+                    this.punish();
+                    return;
                     
-                    // Обнуляем данные в памяти телефона
+                    // 1. ОБНУЛЯЕМ ВСЁ: Валюту, Прогресс и ИНВЕНТАРЬ
                     DB.user.coins = 0;
                     DB.user.xp = 0;
                     DB.user.level = 1;
                     DB.user.totalSec = 0;
+                    
+                    // 2. ОТИРАЕМ ВСЕ ПОКУПКИ (Темы, Рамки, Аватары, Титулы)
+                    DB.user.ownedThemes = ['standard']; // Оставляем только стандартную
+                    DB.user.ownedAvatars = [];
+                    DB.user.ownedFrames = [];
+                    DB.user.ownedTitles = [];
+                    DB.user.inventory = { shield: 0, booster: 0 };
+                    
+                    // Сбрасываем текущий вид на стандартный
+                    DB.user.theme = 'standard';
+                    DB.user.avatar = '😎';
+                    DB.user.currentFrame = null;
+                    DB.user.currentTitle = null;
+                    
                     DB.user.lastSaveTime = now;
 
-                    // Пытаемся мгновенно обнулить данные в Firebase
+                    // 3. МГНОВЕННО ОБНУЛЯЕМ В ОБЛАКЕ (Firebase)
                     if (window.DB_Online && Auth.currentUser) {
                         const dbRef = window.DB_Online;
                         const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
-                        dbRef.updateDoc(docRef, { 
-                            "user.coins": 0, "user.xp": 0, "user.level": 1, "user.totalSec": 0, "user.lastSaveTime": now 
-                        }).catch(e => console.log("Связь потеряна, но локальные данные стерты."));
+                        dbRef.setDoc(docRef, DB, { merge: false }).catch(e => console.log("Читер заблокирован локально"));
                     }
 
-                    // Блокируем экран пользователю
+                    // 4. ПОКАЗЫВАЕМ ЭКРАН ПОЗОРА
                     document.body.innerHTML = `
-                        <div style="background:#000; color:red; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
-                            <h1 style="font-size:50px;">⛔️ БАН</h1>
+                        <div style="background:#000; color:#ff4d4d; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
+                            <div style="font-size:80px; margin-bottom:20px;">💀</div>
+                            <h1 style="font-size:40px; text-transform:uppercase;">Аккаунт обнулен</h1>
                             <h2 style="color:white;">Обнаружена накрутка времени</h2>
-                            <p style="font-size:18px; margin-top:20px;">За попытку обмана системы (перевод часов назад) <br> <b style="color:red;">ВАШИ МОНЕТЫ И ОПЫТ АННУЛИРОВАНЫ.</b></p>
-                            <p style="opacity:0.5; font-size:12px; margin-top:30px;">Установите реальное время и перезапустите приложение.</p>
-                            <button onclick="location.reload()" style="background:red; color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; margin-top:20px; cursor:pointer;">Я ВСЁ ПОНЯЛ</button>
+                            <div style="background:rgba(255,0,0,0.1); border:1px solid red; padding:20px; border-radius:15px; margin-top:20px; max-width:400px;">
+                                <p style="font-size:16px; line-height:1.5;">За попытку обмана системы (перевод часов) мы аннулировали ваш прогресс: <br>
+                                <b style="color:white;">- Все монеты списаны<br>
+                                - Все темы и рамки удалены<br>
+                                - Уровень сброшен до 1</b></p>
+                            </div>
+                            <p style="opacity:0.5; font-size:12px; margin-top:30px;">Установите реальное время и начните путь честно.</p>
+                            <button onclick="location.reload()" style="background:#ff4d4d; color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; margin-top:20px; cursor:pointer; box-shadow: 0 0 20px rgba(255,77,77,0.4);">Я ВСЁ ПОНЯЛ</button>
                         </div>
                     `;
-                    return; // Полная остановка загрузки кода
+                    return; 
                 }
                 // --- КОНЕЦ БЛОКА НАКАЗАНИЯ ---
 
                 this.cleanSubjects();
-                console.log("✅ Данные загружены из памяти телефона");
-            } catch(e) {
-                console.error("Ошибка парсинга JSON:", e);
-            }
+                console.log("✅ Данные загружены");
+            } catch(e) { console.error(e); }
         }
 
         // Если данных нет ВООБЩЕ (первый вход), тогда создаем новые
@@ -3026,7 +3042,46 @@ const Data = {
 
         if(window.DB_Online) this.startListening(userId);
     },
+punish() {
+        console.error("🚨 ПРИМЕНЕНИЕ САНКЦИЙ...");
+        
+        // 1. Обнуляем локальный объект
+        DB.user.coins = 0;
+        DB.user.xp = 0;
+        DB.user.level = 1;
+        DB.user.totalSec = 0;
+        DB.user.ownedThemes = ['standard'];
+        DB.user.ownedAvatars = [];
+        DB.user.ownedFrames = [];
+        DB.user.ownedTitles = [];
+        DB.user.inventory = { shield: 0, booster: 0 };
+        DB.user.theme = 'standard';
+        DB.user.avatar = '😎';
+        DB.user.currentFrame = null;
+        DB.user.currentTitle = null;
+        DB.user.lastSaveTime = Date.now();
 
+        // 2. Очищаем память телефона
+        localStorage.setItem(this.currentKey, JSON.stringify(DB));
+
+        // 3. Жестко перезаписываем облако (merge: false уничтожит старые данные)
+        if (window.DB_Online && Auth.currentUser) {
+            const dbRef = window.DB_Online;
+            const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
+            dbRef.setDoc(docRef, DB, { merge: false });
+        }
+
+        // 4. Выводим экран блокировки
+        document.body.innerHTML = `
+            <div style="background:#000; color:red; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
+                <h1 style="font-size:50px;">💀 ВЫ ПОЙМАНЫ</h1>
+                <p style="font-size:20px;">Манипуляция временем подтверждена.</p>
+                <b style="color:white; background:red; padding:10px; border-radius:5px;">ВАШ ПРОФИЛЬ ПОЛНОСТЬЮ ОБНУЛЕН</b>
+                <p style="margin-top:20px; opacity:0.6;">Верните реальное время и начните заново.</p>
+                <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; cursor:pointer;">Я ВСЁ ПОНЯЛ</button>
+            </div>
+        `;
+    },
 
     // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
     startListening(userId) {
@@ -3087,25 +3142,8 @@ const Data = {
     async save() {
         if (!DB || !Auth.currentUser) return;
 
-                const totalMinutes = (DB.user.totalSec || 0) / 60;
-        const currentLevel = DB.user.level || 1;
-
-        // Математика: Для 2-го уровня нужно 500 XP. 
-        // 500 XP = 50 минут чистой учебы.
-        // Значит, уровень не может быть больше, чем (минуты / 20).
-        if (currentLevel > 1 && totalMinutes < (currentLevel * 10)) {
-            console.error("🚨 Накрутка уровня! Сброс прогресса.");
-            DB.user.level = 1;
-            DB.user.xp = 0;
-            DB.user.totalSec = 0;
-            App.toast("⛔️ Аномальный прогресс сброшен");
-        }
-
-        // -----------------------------------------------------
-
-        DB.user.lastSaveTime = Date.now();
-        DB.user.lastSeenTime = Date.now();
-        DB.user.lastActive = Date.now(); // Для точки "Онлайн"
+        // ОБЯЗАТЕЛЬНО обновляем метку времени перед сохранением
+        DB.user.lastSaveTime = Date.now(); 
 
         localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
@@ -3114,9 +3152,7 @@ const Data = {
             const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
             try {
                 await dbRef.setDoc(docRef, DB, { merge: true });
-            } catch (e) {
-                console.error("Cloud Save Error", e);
-            }
+            } catch (e) { console.error("Cloud Save Error", e); }
         }
     },
      
@@ -3259,13 +3295,15 @@ const DailySys = {
     },
 
    async claim() {
-        App.toast("📡 Проверка времени...");
+        App.toast("📡 Проверка честности...");
         
-        // 1. ПРИНУДИТЕЛЬНО ждем свежую проверку через интернет
+        // 1. Ждем ответа от сервера времени
         await TimeGuard.verify();
 
+        // 2. Если TimeGuard сказал, что время на телефоне врет
         if (!TimeGuard.isTimeValid) {
-            alert("🚨 ВЗЛОМ ВРЕМЕНИ! \nНаграда заблокирована. Установите реальное время.");
+            // ВМЕСТО ПРОСТОЙ ОШИБКИ — СРАЗУ НАКАЗЫВАЕМ
+            Data.punish(); 
             return;
         }
 
