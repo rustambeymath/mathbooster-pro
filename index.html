@@ -1817,8 +1817,9 @@ window.addEventListener('load', () => {
             </div>
             <!-- Карточка: Статистика по предметам -->
             <div class="card" style="margin-top: 20px;">
-            <h3>🎓 Твои предметы</h3>
-                <p style="font-size:11px; color:var(--text-light); margin-bottom:15px;">Общее время, потраченное на каждый предмет.</p>
+<h3>🎓 Твои предметы</h3>
+<p style="font-size:11px; color:var(--text-light); margin-bottom:15px;">Общее время, потраченное на каждую дисциплину.</p>
+            <div id="subject-breakdown" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                     <!-- Сюда JS вставит список -->
                     <div style="text-align:center; color:var(--text-light); font-size:12px;">Загрузка...</div>
                 </div>
@@ -2843,19 +2844,13 @@ const LEAGUES = [
 
 // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
 const getUZDate = (dateObj = new Date()) => {
-    // 1. Проверяем: есть ли у нас серверный сдвиг?
-    // Если разница со временем телефона более 5 минут, используем только скорректированное время
-    let timeToUse = dateObj.getTime();
+    // Используем сдвиг, полученный от сервера в TimeGuard
+    const offset = (window.TimeGuard && TimeGuard.serverOffset) ? TimeGuard.serverOffset : 0;
+    const correctedTime = dateObj.getTime() + offset;
     
-    if (window.TimeGuard && Math.abs(TimeGuard.serverOffset) > 300000) {
-        timeToUse = dateObj.getTime() + TimeGuard.serverOffset;
-    }
-
-    const correctedDate = new Date(timeToUse);
-    const utc = correctedDate.getTime() + (correctedDate.getTimezoneOffset() * 60000);
-    const uzTime = new Date(utc + (3600000 * 5)); // Ташкент +5
-    
-    return uzTime.toISOString().slice(0, 10);
+    // Переводим в дату Ташкента
+    const uzDate = new Date(correctedTime + (3600000 * 5)); 
+    return uzDate.toISOString().slice(0, 10);
 };
 
 
@@ -2912,7 +2907,7 @@ const Data = {
         localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
     },
 
-    load(userId) { 
+    load(userId) {
         this.currentKey = 'MathData_' + userId; 
         const raw = localStorage.getItem(this.currentKey); 
         
@@ -3032,6 +3027,7 @@ const Data = {
         if(window.DB_Online) this.startListening(userId);
     },
 
+
     // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
     startListening(userId) {
         if (this.listener) this.listener(); 
@@ -3039,53 +3035,28 @@ const Data = {
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
 
         this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const cloud = docSnap.data();
-
-                // 🛡️ ШАГ 1: ГАРАНТИЯ ЦЕЛОСТНОСТИ (Защита от undefined)
-                // Если в облаке почему-то нет этих полей, создаем их, чтобы код не упал
-                if (!cloud.settings) cloud.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
-                if (!cloud.user.inventory) cloud.user.inventory = { shield: 0, booster: 0 };
-                if (!cloud.user.ownedAvatars) cloud.user.ownedAvatars = [];
-                if (!cloud.user.ownedThemes) cloud.user.ownedThemes = ['standard'];
-
-                // 🛡️ ШАГ 2: ОБНОВЛЕНИЕ ПРИ АКТИВНОМ ТАЙМЕРЕ
-                if (Timer.active) {
-                    console.log("⏳ Таймер запущен: обновляем только прогресс и покупки...");
+                if (docSnap.exists()) {
+                    const cloud = docSnap.data();
                     
-                    // Синхронизируем критически важные для магазина и настроек поля
-                    DB.user.coins = cloud.user.coins;
-                    DB.user.ownedAvatars = cloud.user.ownedAvatars;
-                    DB.user.ownedThemes = cloud.user.ownedThemes;
-                    DB.user.ownedFrames = cloud.user.ownedFrames || [];
-                    DB.user.ownedTitles = cloud.user.ownedTitles || [];
-                    DB.user.inventory = cloud.user.inventory;
-                    
-                    // Синхронизируем настройки, чтобы переключатели не сбрасывались
-                    DB.settings = cloud.settings;
+                    // 🛡️ ЗАЩИТА ОТ "ПРЫЖКОВ" ПРЕДМЕТОВ
+                    // Если мы сейчас в процессе изменения (таймер активен или только что сохранили),
+                    // мы обновляем только монеты и покупки, но НЕ трогаем структуру предметов.
+                    if (Timer.active || (Date.now() - DB.user.lastSaveTime < 5000)) {
+                        DB.user.coins = cloud.user.coins;
+                        DB.user.inventory = cloud.user.inventory;
+                        DB.user.ownedAvatars = cloud.user.ownedAvatars;
+                        // Предметы НЕ ТРОГАЕМ, чтобы они не возвращались
+                        App.updateUI(); 
+                        return; 
+                    }
 
-                    App.updateUI(); 
-                    return; // Выходим, не трогая секунды и историю, чтобы таймер не прыгал
+                    if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
+                        DB = cloud;
+                        localStorage.setItem(this.currentKey, JSON.stringify(DB));
+                        App.updateUI();
+                    }
                 }
-
-                // 🛡️ ШАГ 3: ЖЕСТКАЯ СИНХРОНИЗАЦИЯ (Когда таймер спит)
-                // Сравниваем объекты через JSON строку, чтобы не частить с обновлениями
-                if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
-                    console.log("⚡ Синхронизация: данные на устройствах объединены");
-                    
-                    DB = cloud;
-                    
-                    // После объединения еще раз прогоняем "чистку предметов" (которую мы делали раньше)
-                    this.cleanSubjects(); 
-
-                    localStorage.setItem(this.currentKey, JSON.stringify(DB));
-                    App.updateUI();
-                    
-                    // Если открыт магазин — перерисовываем его
-                    if (document.getElementById('shop').classList.contains('active')) App.renderShop();
-                }
-            }
-        });
+            });
     },
 
     stopListening() {
@@ -3096,27 +3067,27 @@ const Data = {
     },
     cleanSubjects() {
         if (!DB || !DB.subjects) return;
-        const seenNames = {};
-        const keys = Object.keys(DB.subjects);
-
-        keys.forEach(key => {
-            const s = DB.subjects[key];
-            if (!s || !s.name) { delete DB.subjects[key]; return; }
-            const n = s.name.trim();
-
-            if (seenNames[n]) {
-                const originalKey = seenNames[n];
-                DB.subjects[originalKey].sec = (DB.subjects[originalKey].sec || 0) + (s.sec || 0);
-                if (DB.user.subject === key) DB.user.subject = originalKey;
-                delete DB.subjects[key];
-            } else {
-                seenNames[n] = key;
+        // Оставляем только те предметы, которые есть в ALL_SUBJECTS (убираем мусор)
+        const validIds = ALL_SUBJECTS.map(s => s.id);
+        const cleaned = {};
+        
+        Object.keys(DB.subjects).forEach(key => {
+            if (validIds.includes(key)) {
+                cleaned[key] = DB.subjects[key];
             }
         });
+        
+        DB.subjects = cleaned;
+        if (Object.keys(DB.subjects).length === 0) {
+            DB.subjects['algebra'] = { name: 'Алгебра', icon: '✖️', sec: 0 };
+        }
     },
+
+
     async save() {
-        // --- УСИЛЕННЫЙ АНТИ-ЧИТ ---
-        const totalMinutes = (DB.user.totalSec || 0) / 60;
+        if (!DB || !Auth.currentUser) return;
+
+                const totalMinutes = (DB.user.totalSec || 0) / 60;
         const currentLevel = DB.user.level || 1;
 
         // Математика: Для 2-го уровня нужно 500 XP. 
@@ -3129,6 +3100,8 @@ const Data = {
             DB.user.totalSec = 0;
             App.toast("⛔️ Аномальный прогресс сброшен");
         }
+
+        // -----------------------------------------------------
 
         DB.user.lastSaveTime = Date.now();
         DB.user.lastSeenTime = Date.now();
@@ -3285,47 +3258,29 @@ const DailySys = {
         SoundSys.play('win');
     },
 
-    async claim() {
-        // ПРИНУДИТЕЛЬНАЯ ПЕРЕПРОВЕРКА ВРЕМЕНИ ЧЕРЕЗ ИНТЕРНЕТ
-        if (window.TimeGuard) {
-            await TimeGuard.verify();
-            if (!TimeGuard.isTimeValid) {
-                alert("❌ ОШИБКА БЕЗОПАСНОСТИ: \nНа вашем устройстве установлено неверное время. Кнопка заблокирована.");
-                return;
-            }
+   async claim() {
+        App.toast("📡 Проверка времени...");
+        
+        // 1. ПРИНУДИТЕЛЬНО ждем свежую проверку через интернет
+        await TimeGuard.verify();
+
+        if (!TimeGuard.isTimeValid) {
+            alert("🚨 ВЗЛОМ ВРЕМЕНИ! \nНаграда заблокирована. Установите реальное время.");
+            return;
         }
 
-
-        const today = getUZDate();
-
-        // Проверка 2: Если нет интернета (offset = 0)
-        // Мы можем разрешить или запретить выдачу без сети. 
-        // Лучше разрешить, но TimeGuard.verify() должен был сработать.
-
-
-        const currentDayIndex = DB.user.dailyStreak % 7; 
+        // Если проверка пройдена, выполняем оригинальный код
+        const currentDayIndex = DB.user.dailyStreak % 7;
         const reward = this.rewards[currentDayIndex];
         
-        // Начисляем
-        DB.user.coins += reward; 
-        
-        // Увеличиваем стрик
-        DB.user.dailyStreak++; 
-        
-        // Запоминаем, что сегодня забрали
-        DB.user.lastDailyClaim = getUZDate(); 
-        
-        if (currentDayIndex === 6) { 
-            App.addXP(500); 
-            App.toast("🎉 Неделя пройдена! +500 XP"); 
-            FX.confetti(); 
-        }
-        
-        Data.save(); 
-        App.updateUI(); // Обновляем цифру огня на экране
-        
-        document.getElementById('daily-modal').classList.remove('show'); 
-        SoundSys.play('coin'); 
+        DB.user.coins += reward;
+        DB.user.dailyStreak++;
+        DB.user.lastDailyClaim = getUZDate(); // Эта функция теперь использует серверный сдвиг
+
+        Data.save();
+        App.updateUI();
+        document.getElementById('daily-modal').classList.remove('show');
+        SoundSys.play('coin');
         App.toast(`Получено: ${reward} монет!`);
     }
 };
@@ -5691,6 +5646,13 @@ const App = {
         this.setText('streak-display', DB.user.dailyStreak);
         this.setText('profile-id-text', Auth.currentUser ? Auth.currentUser.id : "...");
 
+        // Обновление заголовка предмета под таймером
+        const currentSub = DB.subjects[DB.user.subject];
+        const titleEl = document.getElementById('subject-title');
+        if (titleEl) {
+            titleEl.innerText = currentSub ? currentSub.name : "Выбери предмет";
+        }
+
         // --- СТАТУСЫ И ЛИГИ (PRO) ---
         let currentLeague = LEAGUES[0];
         let nextLeague = null;
@@ -6391,23 +6353,16 @@ const App = {
         const grid = document.getElementById('subjects-grid');
         if (!grid || !DB || !DB.subjects) return;
 
-        Data.cleanSubjects();
-
-        const subjectsKeys = Object.keys(DB.subjects).sort((a, b) => {
-            return DB.subjects[a].name.localeCompare(DB.subjects[b].name);
-        });
+        // Просто берем ключи как они есть
+        const subjectsKeys = Object.keys(DB.subjects);
 
         grid.innerHTML = subjectsKeys.map(k => {
             const s = DB.subjects[k];
             const isActive = DB.user.subject === k;
             
             let cardStyle = `padding:15px; text-align:center; cursor:pointer; transition:0.2s; border:2px solid transparent;`;
-            
-            if (isActive) {
-                cardStyle += 'border-color:var(--primary); background:rgba(108,99,255,0.05);';
-            } else if (Timer.active) {
-                cardStyle += 'opacity: 0.3; cursor: not-allowed; filter: grayscale(1);';
-            }
+            if (isActive) cardStyle += 'border-color:var(--primary); background:rgba(108,99,255,0.05);';
+            else if (Timer.active) cardStyle += 'opacity: 0.3; filter: grayscale(1);';
 
             return `
             <div class="card" style="${cardStyle}" onclick="${Timer.active ? '' : `App.selectSubject('${k}')`}">
@@ -6415,6 +6370,12 @@ const App = {
                 <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
             </div>`;
         }).join('');
+
+        // Обновляем заголовок Фокуса
+        const titleEl = document.getElementById('subject-title');
+        if (titleEl && DB.subjects[DB.user.subject]) {
+            titleEl.innerText = DB.subjects[DB.user.subject].name;
+        }
     },
 
     selectSubject(key) {
@@ -7018,84 +6979,239 @@ function cleanSubjects() {
     });
 }
 
-// Обновление списков
-// 1. ОТРИСОВКА СПИСКОВ В НАСТРОЙКАХ
-// ОБНОВЛЕНИЕ СПИСКОВ В НАСТРОЙКАХ
 function updateSubjectLists() {
-    const my = document.getElementById('my-subjects-list');
-    const avail = document.getElementById('available-subjects-list');
-    if (!my || !avail) return;
+    const myGrid = document.getElementById('my-subjects-list');
+    const availGrid = document.getElementById('available-subjects-list');
+    if (!myGrid || !availGrid) return;
 
-    my.innerHTML = '';
-    avail.innerHTML = '';
+    myGrid.innerHTML = '';
+    availGrid.innerHTML = '';
 
-    // 1. Сортируем "Мои предметы" перед выводом
-    const mySortedKeys = Object.keys(DB.subjects).sort((a, b) => {
-        return DB.subjects[a].name.localeCompare(DB.subjects[b].name);
-    });
-
-    mySortedKeys.forEach(key => {
-        const subj = DB.subjects[key];
+    // 1. МОИ ПРЕДМЕТЫ (Без сортировки)
+    Object.keys(DB.subjects).forEach(id => {
+        const s = DB.subjects[id];
         const div = document.createElement('div');
         div.className = 'subject-item added';
-        if (Timer.active) { div.style.opacity = "0.4"; div.style.cursor = "not-allowed"; }
-        
-        div.innerHTML = `<div class="icon">${subj.icon}</div><div class="name">${subj.name}</div>`;
-        div.onclick = () => moveSubject(key, true);
-        my.appendChild(div);
+        // Если таймер запущен — блокируем нажатия
+        if (Timer.active) div.style.opacity = "0.5";
+
+        div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+        div.onclick = () => { if(!Timer.active) moveSubject(id, true); };
+        myGrid.appendChild(div);
     });
 
-    // 2. Сортируем "Доступные" (из эталонного списка ALL_SUBJECTS)
-    ALL_SUBJECTS.filter(s => !DB.subjects[s.id]).forEach(subj => {
-        const div = document.createElement('div');
-        div.className = 'subject-item';
-        if (Timer.active) { div.style.opacity = "0.4"; div.style.cursor = "not-allowed"; }
+    // 2. ДОСТУПНЫЕ (Берем из ALL_SUBJECTS те, которых нет в Моих)
+    ALL_SUBJECTS.forEach(template => {
+        // Проверяем, нет ли такого имени в Моих предметах
+        const isInMy = Object.values(DB.subjects).some(m => m.name.toLowerCase() === template.name.toLowerCase());
         
-        div.innerHTML = `<div class="icon">${subj.icon}</div><div class="name">${subj.name}</div>`;
-        div.onclick = () => moveSubject(subj.id, false);
-        avail.appendChild(div);
+        if (!isInMy) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            if (Timer.active) div.style.opacity = "0.5";
+
+            div.innerHTML = `<div class="icon">${template.icon}</div><div class="name">${template.name}</div>`;
+            div.onclick = () => { if(!Timer.active) moveSubject(template.id, false); };
+            availGrid.appendChild(div);
+        }
     });
 }
 
 // 2. ПЕРЕМЕЩЕНИЕ ПРЕДМЕТА (ДОБАВИТЬ / УДАЛИТЬ)
+// 1. Функция перемещения (Добавить/Удалить)
 function moveSubject(id, isAlreadyAdded) {
-    // 🔒 БЛОКИРОВКА ПРИ РАБОТАЮЩЕМ ТАЙМЕРЕ
-    if (Timer.active) {
-        SoundSys.play('error');
-        App.toast("⛔️ Нельзя менять список предметов во время учебы!");
-        return; // Выходим из функции, не давая удалить
-    }
-    // Если предмет уже есть — УДАЛЯЕМ
+    if (Timer.active) return App.toast("⛔️ Сначала остановите таймер!");
+
+    // 1. Работаем со структурой
     if (isAlreadyAdded) {
-        // Защита: Нельзя удалить последний предмет
-        if (Object.keys(DB.subjects).length <= 1) {
-            return App.toast("Оставьте хотя бы один предмет!");
-        }
-        
-        delete DB.subjects[id];
-        
-        // Если удалили тот предмет, который сейчас выбран в таймере — переключаем на другой
-        if (DB.user.subject === id) {
-            DB.user.subject = Object.keys(DB.subjects)[0];
-        }
-        
-        App.toast("🗑️ Предмет скрыт");
-    } 
-    // Если предмета нет — ДОБАВЛЯЕМ
-    else {
+        if (Object.keys(DB.subjects).length <= 1) return App.toast("Минимум 1 предмет!");
+        delete DB.subjects[id]; // Удаляем ключ полностью
+        if (DB.user.subject === id) DB.user.subject = Object.keys(DB.subjects)[0];
+    } else {
         const template = ALL_SUBJECTS.find(s => s.id === id);
         if (template) {
-            // Добавляем в базу (счетчик 0 секунд)
+            // Добавляем строго по ID из эталона
             DB.subjects[id] = { name: template.name, icon: template.icon, sec: 0 };
-            App.toast("✅ Предмет добавлен!");
         }
     }
 
-    // 🔥 ВАЖНО: СОХРАНЯЕМ И ОБНОВЛЯЕМ ВСЁ СРАЗУ
+    // 2. Фиксируем время изменения, чтобы блокировать Snapshot (из Шага 1)
+    DB.user.lastSaveTime = Date.now();
+
+    // 3. Сохраняем и обновляем
     Data.save();
-    updateSubjectLists(); // Обновляем списки в настройках
-    App.renderSubjects(); // Обновляем главную страницу (Дашборд)
+    updateSubjectLists();
+    App.renderSubjects();
+    App.updateUI();
 }
+
+function updateSubjectLists() {
+    const myGrid = document.getElementById('my-subjects-list');
+    const availGrid = document.getElementById('available-subjects-list');
+    if (!myGrid || !availGrid) return;
+
+    myGrid.innerHTML = '';
+    availGrid.innerHTML = '';
+
+    // Список ID, которые у нас уже есть
+    const ownedIds = Object.keys(DB.subjects);
+
+    // Рендерим МОИ (те, что в базе)
+    ownedIds.forEach(id => {
+        const s = DB.subjects[id];
+        const div = document.createElement('div');
+        div.className = 'subject-item added';
+        div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+        div.onclick = () => moveSubject(id, true);
+        myGrid.appendChild(div);
+    });
+
+    // Рендерим ДОСТУПНЫЕ (те из ALL_SUBJECTS, которых НЕТ в ownedIds)
+    ALL_SUBJECTS.forEach(subj => {
+        if (!ownedIds.includes(subj.id)) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            div.innerHTML = `<div class="icon">${subj.icon}</div><div class="name">${subj.name}</div>`;
+            div.onclick = () => moveSubject(subj.id, false);
+            availGrid.appendChild(div);
+        }
+    });
+}
+
+// 2. Функция отрисовки списков в Настройках
+function updateSubjectLists() {
+    const myGrid = document.getElementById('my-subjects-list');
+    const availGrid = document.getElementById('available-subjects-list');
+    if (!myGrid || !availGrid) return;
+
+    myGrid.innerHTML = '';
+    availGrid.innerHTML = '';
+
+    // 1. Получаем список ID, которые сейчас есть в "Моих предметах"
+    const myIds = Object.keys(DB.subjects);
+
+    // 2. Рисуем "Мои предметы"
+    myIds.forEach(id => {
+        const s = DB.subjects[id];
+        if (!s) return;
+
+        const div = document.createElement('div');
+        div.className = 'subject-item added';
+        div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+        
+        // При клике — удаляем (isAlreadyAdded = true)
+        div.onclick = () => moveSubject(id, true);
+        myGrid.appendChild(div);
+    });
+
+    // 3. Рисуем "Доступные"
+    // Берем ВЕСЬ список ALL_SUBJECTS и фильтруем: оставляем только те, которых НЕТ в myIds
+    ALL_SUBJECTS.forEach(template => {
+        if (!myIds.includes(template.id)) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            div.innerHTML = `<div class="icon">${template.icon}</div><div class="name">${template.name}</div>`;
+            
+            // При клике — добавляем (isAlreadyAdded = false)
+            div.onclick = () => moveSubject(template.id, false);
+            availGrid.appendChild(div);
+        }
+    });
+}
+
+// 3. Функция очистки (Запускается при загрузке)
+// Она удалит все старые "кривые" ID и оставит только чистые из ALL_SUBJECTS
+Data.cleanSubjects = function() {
+    if (!DB || !DB.subjects) return;
+
+    const newCleanSubjects = {};
+    const currentKeys = Object.keys(DB.subjects);
+
+    currentKeys.forEach(key => {
+        const s = DB.subjects[key];
+        if (!s || !s.name) return;
+
+        // Ищем, какому ID из эталона соответствует этот предмет
+        const template = ALL_SUBJECTS.find(t => t.name.trim().toLowerCase() === s.name.trim().toLowerCase());
+        
+        if (template) {
+            // Если нашли соответствие — переносим данные на правильный ID
+            if (newCleanSubjects[template.id]) {
+                newCleanSubjects[template.id].sec += (s.sec || 0);
+            } else {
+                newCleanSubjects[template.id] = { 
+                    name: template.name, 
+                    icon: template.icon, 
+                    sec: s.sec || 0 
+                };
+            }
+        }
+    });
+
+    // Если после чистки список пуст — даем Алгебру по умолчанию
+    if (Object.keys(newCleanSubjects).length === 0) {
+        newCleanSubjects['algebra'] = { name: 'Алгебра', icon: '✖️', sec: 0 };
+    }
+
+    DB.subjects = newCleanSubjects;
+
+    // Проверяем, чтобы выбранный предмет существовал в новом списке
+    if (!DB.subjects[DB.user.subject]) {
+        DB.user.subject = Object.keys(DB.subjects)[0];
+    }
+};
+
+function updateSubjectLists() {
+    const myGrid = document.getElementById('my-subjects-list');
+    const availGrid = document.getElementById('available-subjects-list');
+    if (!myGrid || !availGrid) return;
+
+    myGrid.innerHTML = '';
+    availGrid.innerHTML = '';
+
+    // 1. Отрисовка МОИХ ПРЕДМЕТОВ
+    // Берем только те предметы, которые реально записаны в DB.subjects
+    const myKeys = Object.keys(DB.subjects);
+    
+    myKeys.forEach(id => {
+        const s = DB.subjects[id];
+        if (!s) return;
+
+        const div = document.createElement('div');
+        div.className = 'subject-item added';
+        if (Timer.active) div.style.opacity = "0.5";
+
+        div.innerHTML = `
+            <div class="icon">${s.icon}</div>
+            <div class="name">${s.name}</div>
+        `;
+        
+        // Передаем true, так как предмет уже в списке "Мои"
+        div.onclick = () => moveSubject(id, true);
+        myGrid.appendChild(div);
+    });
+
+    // 2. Отрисовка ДОСТУПНЫХ ПРЕДМЕТОВ
+    // Берем справочник ALL_SUBJECTS и показываем только те, которых НЕТ в myKeys
+    ALL_SUBJECTS.forEach(template => {
+        if (!myKeys.includes(template.id)) {
+            const div = document.createElement('div');
+            div.className = 'subject-item';
+            if (Timer.active) div.style.opacity = "0.5";
+
+            div.innerHTML = `
+                <div class="icon">${template.icon}</div>
+                <div class="name">${template.name}</div>
+            `;
+            
+            // Передаем false, так как предмета еще нет в списке "Мои"
+            div.onclick = () => moveSubject(template.id, false);
+            availGrid.appendChild(div);
+        }
+    });
+}
+
+
 function updatePresets() {
     const presetGrid = document.querySelector('.preset-grid');
     if (!presetGrid) return;
