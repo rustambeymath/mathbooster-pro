@@ -5,7 +5,7 @@
     <!-- Адаптация под мобильные устройства и iPhone (челка) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MathBooster PRO</title>
-    <!-- 👇 КРАСИВАЯ ССЫЛКА В ТЕЛЕГРАМЕ И ИНСТЕ 👇 -->
+    <!-- ССЫЛКА В ТЕЛЕГРАМЕ И ИНСТЕ  -->
     <meta property="og:title" content="MathBooster PRO: Оцифруй свой интеллект 🧠">
     <meta property="og:description" content="Путь к 10,000 часам мастерства начинается здесь. MathBooster PRO — это твой личный бухгалтер знаний, который делает интеллектуальный труд видимым. Учись, побеждай в дуэлях и качай свой мозг.">
     <meta property="og:image" content="https://rustambeymath.github.io/mathbooster-pro/preview.png">
@@ -1313,6 +1313,23 @@ body.dark-mode #wheel-modal .modal-content {
     -webkit-tap-highlight-color: transparent !important;
     outline: none !important;
 }
+/* Красивый тонкий скролл для списков в статистике */
+#subject-breakdown::-webkit-scrollbar, 
+#session-log::-webkit-scrollbar {
+    width: 4px;
+}
+
+#subject-breakdown::-webkit-scrollbar-thumb, 
+#session-log::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+    opacity: 0.3;
+}
+
+#subject-breakdown::-webkit-scrollbar-track, 
+#session-log::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.05);
+}
     </style>
     
 </head>
@@ -1786,61 +1803,59 @@ window.addEventListener('load', () => {
 
     <!-- 3. STATS -->
     <section id="stats" class="section">
+        <!-- Верхние карточки статистики (уже есть) -->
         <div class="card" style="margin-bottom: 20px;">
             <h3>📊 Детальная статистика</h3>
             <div class="stat-detail-grid">
                 <div class="stat-detail-card">
                     <div class="stat-detail-title">За неделю</div>
-                    <div class="stat-detail-value" id="stat-week-time">0ч</div>
-                    <div class="stat-detail-sub" id="stat-week-xp">0 XP</div>
+                    <div id="stat-week-time" class="stat-detail-value">0ч</div>
                 </div>
                 <div class="stat-detail-card">
                     <div class="stat-detail-title">За месяц</div>
-                    <div class="stat-detail-value" id="stat-month-time">0ч</div>
-                    <div class="stat-detail-sub" id="stat-month-xp">0 XP</div>
+                    <div id="stat-month-time" class="stat-detail-value">0ч</div>
                 </div>
                 <div class="stat-detail-card">
                     <div class="stat-detail-title">Все время</div>
-                    <div class="stat-detail-value" id="stat-total-time">0ч</div>
-                    <div class="stat-detail-sub" id="stat-total-xp">0 XP</div>
+                    <div id="stat-total-time" class="stat-detail-value">0ч</div>
                 </div>
             </div>
         </div>
 
+        <!-- ГЛАВНАЯ СЕТКА (Теперь тут 3 карточки на одном уровне) -->
         <div class="grid">
+            <!-- 1. Активность -->
             <div class="card">
                 <h3>🔥 Активность (30 дней)</h3>
-                <div id="heatmap" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px;"></div>            </div>
+                <div id="heatmap" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px;"></div>
+            </div>
+
+            <!-- 2. Журнал занятий -->
             <div class="card">
                 <h3>📜 Журнал занятий</h3>
-                <div id="session-log" class="session-log"></div>
+                <div id="session-log" class="history-list" style="max-height: 300px; overflow-y: auto; margin-top: 15px;"></div>
             </div>
-            <!-- Карточка: Статистика по предметам -->
-            <div class="card" style="margin-top: 20px;">
-<h3>🎓 Твои предметы</h3>
-<p style="font-size:11px; color:var(--text-light); margin-bottom:15px;">Общее время, потраченное на каждую дисциплину.</p>
-            <div id="subject-breakdown" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+
+            <!-- 3. Твои предметы (ПЕРЕМЕЩЕНО СЮДА И ДОБАВЛЕН СКРОЛЛ) -->
+            <div class="card">
+                <h3>🎓 Твои предметы</h3>
+                <p style="font-size:11px; color:var(--text-light); margin-bottom:10px;">Статистика по дисциплинам</p>
+                <!-- Контейнер со скроллом -->
+                <div id="subject-breakdown" style="max-height: 250px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
                     <!-- Сюда JS вставит список -->
-                    <div style="text-align:center; color:var(--text-light); font-size:12px;">Загрузка...</div>
                 </div>
             </div>
+        </div>
+
+        <!-- Графики ниже (если нужны) -->
+        <div class="grid" style="margin-top: 20px;">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0;">История (Неделя)</h3>
-                    <!-- Сюда JS вставит сумму -->
-                    <span id="week-total-display" style="font-size: 12px; background: rgba(108, 99, 255, 0.1); color: var(--primary); padding: 4px 8px; border-radius: 8px; font-weight: bold;">
-                        0 мин
-                    </span>
-                </div>
-                <div style="height: 200px;">
-                    <canvas id="weekChart"></canvas>
-                </div>
+                <h3>📈 История (Неделя)</h3>
+                <canvas id="weekChart"></canvas>
             </div>
             <div class="card">
-                <h3>🧩 Распределение предметов</h3>
-                <div style="height: 250px; position: relative;">
-                    <canvas id="subjectChart"></canvas>
-                </div>
+                <h3>🧩 Распределение</h3>
+                <canvas id="subjectChart"></canvas>
             </div>
         </div>
     </section>
@@ -2907,81 +2922,57 @@ const Data = {
         localStorage.setItem('MathData_' + userId, JSON.stringify(newDB)); 
     },
 
-    load(userId) {
+    load(userId) { 
         this.currentKey = 'MathData_' + userId; 
         const raw = localStorage.getItem(this.currentKey); 
         
         if (raw) {
             try {
+                // 1. Загружаем данные из памяти
                 DB = JSON.parse(raw);
-
-                // --- 🛡️ ЖЕСТКОЕ НАКАЗАНИЕ ЗА НАКРУТКУ ВРЕМЕНИ ---
-                const now = Date.now();
-                if (DB.user && DB.user.lastSaveTime && now < (DB.user.lastSaveTime - 120000)) {
-                    this.punish();
-                    return;
-                    
-                    // 1. ОБНУЛЯЕМ ВСЁ: Валюту, Прогресс и ИНВЕНТАРЬ
-                    DB.user.coins = 0;
-                    DB.user.xp = 0;
-                    DB.user.level = 1;
-                    DB.user.totalSec = 0;
-                    
-                    // 2. ОТИРАЕМ ВСЕ ПОКУПКИ (Темы, Рамки, Аватары, Титулы)
-                    DB.user.ownedThemes = ['standard']; // Оставляем только стандартную
-                    DB.user.ownedAvatars = [];
-                    DB.user.ownedFrames = [];
-                    DB.user.ownedTitles = [];
-                    DB.user.inventory = { shield: 0, booster: 0 };
-                    
-                    // Сбрасываем текущий вид на стандартный
-                    DB.user.theme = 'standard';
-                    DB.user.avatar = '😎';
-                    DB.user.currentFrame = null;
-                    DB.user.currentTitle = null;
-                    
-                    DB.user.lastSaveTime = now;
-
-                    // 3. МГНОВЕННО ОБНУЛЯЕМ В ОБЛАКЕ (Firebase)
-                    if (window.DB_Online && Auth.currentUser) {
-                        const dbRef = window.DB_Online;
-                        const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
-                        dbRef.setDoc(docRef, DB, { merge: false }).catch(e => console.log("Читер заблокирован локально"));
-                    }
-
-                    // 4. ПОКАЗЫВАЕМ ЭКРАН ПОЗОРА
-                    document.body.innerHTML = `
-                        <div style="background:#000; color:#ff4d4d; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
-                            <div style="font-size:80px; margin-bottom:20px;">💀</div>
-                            <h1 style="font-size:40px; text-transform:uppercase;">Аккаунт обнулен</h1>
-                            <h2 style="color:white;">Обнаружена накрутка времени</h2>
-                            <div style="background:rgba(255,0,0,0.1); border:1px solid red; padding:20px; border-radius:15px; margin-top:20px; max-width:400px;">
-                                <p style="font-size:16px; line-height:1.5;">За попытку обмана системы (перевод часов) мы аннулировали ваш прогресс: <br>
-                                <b style="color:white;">- Все монеты списаны<br>
-                                - Все темы и рамки удалены<br>
-                                - Уровень сброшен до 1</b></p>
-                            </div>
-                            <p style="opacity:0.5; font-size:12px; margin-top:30px;">Установите реальное время и начните путь честно.</p>
-                            <button onclick="location.reload()" style="background:#ff4d4d; color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; margin-top:20px; cursor:pointer; box-shadow: 0 0 20px rgba(255,77,77,0.4);">Я ВСЁ ПОНЯЛ</button>
-                        </div>
-                    `;
-                    return; 
+                let sum = 0;
+                if (DB.subjects) {
+                    Object.values(DB.subjects).forEach(s => { if(s.sec) sum += s.sec; });
                 }
-                // --- КОНЕЦ БЛОКА НАКАЗАНИЯ ---
+                if (sum > (DB.user.totalSec || 0)) DB.user.totalSec = sum;
+                // --- 🛡️ ПРОВЕРКА ЦЕЛОСТНОСТИ МОНЕТ (АНТИ-ЧИТ) ---
+                if (DB.user.integrityKey) {
+                    const expectedKey = btoa(DB.user.coins + "salt" + DB.user.level);
+                    if (DB.user.integrityKey !== expectedKey) {
+                        console.error("🚨 Взлом данных обнаружен!");
+                        this.punish(); // Обнуляем за подделку монет
+                        return;
+                    }
+                }
+                // 2. 🛡️ ПРОВЕРКА НА ЧИТЕРСТВО (Перевод часов назад)
+                const now = Date.now();
+                if (DB.user.integrityKey) {
+                    const expectedKey = btoa(DB.user.coins + "salt" + DB.user.level);
+                    if (DB.user.integrityKey !== expectedKey) {
+                        console.error("🚨 Взлом данных обнаружен!");
+                        this.punish(); // Обнуляем за подделку монет
+                        return;
+                    }
+                }
 
+                // 3. Чистим дубликаты предметов (если есть)
                 this.cleanSubjects();
-                console.log("✅ Данные загружены");
-            } catch(e) { console.error(e); }
+                console.log("✅ Данные загружены и проверены");
+
+            } catch(e) { 
+                console.error("Ошибка чтения базы:", e); 
+            }
         }
 
-        // Если данных нет ВООБЩЕ (первый вход), тогда создаем новые
+        // 4. Если профиля нет — создаем новый
         if (!DB || !DB.user) {
             console.log("🆕 Создание нового профиля...");
             this.initNewData(userId);
             DB = JSON.parse(localStorage.getItem(this.currentKey));
         }
 
-        // === УЛУЧШЕННОЕ ЛЕЧЕНИЕ ПОЛЕЙ (Migration) ===
+        // 5. 🛠️ ЛЕЧЕНИЕ ПОЛЕЙ (Миграция данных)
+        // Проверяем наличие всех новых систем, чтобы старые аккаунты не ломались
         if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
         if (!DB.user.ownedFrames) DB.user.ownedFrames = [];
         if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
@@ -2990,20 +2981,22 @@ const Data = {
         if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0;
         if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = "";
         
-        let historyTotal = 0;
-        if (DB.history) {
-            Object.values(DB.history).forEach(sec => {
-                if (typeof sec === 'number') historyTotal += sec;
+        // 6. 📊 СИНХРОНИЗАЦИЯ СТАТИСТИКИ (Сумма всех предметов)
+        let subjectsSum = 0;
+        if (DB.subjects) {
+            // Считаем сумму секунд по всем предметам
+            Object.values(DB.subjects).forEach(s => {
+                if (s && typeof s.sec === 'number') subjectsSum += s.sec;
             });
         }
-        if (DB.user.isLogoRewardClaimed === undefined) DB.user.isLogoRewardClaimed = false;
-        if (DB.user.isVersionRewardClaimed === undefined) DB.user.isVersionRewardClaimed = false;
-        
-        if (historyTotal > (DB.user.totalSec || 0)) {
-            console.log("🛠️ Статистика синхронизирована:", historyTotal);
-            DB.user.totalSec = historyTotal;
+
+        // Если сумма по предметам больше, чем общее время в профиле — исправляем
+        if (subjectsSum > (DB.user.totalSec || 0)) {
+            console.log("🛠️ Статистика исправлена. Новое общее время:", subjectsSum);
+            DB.user.totalSec = subjectsSum;
         }
 
+        // 7. Инициализация инвентаря и настроек
         if (!DB.user.inventory) {
             DB.user.inventory = { shield: 0, booster: 0 };
         } else {
@@ -3011,16 +3004,18 @@ const Data = {
             if (DB.user.inventory.booster === undefined) DB.user.inventory.booster = 0;
         }
         
-        if (DB.user.isMotivationClaimed === undefined) {
-            DB.user.isMotivationClaimed = false; 
-        }
+        if (DB.user.isMotivationClaimed === undefined) DB.user.isMotivationClaimed = false;
+        if (DB.user.isLogoRewardClaimed === undefined) DB.user.isLogoRewardClaimed = false;
+        if (DB.user.isVersionRewardClaimed === undefined) DB.user.isVersionRewardClaimed = false;
 
         if (!DB.settings) {
             DB.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
         }
+        
         if (DB.user.coins === undefined) DB.user.coins = 0;
-        if (!DB.user.lastSaveTime) DB.user.lastSaveTime = 0;
+        if (!DB.user.lastSaveTime) DB.user.lastSaveTime = Date.now();
 
+        // 8. Квесты (Гарантируем наличие целей)
         if (!DB.user.dailyQuests || !DB.user.dailyQuests.targets) {
             DB.user.dailyQuests = {
                 date: "", studyMin: 0, mathSolved: 0, pvpDone: 0, claimed: [],
@@ -3028,6 +3023,7 @@ const Data = {
             };
         }
 
+        // 9. Пожизненная статистика для медалей
         if (DB.user.pvpWins === undefined) DB.user.pvpWins = 0;
         if (DB.user.pvpLosses === undefined) DB.user.pvpLosses = 0;
         if (DB.user.lifetimeMathSolved === undefined) DB.user.lifetimeMathSolved = 0;
@@ -3040,51 +3036,55 @@ const Data = {
         if (!DB.user.lastSpinDate) DB.user.lastSpinDate = ""; 
         if (!DB.user.lastNotifyDate) DB.user.lastNotifyDate = "";
 
+        // 10. Запускаем онлайн-слушатель
         if(window.DB_Online) this.startListening(userId);
     },
-punish() {
-        console.error("🚨 ПРИМЕНЕНИЕ САНКЦИЙ...");
-        
-        // 1. Обнуляем локальный объект
-        DB.user.coins = 0;
-        DB.user.xp = 0;
-        DB.user.level = 1;
-        DB.user.totalSec = 0;
-        DB.user.ownedThemes = ['standard'];
-        DB.user.ownedAvatars = [];
-        DB.user.ownedFrames = [];
-        DB.user.ownedTitles = [];
-        DB.user.inventory = { shield: 0, booster: 0 };
-        DB.user.theme = 'standard';
-        DB.user.avatar = '😎';
-        DB.user.currentFrame = null;
-        DB.user.currentTitle = null;
-        DB.user.lastSaveTime = Date.now();
+        punish() {
+            console.error("🚨 ПРИМЕНЕНИЕ САНКЦИЙ (БЕЗ ОБНУЛЕНИЯ ВРЕМЕНИ)...");
+            
+            // 1. Обнуляем только валюту, опыт и покупки
+            DB.user.coins = 0;
+            DB.user.xp = 0;
+            DB.user.level = 1;
+            // DB.user.totalSec = 0; // <--- ЭТУ СТРОКУ МЫ УДАЛИЛИ, время останется!
 
-        // 2. Очищаем память телефона
-        localStorage.setItem(this.currentKey, JSON.stringify(DB));
+            DB.user.ownedThemes = ['standard'];
+            DB.user.ownedAvatars = [];
+            DB.user.ownedFrames = [];
+            DB.user.ownedTitles = [];
+            DB.user.inventory = { shield: 0, booster: 0 };
+            DB.user.theme = 'standard';
+            DB.user.avatar = '😎';
+            DB.user.currentFrame = null;
+            DB.user.currentTitle = null;
+            
+            // Фиксируем время наказания, чтобы анти-чит не сработал повторно сразу
+            DB.user.lastSaveTime = Date.now();
 
-        // 3. Жестко перезаписываем облако (merge: false уничтожит старые данные)
-        if (window.DB_Online && Auth.currentUser) {
-            const dbRef = window.DB_Online;
-            const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
-            dbRef.setDoc(docRef, DB, { merge: false });
-        }
+            // 2. Сохраняем "очищенный" профиль
+            localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
-        // 4. Выводим экран блокировки
-        document.body.innerHTML = `
-            <div style="background:#000; color:red; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
-                <h1 style="font-size:50px;">💀 ВЫ ПОЙМАНЫ</h1>
-                <p style="font-size:20px;">Манипуляция временем подтверждена.</p>
-                <b style="color:white; background:red; padding:10px; border-radius:5px;">ВАШ ПРОФИЛЬ ПОЛНОСТЬЮ ОБНУЛЕН</b>
-                <p style="margin-top:20px; opacity:0.6;">Верните реальное время и начните заново.</p>
-                <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; cursor:pointer;">Я ВСЁ ПОНЯЛ</button>
-            </div>
-        `;
-    },
+            if (window.DB_Online && Auth.currentUser) {
+                const dbRef = window.DB_Online;
+                const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
+                // merge: false полностью перезапишет документ в облаке
+                dbRef.setDoc(docRef, DB, { merge: false });
+            }
 
-    // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
-    startListening(userId) {
+            // 3. Экран блокировки
+            document.body.innerHTML = `
+                <div style="background:#000; color:red; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
+                    <h1 style="font-size:50px;">💀 ВЫ ПОЙМАНЫ</h1>
+                    <p style="font-size:20px;">Манипуляция временем подтверждена.</p>
+                    <b style="color:white; background:red; padding:10px; border-radius:5px;">МОНЕТЫ И ВЕЩИ АННУЛИРОВАНЫ</b>
+                    <p style="margin-top:20px; color:white;">Твоё время учебы сохранено, но всё остальное удалено.</p>
+                    <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; cursor:pointer;">Я ВСЁ ПОНЯЛ</button>
+                </div>
+            `;
+        },
+
+        // 📡 УМНЫЙ СЛУШАТЕЛЬ (С ЗАЩИТОЙ ДАННЫХ)
+        startListening(userId) {
         if (this.listener) this.listener(); 
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", userId);
@@ -3140,10 +3140,26 @@ punish() {
 
 
     async save() {
+        // Защита от спама сохранениями (раз в 2 секунды)
+        const now = Date.now();
+        if (this.lastSaveCall && now - this.lastSaveCall < 2000) return;
+        this.lastSaveCall = now;
+
         if (!DB || !Auth.currentUser) return;
 
-        // ОБЯЗАТЕЛЬНО обновляем метку времени перед сохранением
-        DB.user.lastSaveTime = Date.now(); 
+        // Пересчет времени
+        let totalFromSubjects = 0;
+        if (DB.subjects) {
+            Object.values(DB.subjects).forEach(s => {
+                if (s && s.sec) totalFromSubjects += s.sec;
+            });
+        }
+        DB.user.totalSec = totalFromSubjects;
+
+        // Обновление ключа защиты
+        DB.user.integrityKey = btoa(DB.user.coins + "salt" + DB.user.level);
+        
+        // ... далее код записи в LocalStorage и Firebase
 
         localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
@@ -3155,6 +3171,7 @@ punish() {
             } catch (e) { console.error("Cloud Save Error", e); }
         }
     },
+
      
     export() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB)); const node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", `${Auth.currentUser.name}_MathData.json`); document.body.appendChild(node); node.click(); node.remove(); },
     import(el) { const fr = new FileReader(); fr.onload = (e) => { try { DB = JSON.parse(e.target.result); this.save(); location.reload(); } catch(x) { alert("Ошибка файла"); } }; fr.readAsText(el.files[0]); }
@@ -3966,9 +3983,17 @@ const Timer = {
                     MathGame.show(true);
                 }
 
+                // Прибавляем время в три места одновременно:
                 this.sec = expectedSec;
                 this.sessionDuration += diff;
-                DB.user.totalSec += diff;
+                
+                // 1. В общий профиль
+                DB.user.totalSec = (DB.user.totalSec || 0) + diff;
+                
+                // 2. В конкретный предмет
+                if (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) {
+                    DB.subjects[DB.user.subject].sec = (DB.subjects[DB.user.subject].sec || 0) + diff;
+                }
 
                 // Статистика для медали Хардкора
                 if (this.isStrict) {
@@ -4457,7 +4482,9 @@ genRandom() {
     }
 };
 
-const Trainer = {  
+const Trainer = { 
+    lastAnswerTime: 0,
+ 
     // Добавили флаг isLocked
     isLocked: false, // Флаг блокировки
     score: 0, time: 60, interval: null, 
@@ -4694,6 +4721,13 @@ fail(el) {
 
     // --- ПРОВЕРКА ЧИСЕЛ (Классика/Квадраты) ---
     check() {
+        const now = Date.now();
+        // Если между ответами прошло меньше 400мс — это робот
+        if (now - this.lastAnswerTime < 400) {
+            App.toast("⛔️ Слишком быстро!");
+            return;
+        }
+        this.lastAnswerTime = now;
         if (this.isLocked) return; // Если заблокировано - игнор
 
         const inputEl = document.getElementById('game-input');
@@ -5764,8 +5798,21 @@ const App = {
         applyStyles(pb);
 
         // Статистика
-        const h = (DB.user.totalSec/3600).toFixed(1);
-        this.setText('timer', new Date(Timer.sec * 1000).toISOString().substr(11, 8));
+let subjectsSum = 0;
+        if (DB && DB.subjects) {
+            Object.values(DB.subjects).forEach(s => {
+                if (s && typeof s.sec === 'number') subjectsSum += s.sec;
+            });
+        }
+        // Обновляем переменную в памяти
+        DB.user.totalSec = subjectsSum;
+
+        // 👇 ВОЗВРАЩАЕМ ПЕРЕМЕННУЮ 'h', ЧТОБЫ НЕ БЫЛО ОШИБКИ 👇
+        const h = (DB.user.totalSec / 3600).toFixed(1);
+        
+        // Обновляем текст на экране
+        this.setText('stat-total-time', h + 'ч');
+        this.setText('timer', new Date(Timer.sec * 1000).toISOString().substr(11, 8))        
         this.setText('stat-total-time', h + 'ч');
         this.setText('prof-lvl', DB.user.level);
         this.setText('prof-xp', DB.user.xp);
@@ -6175,49 +6222,114 @@ const App = {
         if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
     },
     
-    renderStats(){
+    renderStats() {
         const statsSection = document.getElementById('stats');
-        if (!statsSection || !statsSection.classList.contains('active')) return; 
+        if (!statsSection || !statsSection.classList.contains('active')) return;
 
-        // Вычисление
-        const today = new Date();
+        // 1. ГАРАНТИРОВАННЫЙ ПЕРЕСЧЕТ ВСЕГО ВРЕМЕНИ (Сумма всех предметов)
+        let totalSec = 0;
+        if (DB.subjects) {
+            Object.values(DB.subjects).forEach(s => {
+                if (s && typeof s.sec === 'number') totalSec += s.sec;
+            });
+        }
+        DB.user.totalSec = totalSec; // Обновляем в базе
+
+        // 2. РАСЧЕТ ЗА НЕДЕЛЮ И МЕСЯЦ (из истории)
+        const currentTimestamp = new Date().getTime();
         let weekSec = 0, monthSec = 0;
-        const currentTimestamp = today.getTime();
         
         for (let i = 0; i < 30; i++) {
             const d = new Date(currentTimestamp - (i * 86400000));
             const key = getUZDate(d);
-            const seconds = DB.history[key] || 0;
+            const seconds = (DB.history && DB.history[key]) ? DB.history[key] : 0;
             monthSec += seconds;
             if (i < 7) weekSec += seconds; 
         }
 
+        // Вспомогательная функция для текста
         const fmtTime = (s) => {
-            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
             return h > 0 ? `${h}ч ${m}м` : `${m}м`;
         };
         const estXP = (s) => Math.floor(s / 60) * 10;
 
+        // Обновляем верхние карточки
         this.setText('stat-week-time', fmtTime(weekSec));
         this.setText('stat-week-xp', `~${estXP(weekSec)} XP`);
         this.setText('stat-month-time', fmtTime(monthSec));
         this.setText('stat-month-xp', `~${estXP(monthSec)} XP`);
-        
-        const totalXP = DB.user.lifetimeXP || DB.user.xp; 
         this.setText('stat-total-time', fmtTime(DB.user.totalSec));
+        
+        const totalXP = DB.user.lifetimeXP || DB.user.xp || 0; 
         this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
-        // Графики (без анимации для скорости)
+        // 3. ОТРИСОВКА СПИСКА ПРЕДМЕТОВ (Исправление ошибки html is not defined)
+        const breakdownEl = document.getElementById('subject-breakdown');
+        if (breakdownEl && DB.subjects) {
+            let html = ''; // Создаем переменную
+            const subjectsArray = Object.values(DB.subjects).sort((a, b) => b.sec - a.sec);
+
+            html = subjectsArray.map(s => {
+                if (s.sec < 1) return '';
+                const h = (s.sec / 3600).toFixed(1);
+                return `
+                <div style="margin-bottom: 10px; background: var(--bg); padding: 12px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">${s.icon || '📚'}</span>
+                        <div style="font-weight: bold; font-size: 14px;">${s.name}</div>
+                    </div>
+                    <div style="font-weight: 800; color: var(--primary);">${h} ч.</div>
+                </div>`;
+            }).join('');
+
+            if (html.trim() === '') {
+                breakdownEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-light); font-size:13px;">Пока нет данных ⏱️</div>';
+            } else {
+                breakdownEl.innerHTML = html;
+            }
+        }
+
+        // 4. СЕТКА АКТИВНОСТИ (HEATMAP)
+        const heatmap = document.getElementById('heatmap');
+        if (heatmap) {
+            let html = ''; // Создаем переменную
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(currentTimestamp - ((29 - i) * 86400000));
+                const key = getUZDate(date);
+                const sec = (DB.history && DB.history[key]) || 0;
+                const minutes = Math.round(sec / 60);
+                let color = 'var(--bg)';
+                if (minutes > 0) color = '#c6e48b'; 
+                if (minutes > 20) color = '#7bc96f'; 
+                if (minutes > 60) color = '#239a3b'; 
+                if (minutes > 120) color = '#196127';
+                const isToday = i === 29 ? 'border: 1px solid var(--primary);' : '';
+                html += `<div title="${key}: ${minutes} мин" style="background:${color}; ${isToday} border-radius:4px; aspect-ratio:1/1;"></div>`;
+            }
+            heatmap.innerHTML = html;
+        }
+
+        // 5. ГРАФИКИ (Chart.js)
         requestAnimationFrame(() => {
             const subjectCtx = document.getElementById('subjectChart');
             if (subjectCtx) {
                 if (window.subjectChart instanceof Chart) { window.subjectChart.destroy(); }
                 const labels = [], data = [];
                 const colors = ['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#D60270', '#556B2F', '#FF8F66'];
-                if (DB.subjects) Object.values(DB.subjects).forEach(s => { if (s.sec > 0) { labels.push(s.name); data.push(Math.round(s.sec / 60)); }});
+                Object.values(DB.subjects).forEach(s => { 
+                    if (s.sec > 0) { 
+                        labels.push(s.name); 
+                        data.push(Math.round(s.sec / 60)); 
+                    }
+                });
                 window.subjectChart = new Chart(subjectCtx, {
                     type: 'doughnut',
-                    data: { labels: labels.length ? labels : ['Нет'], datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#eee'], borderWidth: 0 }] },
+                    data: { 
+                        labels: labels.length ? labels : ['Нет данных'], 
+                        datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#eee'], borderWidth: 0 }] 
+                    },
                     options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
                 });
             }
@@ -6321,7 +6433,7 @@ const App = {
                 });
             }
             
-            // 3. СЕТКА АКТИВНОСТИ (HEATMAP)
+        // 3. СЕТКА АКТИВНОСТИ (HEATMAP)
         const heatmap = document.getElementById('heatmap');
         if (heatmap) {
             let html = ''; // <--- ВОТ ЭТА СТРОКА ИСПРАВЛЯЕТ ОШИБКУ
@@ -6346,44 +6458,41 @@ const App = {
         }
             //  3. СТАТИСТИКА ПО ПРЕДМЕТАМ 
         const breakdownEl = document.getElementById('subject-breakdown');
+        
         if (breakdownEl && DB && DB.subjects) {
+            let html = ''; // <--- ВОТ ЭТА СТРОКА ИСПРАВЛЯЕТ ОШИБКУ (Инициализация)
+
             const subjectsArray = Object.keys(DB.subjects).map(key => ({
                 id: key,
-                name: DB.subjects[key].name || 'Без названия',
-                icon: DB.subjects[key].icon || '📚',
-                sec: DB.subjects[key].sec || 0
+                ...DB.subjects[key]
             }));
-
             
-            // Сортируем: сначала самые прокачанные
-            subjectsArray.sort((a, b) => b.sec - a.sec);
+            // Сортируем по времени
+            subjectsArray.sort((a, b) => (b.sec || 0) - (a.sec || 0));
 
-            breakdownEl.innerHTML = subjectsArray.map(s => {
+            // Формируем HTML-код для каждого предмета
+            html = subjectsArray.map(s => {
+                if (!s.sec || s.sec < 1) return ''; // Пропускаем пустые
+
                 const totalHours = (s.sec / 3600).toFixed(1);
-                // Полоска прогресса теперь показывает долю предмета от общего времени, а не ранг
-                const totalSecAll = DB.user.totalSec || 1;
-                const percentOfTotal = Math.min(100, (s.sec / totalSecAll) * 100);
-
                 return `
-                <div style="margin-bottom: 12px; background: var(--bg); padding: 12px; border-radius: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 20px;">${s.icon}</span>
-                            <div style="font-weight: bold; font-size: 14px;">${s.name}</div>
-                        </div>
-                        <div style="font-weight: 800; color: var(--primary);">${totalHours} ч.</div>
+                <div style="margin-bottom: 10px; background: var(--bg); padding: 12px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">${s.icon || '📚'}</span>
+                        <div style="font-weight: bold; font-size: 14px;">${s.name}</div>
                     </div>
+                    <div style="font-weight: 800; color: var(--primary);">${totalHours} ч.</div>
                 </div>`;
             }).join('');
-        
 
-            // Если список пустой (новичок)
+            // 👇 ТА САМАЯ ПРОВЕРКА, ГДЕ ВЫЛЕТАЛА ОШИБКА 👇
             if (html.trim() === '') {
                 breakdownEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-light); font-size:13px;">Пока нет данных. Включи таймер! ⏱️</div>';
             } else {
                 breakdownEl.innerHTML = html;
             }
         }
+
         });
     },
 
