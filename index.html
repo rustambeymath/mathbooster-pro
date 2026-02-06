@@ -1817,8 +1817,8 @@ window.addEventListener('load', () => {
             </div>
             <!-- Карточка: Статистика по предметам -->
             <div class="card" style="margin-top: 20px;">
-            <h3>🎓 Твоё Мастерство</h3>
-            <p style="font-size:11px; color:var(--text-light); margin-bottom:15px;">За каждый час занятий предметом ты получаешь +1 Ранг и бонусные 10 монет.</p>            <div id="subject-breakdown" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+            <h3>🎓 Твои предметы</h3>
+                <p style="font-size:11px; color:var(--text-light); margin-bottom:15px;">Общее время, потраченное на каждый предмет.</p>
                     <!-- Сюда JS вставит список -->
                     <div style="text-align:center; color:var(--text-light); font-size:12px;">Загрузка...</div>
                 </div>
@@ -2843,17 +2843,21 @@ const LEAGUES = [
 
 // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
 const getUZDate = (dateObj = new Date()) => {
-    // Прибавляем смещение сервера к текущему времени
-    const correctedTime = dateObj.getTime() + (TimeGuard.serverOffset || 0);
-    const correctedDate = new Date(correctedTime);
+    // 1. Проверяем: есть ли у нас серверный сдвиг?
+    // Если разница со временем телефона более 5 минут, используем только скорректированное время
+    let timeToUse = dateObj.getTime();
+    
+    if (window.TimeGuard && Math.abs(TimeGuard.serverOffset) > 300000) {
+        timeToUse = dateObj.getTime() + TimeGuard.serverOffset;
+    }
 
-    // Получаем время UTC
+    const correctedDate = new Date(timeToUse);
     const utc = correctedDate.getTime() + (correctedDate.getTimezoneOffset() * 60000);
-    // Добавляем 5 часов (Ташкент)
-    const uzTime = new Date(utc + (3600000 * 5));
+    const uzTime = new Date(utc + (3600000 * 5)); // Ташкент +5
     
     return uzTime.toISOString().slice(0, 10);
 };
+
 
 
 
@@ -2910,15 +2914,49 @@ const Data = {
 
     load(userId) { 
         this.currentKey = 'MathData_' + userId; 
-        
-        // Грузим локально
         const raw = localStorage.getItem(this.currentKey); 
+        
         if (raw) {
             try {
-                // Присваиваем считанные данные глобальной переменной DB
+                // 1. Присваиваем данные
                 DB = JSON.parse(raw);
-                this.cleanSubjects();
 
+                // --- 🛡️ НАЧАЛО БЛОКА НАКАЗАНИЯ ДЛЯ ЧИТЕРОВ ---
+                const now = Date.now();
+                // Если текущее время телефона МЕНЬШЕ времени последнего сохранения (разница более 2 мин)
+                if (DB.user && DB.user.lastSaveTime && now < (DB.user.lastSaveTime - 120000)) {
+                    
+                    // Обнуляем данные в памяти телефона
+                    DB.user.coins = 0;
+                    DB.user.xp = 0;
+                    DB.user.level = 1;
+                    DB.user.totalSec = 0;
+                    DB.user.lastSaveTime = now;
+
+                    // Пытаемся мгновенно обнулить данные в Firebase
+                    if (window.DB_Online && Auth.currentUser) {
+                        const dbRef = window.DB_Online;
+                        const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
+                        dbRef.updateDoc(docRef, { 
+                            "user.coins": 0, "user.xp": 0, "user.level": 1, "user.totalSec": 0, "user.lastSaveTime": now 
+                        }).catch(e => console.log("Связь потеряна, но локальные данные стерты."));
+                    }
+
+                    // Блокируем экран пользователю
+                    document.body.innerHTML = `
+                        <div style="background:#000; color:red; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; font-family:sans-serif;">
+                            <h1 style="font-size:50px;">⛔️ БАН</h1>
+                            <h2 style="color:white;">Обнаружена накрутка времени</h2>
+                            <p style="font-size:18px; margin-top:20px;">За попытку обмана системы (перевод часов назад) <br> <b style="color:red;">ВАШИ МОНЕТЫ И ОПЫТ АННУЛИРОВАНЫ.</b></p>
+                            <p style="opacity:0.5; font-size:12px; margin-top:30px;">Установите реальное время и перезапустите приложение.</p>
+                            <button onclick="location.reload()" style="background:red; color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:bold; margin-top:20px; cursor:pointer;">Я ВСЁ ПОНЯЛ</button>
+                        </div>
+                    `;
+                    return; // Полная остановка загрузки кода
+                }
+                // --- КОНЕЦ БЛОКА НАКАЗАНИЯ ---
+
+                this.cleanSubjects();
                 console.log("✅ Данные загружены из памяти телефона");
             } catch(e) {
                 console.error("Ошибка парсинга JSON:", e);
@@ -2938,59 +2976,47 @@ const Data = {
         if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
         if (!DB.user.activeBattles) DB.user.activeBattles = [];
         if (!DB.achievements || DB.achievements.length < 5) DB.achievements = GenAch();
-        if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0; // Время истечения (timestamp)
-        if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = ""; // Дата последней покупки
-        // --- ИСПРАВЛЕНИЕ СТАТИСТИКИ ---
+        if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0;
+        if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = "";
+        
         let historyTotal = 0;
         if (DB.history) {
-            // Складываем все секунды из каждого дня в истории
             Object.values(DB.history).forEach(sec => {
                 if (typeof sec === 'number') historyTotal += sec;
             });
         }
         if (DB.user.isLogoRewardClaimed === undefined) DB.user.isLogoRewardClaimed = false;
         if (DB.user.isVersionRewardClaimed === undefined) DB.user.isVersionRewardClaimed = false;
-        // Если общее время в профиле меньше, чем сумма по дням в истории — исправляем
+        
         if (historyTotal > (DB.user.totalSec || 0)) {
             console.log("🛠️ Статистика синхронизирована:", historyTotal);
             DB.user.totalSec = historyTotal;
         }
-        // Инвентарь (добавляем все предметы)
+
         if (!DB.user.inventory) {
             DB.user.inventory = { shield: 0, booster: 0 };
         } else {
             if (DB.user.inventory.shield === undefined) DB.user.inventory.shield = 0;
             if (DB.user.inventory.booster === undefined) DB.user.inventory.booster = 0;
         }
-        // Вставь это в блок лечения данных в Data.load
         
         if (DB.user.isMotivationClaimed === undefined) {
             DB.user.isMotivationClaimed = false; 
         }
-        //  блок лечения данных в Data.load
+
         if (!DB.settings) {
-            DB.settings = { 
-                sfx: true, 
-                notifications: false, 
-                notifyTime: "19:00" 
-            };
+            DB.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
         }
         if (DB.user.coins === undefined) DB.user.coins = 0;
         if (!DB.user.lastSaveTime) DB.user.lastSaveTime = 0;
 
-        // Квесты (ВАЖНО: добавляем targets, иначе будет ошибка!)
         if (!DB.user.dailyQuests || !DB.user.dailyQuests.targets) {
             DB.user.dailyQuests = {
-                date: "",
-                studyMin: 0,
-                mathSolved: 0,
-                pvpDone: 0,
-                claimed: [],
+                date: "", studyMin: 0, mathSolved: 0, pvpDone: 0, claimed: [],
                 targets: { studyMin: 30, mathSolved: 20, pvpDone: 1 }
             };
         }
 
-        // Новая статистика для медалей и лимитов
         if (DB.user.pvpWins === undefined) DB.user.pvpWins = 0;
         if (DB.user.pvpLosses === undefined) DB.user.pvpLosses = 0;
         if (DB.user.lifetimeMathSolved === undefined) DB.user.lifetimeMathSolved = 0;
@@ -2998,13 +3024,11 @@ const Data = {
         if (DB.user.lifetimeStrictSec === undefined) DB.user.lifetimeStrictSec = 0;
         if (DB.user.lifetimeXP === undefined) DB.user.lifetimeXP = DB.user.xp || 0;
         
-        // Цели и отчеты
         if (!DB.user.monthlyGoal) DB.user.monthlyGoal = 40;
         if (!DB.user.lastWeeklyReportDate) DB.user.lastWeeklyReportDate = ""; 
         if (!DB.user.lastSpinDate) DB.user.lastSpinDate = ""; 
         if (!DB.user.lastNotifyDate) DB.user.lastNotifyDate = "";
 
-        // Запускаем слушатель
         if(window.DB_Online) this.startListening(userId);
     },
 
@@ -3091,27 +3115,20 @@ const Data = {
         });
     },
     async save() {
-        if (!DB || !Auth.currentUser) return;
-
-        // --- ОБНОВЛЕННЫЙ АНТИ-ЧИТ (Безопасен для донатеров) ---
-        const totalHours = (DB.user.totalSec || 0) / 3600;
+        // --- УСИЛЕННЫЙ АНТИ-ЧИТ ---
+        const totalMinutes = (DB.user.totalSec || 0) / 60;
         const currentLevel = DB.user.level || 1;
 
-        // Проверяем ТОЛЬКО уровень и время. 
-        // Невозможно достичь 10 уровня, имея 0 минут учебы.
-        // Но при этом мы не трогаем монеты (их можно купить или выиграть).
-        if (currentLevel > 5 && totalHours < (currentLevel * 0.05)) { 
-            // 0.05 - это примерно 3 минуты на уровень. Это очень лояльный порог.
-            console.error("🚨 Аномальный уровень замечен. Проверка...");
-            
-            // Вместо жесткого бана, просто обнуляем XP до разумного предела
-            if (totalHours < 0.1) { // Если времени почти 0, а лвл высокий
-                DB.user.level = 1;
-                DB.user.xp = 0;
-                App.toast("⚠️ Прогресс уровня скорректирован");
-            }
+        // Математика: Для 2-го уровня нужно 500 XP. 
+        // 500 XP = 50 минут чистой учебы.
+        // Значит, уровень не может быть больше, чем (минуты / 20).
+        if (currentLevel > 1 && totalMinutes < (currentLevel * 10)) {
+            console.error("🚨 Накрутка уровня! Сброс прогресса.");
+            DB.user.level = 1;
+            DB.user.xp = 0;
+            DB.user.totalSec = 0;
+            App.toast("⛔️ Аномальный прогресс сброшен");
         }
-        // -----------------------------------------------------
 
         DB.user.lastSaveTime = Date.now();
         DB.user.lastSeenTime = Date.now();
@@ -3268,11 +3285,18 @@ const DailySys = {
         SoundSys.play('win');
     },
 
-    claim() {
-        // Проверка 1: Если интернет-время не прошло проверку
-        if (!TimeGuard.isTimeValid) {
-            return alert("❌ ОШИБКА: На телефоне установлено неверное время. Синхронизируйте время в настройках телефона!");
+    async claim() {
+        // ПРИНУДИТЕЛЬНАЯ ПЕРЕПРОВЕРКА ВРЕМЕНИ ЧЕРЕЗ ИНТЕРНЕТ
+        if (window.TimeGuard) {
+            await TimeGuard.verify();
+            if (!TimeGuard.isTimeValid) {
+                alert("❌ ОШИБКА БЕЗОПАСНОСТИ: \nНа вашем устройстве установлено неверное время. Кнопка заблокирована.");
+                return;
+            }
         }
+
+
+        const today = getUZDate();
 
         // Проверка 2: Если нет интернета (offset = 0)
         // Мы можем разрешить или запретить выдачу без сети. 
@@ -3976,18 +4000,7 @@ const Timer = {
                     QuestSys.update('studyMin', 1);
                 }
 
-                // МАСТЕРСТВО ПРЕДМЕТА (Ранги)
-                const sub = DB.subjects[DB.user.subject];
-                const oldMLevel = Math.floor((sub.sec - diff) / 3600);
-                const newMLevel = Math.floor(sub.sec / 3600);
-                if (newMLevel > oldMLevel && newMLevel > 0) {
-                    DB.user.coins += 10;
-                    App.toast(`🎖️ Мастерство ${sub.name}: Ранг ${newMLevel}! (+10 💰)`);
-                    SoundSys.play('level_up');
-                    FX.confetti();
-                    Data.save();
-                    App.updateUI();
-                }
+                
 
                 if (this.sessionDuration >= this.maxSessionTime) { 
                     Notify.send("⏱️ Время вышло!", "Сессия завершена.");
@@ -5201,36 +5214,45 @@ const WheelSys = {
 };
 
 const TimeGuard = {
-    isTimeValid: true,
-    serverOffset: 0,
+    isTimeValid: false, // По умолчанию время НЕ валидно
+    serverTime: null,
 
     async verify() {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
-            const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { signal: controller.signal });
-            const data = await response.json();
-            clearTimeout(timeoutId);
-            
-            const serverTime = new Date(data.utc_datetime).getTime();
-            const localTime = Date.now();
-            
-            this.serverOffset = serverTime - localTime;
+        console.log("📡 Синхронизация с мировым временем...");
+        // Пробуем два разных сервера для надежности
+        const servers = [
+            'https://worldtimeapi.org/api/timezone/Etc/UTC',
+            'https://worldtimeapi.org/api/ip'
+        ];
 
-            // Если разница между сервером и телефоном больше 15 минут (900 000 мс)
-            if (Math.abs(this.serverOffset) > 900000) {
-                this.isTimeValid = false;
-                console.error("❌ Манипуляция временем обнаружена!");
-            } else {
-                this.isTimeValid = true;
-                console.log("✅ Время честное");
+        for (let url of servers) {
+            try {
+                const res = await fetch(url, { cache: "no-store" });
+                const data = await res.json();
+                const remoteTime = new Date(data.utc_datetime || data.datetime).getTime();
+                
+                const localTime = Date.now();
+                const offset = remoteTime - localTime;
+
+                // Если разница между телефоном и миром > 10 минут
+                if (Math.abs(offset) > 600000) {
+                    this.isTimeValid = false;
+                    console.error("🚨 Манипуляция временем! Разница: " + (offset/1000/60) + " мин.");
+                } else {
+                    this.isTimeValid = true;
+                    console.log("✅ Время подтверждено сервером");
+                }
+                return; // Выходим из цикла, если один сервер ответил
+            } catch (e) {
+                continue; // Пробуем следующий сервер
             }
-        } catch (e) {
-            console.log("🌐 Нет сети, доверяем локальному времени под честное слово.");
-            this.isTimeValid = true; 
         }
+        
+        // Если ни один сервер не ответил — время остается невалидным
+        this.isTimeValid = false;
     }
 };
+
 const SecretSys = {
     logoTaps: 0,
         versionClicks: 0, // Счетчик для кодов
@@ -6338,26 +6360,18 @@ const App = {
 
             breakdownEl.innerHTML = subjectsArray.map(s => {
                 const totalHours = (s.sec / 3600).toFixed(1);
-                const rank = Math.floor(s.sec / 3600);
-                const progress = Math.min(100, (s.sec % 3600) / 3600 * 100);
+                // Полоска прогресса теперь показывает долю предмета от общего времени, а не ранг
+                const totalSecAll = DB.user.totalSec || 1;
+                const percentOfTotal = Math.min(100, (s.sec / totalSecAll) * 100);
 
                 return `
-                <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="margin-bottom: 12px; background: var(--bg); padding: 12px; border-radius: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="font-size: 20px;">${s.icon}</span>
-                            <div>
-                                <div style="font-weight: bold; font-size: 14px;">${s.name}</div>
-                                <div style="font-size: 10px; color: var(--primary); font-weight: 800;">РАНГ: ${rank}</div>
-                            </div>
+                            <div style="font-weight: bold; font-size: 14px;">${s.name}</div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: 800; color: var(--text);">${totalHours} ч.</div>
-                        </div>
-                    </div>
-                    <!-- Полоска прогресса до следующего ранга -->
-                    <div style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden;">
-                        <div style="width: ${progress}%; height: 100%; background: var(--primary); transition: 1s;"></div>
+                        <div style="font-weight: 800; color: var(--primary);">${totalHours} ч.</div>
                     </div>
                 </div>`;
             }).join('');
@@ -6377,30 +6391,21 @@ const App = {
         const grid = document.getElementById('subjects-grid');
         if (!grid || !DB || !DB.subjects) return;
 
-        // Чистим мусор перед отрисовкой
         Data.cleanSubjects();
 
         const subjectsKeys = Object.keys(DB.subjects).sort((a, b) => {
-            const nameA = DB.subjects[a].name.toLowerCase();
-            const nameB = DB.subjects[b].name.toLowerCase();
-            return nameA.localeCompare(nameB);
+            return DB.subjects[a].name.localeCompare(DB.subjects[b].name);
         });
 
         grid.innerHTML = subjectsKeys.map(k => {
             const s = DB.subjects[k];
             const isActive = DB.user.subject === k;
             
-            // Расчет ранга для отображения
-            const rank = Math.floor((s.sec || 0) / 3600);
-            const progress = Math.min(100, ((s.sec || 0) % 3600) / 3600 * 100);
-
-            // Стиль карточки
-            let cardStyle = `padding:15px; text-align:center; cursor:pointer; transition:0.2s; border:2px solid transparent; position:relative;`;
+            let cardStyle = `padding:15px; text-align:center; cursor:pointer; transition:0.2s; border:2px solid transparent;`;
             
             if (isActive) {
-                cardStyle += 'border-color:var(--primary); background:rgba(108,99,255,0.05); transform:scale(1.02);';
+                cardStyle += 'border-color:var(--primary); background:rgba(108,99,255,0.05);';
             } else if (Timer.active) {
-                // Если таймер идет — блокируем остальные визуально
                 cardStyle += 'opacity: 0.3; cursor: not-allowed; filter: grayscale(1);';
             }
 
@@ -6408,10 +6413,6 @@ const App = {
             <div class="card" style="${cardStyle}" onclick="${Timer.active ? '' : `App.selectSubject('${k}')`}">
                 <div style="font-size:24px">${s.icon}</div>
                 <div style="font-weight:bold; font-size:12px; margin-top:5px;">${s.name}</div>
-                <div style="font-size:9px; color:var(--primary); font-weight:900; margin-top:3px;">РАНГ ${rank}</div>
-                <div style="height:3px; background:rgba(0,0,0,0.05); border-radius:2px; margin-top:5px; width:100%; overflow:hidden;">
-                    <div style="height:100%; width:${progress}%; background:var(--primary);"></div>
-                </div>
             </div>`;
         }).join('');
     },
