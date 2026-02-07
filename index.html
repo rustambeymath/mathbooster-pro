@@ -5180,47 +5180,30 @@
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
-// --- ЯДЕРНОЕ ВОССТАНОВЛЕНИЕ ВРЕМЕНИ (V2) ---
-if (DB && DB.user) {
-    let totalFromHistory = 0;
-    let totalFromSessions = 0;
+// --- ВОССТАНОВЛЕНИЕ ВРЕМЕНИ ИЗ ЖУРНАЛА (SESSIONS) ---
+if (DB && DB.sessions && DB.sessions.length > 0) {
+    let sessionSum = 0;
 
-    // 1. Считаем время из истории (Heatmap)
-    if (DB.history) {
-        Object.values(DB.history).forEach(sec => {
-            if (typeof sec === 'number') totalFromHistory += sec;
-        });
-    }
+    // Считаем сумму секунд только из Журнала занятий
+    DB.sessions.forEach(session => {
+        if (session.sec && typeof session.sec === 'number') {
+            sessionSum += session.sec;
+        }
+    });
 
-    // 2. Считаем время из журнала (Sessions)
-    if (DB.sessions && DB.sessions.length > 0) {
-        DB.sessions.forEach(s => {
-            if (s.sec) totalFromSessions += s.sec;
-        });
-    }
-
-    // Выбираем максимальное значение из двух источников
-    let finalRecoveredTime = Math.max(totalFromHistory, totalFromSessions);
-
-    // 3. Если в профиле 0, а в истории что-то есть — чиним!
-    if ((!DB.user.totalSec || DB.user.totalSec === 0) && finalRecoveredTime > 0) {
-        DB.user.totalSec = finalRecoveredTime;
+    // Если в Журнале времени больше, чем сейчас на счетчике — исправляем
+    if (sessionSum > (DB.user.totalSec || 0)) {
+        DB.user.totalSec = sessionSum;
         
-        // Сразу сохраняем и в локалку, и в облако
+        // Сохраняем результат
         localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+        Data.save(); 
         
-        // Принудительно обновляем экран
+        // Обновляем цифры на экране
         App.updateUI(); 
         
-        // Отправляем в Firebase
-        if (window.DB_Online && Auth.currentUser) {
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-            window.DB_Online.setDoc(docRef, DB, { merge: true }).then(() => {
-                console.log("✅ Время восстановлено в облаке!");
-            });
-        }
-        
-        App.toast("💎 Твоё время (" + Math.floor(finalRecoveredTime/3600) + "ч) восстановлено!");
+        console.log("✅ Время восстановлено из Журнала: " + sessionSum + " сек.");
+        App.toast("✅ Время восстановлено из Журнала занятий!");
     }
 }
             setTimeout(() => {
@@ -5339,10 +5322,8 @@ if (DB && DB.user) {
             }
         },
         updateUI() {
-    if (!DB || !DB.user || !Auth.currentUser) return;
-
-            
-            
+            if (!DB || !DB.user || !Auth.currentUser) return;
+  
             // Оптимизированная смена классов
             const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
             if (document.body.className !== newClass) document.body.className = newClass;
@@ -5477,8 +5458,8 @@ if (DB && DB.user) {
                     if (s && typeof s.sec === 'number') subjectsSum += s.sec;
                 });
             }
-            // Если сумма по предметам больше 0, берем её. 
-            // Если по предметам 0, но в totalSec уже есть восстановленное время — не трогаем его!
+            // Исправлено: обновляем totalSec только если сумма предметов БОЛЬШЕ текущего времени.
+            // Это не даст обнулить восстановленное из Журнала время.
             if (subjectsSum > (DB.user.totalSec || 0)) {
                 DB.user.totalSec = subjectsSum;
             }
