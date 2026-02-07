@@ -3035,6 +3035,13 @@
 
                         if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
                             DB = cloud;
+                            if (DB.sessions && DB.sessions.length > 0) {
+                            let sSum = 0;
+                            DB.sessions.forEach(s => { if(s.sec) sSum += s.sec; });
+                            if (sSum > (DB.user.totalSec || 0)) {
+                                DB.user.totalSec = sSum;
+                            }
+                        }
                             localStorage.setItem(this.currentKey, JSON.stringify(DB));
                             App.updateUI();
                         }
@@ -3960,25 +3967,25 @@
 
             // 2. Сохранение прогресса (только если DB на месте)
             if (this.sec > 2 && DB && DB.user) {
-                const k = getUZDate(); 
-                if (!DB.history) DB.history = {};
-                DB.history[k] = (DB.history[k] || 0) + this.sec; 
-                
-                const currentSubName = (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) 
-                                        ? DB.subjects[DB.user.subject].name : 'Учеба';
+    const currentSubName = (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) 
+                            ? DB.subjects[DB.user.subject].name : 'Учеба';
 
-                const log = { 
-                    date: new Date().toISOString(), 
-                    subject: currentSubName, 
-                    sec: this.sec, 
-                    coins: this.sessionCoins || 0
-                }; 
-                if (!DB.sessions) DB.sessions = [];
-                DB.sessions.unshift(log); 
-                if (DB.sessions.length > 50) DB.sessions.pop(); 
-                
-                Data.save();
-            }
+    const log = { 
+        date: new Date().toISOString(), 
+        subject: currentSubName, 
+        sec: this.sec, 
+        coins: this.sessionCoins || 0
+    }; 
+    
+    if (!DB.sessions) DB.sessions = [];
+    DB.sessions.unshift(log); // Добавляем в начало журнала
+    if (DB.sessions.length > 50) DB.sessions.pop(); 
+    
+    // СРАЗУ ОБНОВЛЯЕМ ОБЩЕЕ ВРЕМЯ
+    DB.user.totalSec = (DB.user.totalSec || 0) + this.sec;
+    
+    Data.save();
+}
 
             // 3. БЕЗОПАСНОЕ ОБНОВЛЕНИЕ UI (проверяем каждый элемент)
             const timerEl = document.getElementById('timer');
@@ -5232,7 +5239,20 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             quoteEl.innerText = `"${randomQuote}"`;
             }
             WeeklyReportSys.check();
+            // Авто-починка при каждом входе
+setTimeout(() => {
+    let finalSec = 0;
+    if (DB.sessions) DB.sessions.forEach(s => { finalSec += (Number(s.sec) || 0); });
+    
+    if (finalSec > (DB.user.totalSec || 0)) {
+        DB.user.totalSec = finalSec;
+        Data.save();
+        App.updateUI();
+        console.log("🛠️ Время принудительно восстановлено из сессий: " + finalSec);
+    }
+}, 2000);
             },
+
         copyId() {
             if (Auth.currentUser && Auth.currentUser.id) {
                 navigator.clipboard.writeText(Auth.currentUser.id)
@@ -5452,18 +5472,22 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             applyStyles(pb);
 
             // Статистика
-        let subjectsSum = 0;
-            if (DB && DB.subjects) {
-                Object.values(DB.subjects).forEach(s => {
-                    if (s && typeof s.sec === 'number') subjectsSum += s.sec;
-                });
-            }
-            // Исправлено: обновляем totalSec только если сумма предметов БОЛЬШЕ текущего времени.
-            // Это не даст обнулить восстановленное из Журнала время.
-            if (subjectsSum > (DB.user.totalSec || 0)) {
-                DB.user.totalSec = subjectsSum;
-            }
+        // НОВЫЙ БЕЗОПАСНЫЙ РАСЧЕТ:
+let sessionSum = 0;
+if (DB.sessions && DB.sessions.length > 0) {
+    DB.sessions.forEach(s => { if(s.sec) sessionSum += s.sec; });
+}
 
+// --- УМНЫЙ РАСЧЕТ ВРЕМЕНИ (FIX) ---
+let sSum = 0;
+if (DB.sessions) DB.sessions.forEach(s => { sSum += (Number(s.sec) || 0); });
+
+let subSum = 0;
+if (DB.subjects) Object.values(DB.subjects).forEach(s => { subSum += (Number(s.sec) || 0); });
+
+// Берем максимум из Журнала, Предметов или того, что уже есть
+DB.user.totalSec = Math.max(sSum, subSum, (DB.user.totalSec || 0));
+// ---------------------------------
             // 👇 ВОЗВРАЩАЕМ ПЕРЕМЕННУЮ 'h', ЧТОБЫ НЕ БЫЛО ОШИБКИ 👇
             const h = (DB.user.totalSec / 3600).toFixed(1);
             
@@ -5884,13 +5908,15 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             if (!statsSection || !statsSection.classList.contains('active')) return;
 
             // 1. ГАРАНТИРОВАННЫЙ ПЕРЕСЧЕТ ВСЕГО ВРЕМЕНИ (Сумма всех предметов)
-            let totalSec = 0;
-            if (DB.subjects) {
-                Object.values(DB.subjects).forEach(s => {
-                    if (s && typeof s.sec === 'number') totalSec += s.sec;
-                });
-            }
-            DB.user.totalSec = totalSec; // Обновляем в базе
+            // --- УМНЫЙ РАСЧЕТ ДЛЯ СТАТИСТИКИ ---
+let sSumStats = 0;
+if (DB.sessions) DB.sessions.forEach(s => { sSumStats += (Number(s.sec) || 0); });
+
+let subSumStats = 0;
+if (DB.subjects) Object.values(DB.subjects).forEach(s => { subSumStats += (Number(s.sec) || 0); });
+
+DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
+// ----------------------------------
 
             // 2. РАСЧЕТ ЗА НЕДЕЛЮ И МЕСЯЦ (из истории)
             const currentTimestamp = new Date().getTime();
