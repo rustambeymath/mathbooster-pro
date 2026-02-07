@@ -3392,72 +3392,63 @@
     const Online = {
         async loadLeaderboard() {
         if (!window.DB_Online) {
-            App.toast("⚠️ Нет подключения к онлайн-базе");
+            App.toast("⚠️ Нет подключения");
             return;
         }
 
         const list = document.getElementById('leaderboard-list');
         const countEl = document.getElementById('total-players-count');
-        list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Загрузка...</div>';
+        list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">⏳ Загрузка рейтинга...</div>';
 
         try {
+            // 1. Уменьшаем лимит до 50 (этого достаточно для соревнований)
             const q = window.DB_Online.query(
                 window.DB_Online.collection(window.DB_Online.db, "users"),
-                window.DB_Online.orderBy("user.totalSec", "desc"),  // ← Сортировка по времени (секундам)
-                window.DB_Online.limit(100)
+                window.DB_Online.orderBy("user.totalSec", "desc"),
+                window.DB_Online.limit(100) 
             );
 
             const snap = await window.DB_Online.getDocs(q);
-            countEl.innerText = `Всего игроков в базе: ${snap.size}`;
+            if (countEl) countEl.innerText = `Игроков в сети: ${snap.size}`;
 
             if (snap.empty) {
-                list.innerHTML = '<div style="text-align:center; color:var(--text-light);">Топ пуст 😔</div>';
+                list.innerHTML = '<div style="text-align:center; color:gray;">Топ пока пуст</div>';
                 return;
             }
-                list.innerHTML = '';
-                let rank = 1;
+
+            // 2. Формируем весь список в одну строку (это в 10 раз быстрее, чем добавлять по одному)
+            let html = '';
+            let rank = 1;
+            const now = Date.now();
+
+            snap.forEach(doc => {
+                const data = doc.data();
+                const u = data.user || {};
                 
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    const u = data.user || {};
-                    if (!u.totalSec && u.totalSec !== 0) return;
+                const name = u.name || "Игрок";
+                const avatar = u.avatar || "😎";
+                const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
+                
+                // Проверка онлайна (5 минут)
+                const isOnline = (now - (u.lastActive || 0)) < 300000; 
+                const onlineBadge = isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:10;"></div>' : '';
 
-                    const name = u.name || "Игрок";
-                    const avatar = u.avatar || "😎";
-                    const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
-                    
-                    // 👇 ЛОГИКА ОНЛАЙНА 👇
-                    const now = Date.now();
-                    const lastActive = u.lastActive || 0;
-                    // Если активность была менее 5 минут (300 000 мс) назад
-                    const isOnline = (now - lastActive) < 300000; 
-                    
-                    const onlineBadge = isOnline ? `
-                        <div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:10; box-shadow:0 0 5px rgba(0,210,106,0.5);"></div>
-                    ` : '';
-                    // 👆 👆 👆 👆 👆 👆 👆
+                const hours = Math.floor((u.totalSec || 0) / 3600);
+                const minutes = Math.floor(((u.totalSec || 0) % 3600) / 60);
+                
+                const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
+                const itemStyle = isMe ? "border: 2px solid var(--primary); background: rgba(108, 99, 255, 0.05);" : "";
 
-                    const hours = Math.floor(u.totalSec / 3600);
-                    const minutes = Math.floor((u.totalSec % 3600) / 60);
-                    const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
-                    const bgStyle = isMe ? "border: 2px solid var(--primary); background: rgba(108, 99, 255, 0.05);" : "";
-
-                    const item = document.createElement('div');
-                    item.className = 'user-list-item';
-                    item.style.cssText = `justify-content: space-between; align-items: center; ${bgStyle}`;
-
-                    item.innerHTML = `
+                html += `
+                    <div class="user-list-item" style="justify-content: space-between; align-items: center; ${itemStyle}">
                         <div style="display:flex; align-items:center; gap:12px;">
                             <div style="font-weight:bold; width:25px; text-align:center; color:var(--text-light);">#${rank}</div>
-                            
-                            <!-- ОБЕРТКА АВАТАРА ДЛЯ ОНЛАЙН ТОЧКИ -->
                             <div style="position:relative; width:45px; height:45px;">
                                 <div class="${frameClass}" style="width:45px; height:45px; min-width:45px; font-size:24px; margin:0;">
                                     <div>${avatar}</div>
                                 </div>
-                                ${onlineBadge} <!-- Сюда вставится точка, если юзер онлайн -->
+                                ${onlineBadge}
                             </div>
-
                             <div>
                                 <b style="display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px;">
                                     ${u.isKing ? '👑 ' : (u.isVip ? '💎 ' : '')}${name}
@@ -3466,18 +3457,17 @@
                             </div>
                         </div>
                         <b style="color:var(--primary); font-size:13px;">${hours}ч ${minutes}м</b>
-                    `;
-                    list.appendChild(item);
-                    rank++;
-                });
+                    </div>`;
+                rank++;
+            });
 
-            App.toast("🏆 Топ по времени учёбы обновлён!");
+            list.innerHTML = html;
+
         } catch (e) {
-            console.error("Ошибка лидерборда:", e);
-            list.innerHTML = '<div style="text-align:center; color:red;">Ошибка загрузки 😔</div>';
-            App.toast("❌ Ошибка связи с сервером");
+            console.error("Leaderboard Error:", e);
+            list.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Ошибка загрузки. Проверьте интернет.</div>';
         }
-    }
+    },
     };
 
     /* ==========================================
@@ -3619,10 +3609,9 @@
         async createAccount() {
         const inputField = document.getElementById('reg-name');
         const name = inputField.value.trim();
-        
         if (!name) return App.toast('⚠️ Введите имя!');
-        
-        // 1. Создаем временный объект пользователя
+
+        // 1. Создаем объект для списка профилей
         const newUser = {
             id: 'u' + Date.now(),
             name: name,
@@ -3630,27 +3619,23 @@
             gender: this.selectedGender || 'male'
         };
 
-        // 2. Сохраняем его в список профилей на телефоне
+        // 2. Создаем структуру данных (DB) ПРЯМО ЗДЕСЬ
+        const newDB = JSON.parse(JSON.stringify(DefaultDB));
+        newDB.user.name = name;
+        newDB.user.avatar = newUser.avatar;
+        newDB.user.gender = newUser.gender;
+        newDB.achievements = GenAch();
+        newDB.user.id = newUser.id;
+
+        // 3. Сохраняем это в память телефона ДО входа
+        localStorage.setItem('MathData_' + newUser.id, JSON.stringify(newDB));
+
+        // 4. Добавляем в список пользователей
         this.users.push(newUser);
         localStorage.setItem('MathUsers', JSON.stringify(this.users));
 
-        // 3. ВАЖНО: Сразу назначаем его текущим, чтобы Data.save не ломался
-        Auth.currentUser = newUser;
-
-        // 4. Ждем входа (создания папок в базе)
+        // 5. Теперь входим. login увидит данные в localStorage и не поставит "Игрока"
         await this.login(newUser.id);
-
-        // 5. Теперь, когда вход завершен, ПРИНУДИТЕЛЬНО пишем имя поверх "Игрока"
-        if (DB && DB.user) {
-            DB.user.name = name;
-            DB.user.avatar = newUser.avatar;
-            DB.user.gender = newUser.gender;
-            // Сохраняем окончательно
-            await Data.save();
-        }
-
-        // 6. Обновляем экран
-        App.updateUI();
         
         setTimeout(() => {
             if (typeof Tutorial !== 'undefined') Tutorial.startFlow(); 
@@ -3672,44 +3657,40 @@
                 </div>`;
 
             try {
-                // 👇 ЦИКЛ ОЖИДАНИЯ БАЗЫ (до 5 секунд) 👇
-                let attempts = 0;
-                while (!window.DB_Online && attempts < 10) {
-                    console.log("⏳ База еще не готова, ждем 500мс...");
-                    await new Promise(res => setTimeout(res, 500)); // Ждем полсекунды
-                    attempts++;
-                }
+            let attempts = 0;
+            while (!window.DB_Online && attempts < 10) {
+                await new Promise(res => setTimeout(res, 500));
+                attempts++;
+            }
 
-                const dbRef = window.DB_Online; 
-                if (!dbRef) {
-                    throw new Error("Не удалось подключиться к серверу. Проверьте интернет.");
-                }
-                
-                const docRef = dbRef.doc(dbRef.db, "users", id);
-                const docSnap = await dbRef.getDoc(docRef);
+            const dbRef = window.DB_Online; 
+            const docRef = dbRef.doc(dbRef.db, "users", id);
+            const docSnap = await dbRef.getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    DB = docSnap.data();
-                    console.log("☁️ Профиль загружен из облака");
-                } else {
-                    console.log("🆕 Облачного профиля нет, создаем новый");
-                    Data.load(id); 
-                }
+            if (docSnap.exists()) {
+                // Если в облаке есть данные - берем их
+                DB = docSnap.data();
+            } else {
+                // ЕСЛИ В ОБЛАКЕ ПУСТО (новый юзер)
+                // Загружаем то, что мы только что подготовили в createAccount
+                Data.load(id); 
+                // И сразу отправляем это в облако, чтобы там больше не было пусто
+                await Data.save();
+            }
 
-                // Стандартный вход
-                this.currentUser = user; 
-                localStorage.setItem('LastUserId', id); 
-                document.getElementById('auth-screen').classList.add('hidden'); 
-                document.getElementById('app-container').style.display = 'block'; 
-                
-                App.initAfterLogin();
-                Data.startListening(id);
-                
-            } catch (e) {
-                console.error("Login Error:", e);
-                if(loginCard) loginCard.innerHTML = originalHTML;
-                this.renderUserList(); 
-                alert("❌ Ошибка: " + e.message);
+            this.currentUser = user; 
+            localStorage.setItem('LastUserId', id); 
+            document.getElementById('auth-screen').classList.add('hidden'); 
+            document.getElementById('app-container').style.display = 'block'; 
+            
+            App.initAfterLogin();
+            Data.startListening(id);
+            
+        } catch (e) {
+            console.error("Login Error:", e);
+            if(loginCard) loginCard.innerHTML = originalHTML;
+            this.renderUserList(); 
+            alert("❌ Ошибка входа");
             }
         },
 
@@ -5199,7 +5180,33 @@
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
+// --- БЛОК ВОССТАНОВЛЕНИЯ ВРЕМЕНИ ---
+if (DB && DB.user && (DB.user.totalSec === 0 || !DB.user.totalSec)) {
+    let recoveredTime = 0;
+    
+    // 1. Пробуем восстановить из истории по дням
+    if (DB.history) {
+        for (let date in DB.history) {
+            recoveredTime += DB.history[date];
+        }
+    }
+    
+    // 2. Если история пуста, пробуем восстановить из списка сессий
+    if (recoveredTime === 0 && DB.sessions && DB.sessions.length > 0) {
+        DB.sessions.forEach(s => {
+            recoveredTime += s.sec;
+        });
+    }
 
+    // 3. Если что-то нашли — возвращаем игроку
+    if (recoveredTime > 0) {
+        DB.user.totalSec = recoveredTime;
+        Data.save(); // Сохраняем исправленное время в облако
+        console.log("✅ Время успешно восстановлено: " + recoveredTime + " сек.");
+        App.toast("💎 Твоё время было восстановлено!");
+    }
+}
+// ----------------------------------
             setTimeout(() => {
                 this.renderSubjects();
                 SubjectSys.render();
