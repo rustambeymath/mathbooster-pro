@@ -5180,33 +5180,49 @@
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
-// --- БЛОК ВОССТАНОВЛЕНИЯ ВРЕМЕНИ ---
-if (DB && DB.user && (DB.user.totalSec === 0 || !DB.user.totalSec)) {
-    let recoveredTime = 0;
-    
-    // 1. Пробуем восстановить из истории по дням
+// --- ЯДЕРНОЕ ВОССТАНОВЛЕНИЕ ВРЕМЕНИ (V2) ---
+if (DB && DB.user) {
+    let totalFromHistory = 0;
+    let totalFromSessions = 0;
+
+    // 1. Считаем время из истории (Heatmap)
     if (DB.history) {
-        for (let date in DB.history) {
-            recoveredTime += DB.history[date];
-        }
-    }
-    
-    // 2. Если история пуста, пробуем восстановить из списка сессий
-    if (recoveredTime === 0 && DB.sessions && DB.sessions.length > 0) {
-        DB.sessions.forEach(s => {
-            recoveredTime += s.sec;
+        Object.values(DB.history).forEach(sec => {
+            if (typeof sec === 'number') totalFromHistory += sec;
         });
     }
 
-    // 3. Если что-то нашли — возвращаем игроку
-    if (recoveredTime > 0) {
-        DB.user.totalSec = recoveredTime;
-        Data.save(); // Сохраняем исправленное время в облако
-        console.log("✅ Время успешно восстановлено: " + recoveredTime + " сек.");
-        App.toast("💎 Твоё время было восстановлено!");
+    // 2. Считаем время из журнала (Sessions)
+    if (DB.sessions && DB.sessions.length > 0) {
+        DB.sessions.forEach(s => {
+            if (s.sec) totalFromSessions += s.sec;
+        });
+    }
+
+    // Выбираем максимальное значение из двух источников
+    let finalRecoveredTime = Math.max(totalFromHistory, totalFromSessions);
+
+    // 3. Если в профиле 0, а в истории что-то есть — чиним!
+    if ((!DB.user.totalSec || DB.user.totalSec === 0) && finalRecoveredTime > 0) {
+        DB.user.totalSec = finalRecoveredTime;
+        
+        // Сразу сохраняем и в локалку, и в облако
+        localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+        
+        // Принудительно обновляем экран
+        App.updateUI(); 
+        
+        // Отправляем в Firebase
+        if (window.DB_Online && Auth.currentUser) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            window.DB_Online.setDoc(docRef, DB, { merge: true }).then(() => {
+                console.log("✅ Время восстановлено в облаке!");
+            });
+        }
+        
+        App.toast("💎 Твоё время (" + Math.floor(finalRecoveredTime/3600) + "ч) восстановлено!");
     }
 }
-// ----------------------------------
             setTimeout(() => {
                 this.renderSubjects();
                 SubjectSys.render();
@@ -5455,14 +5471,17 @@ if (DB && DB.user && (DB.user.totalSec === 0 || !DB.user.totalSec)) {
             applyStyles(pb);
 
             // Статистика
-    let subjectsSum = 0;
+        let subjectsSum = 0;
             if (DB && DB.subjects) {
                 Object.values(DB.subjects).forEach(s => {
                     if (s && typeof s.sec === 'number') subjectsSum += s.sec;
                 });
             }
-            // Обновляем переменную в памяти
-            DB.user.totalSec = subjectsSum;
+            // Если сумма по предметам больше 0, берем её. 
+            // Если по предметам 0, но в totalSec уже есть восстановленное время — не трогаем его!
+            if (subjectsSum > (DB.user.totalSec || 0)) {
+                DB.user.totalSec = subjectsSum;
+            }
 
             // 👇 ВОЗВРАЩАЕМ ПЕРЕМЕННУЮ 'h', ЧТОБЫ НЕ БЫЛО ОШИБКИ 👇
             const h = (DB.user.totalSec / 3600).toFixed(1);
