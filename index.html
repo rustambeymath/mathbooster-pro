@@ -97,7 +97,6 @@
     window.DB = { user: { coins: 0, level: 0 }, msg: "Nice try, hacker!" };
     window.Data = { save: () => console.log("Save blocked by security system 🛡️") };
 
-    console.log("%c🛡️ MathBooster Security Active", "color: green; font-weight: bold; font-size: 16px;");
         </script>
         
     <style>
@@ -1504,7 +1503,6 @@
                 <div class="card zen-target" style="text-align: center; position: relative;">
                     <!-- TOOLS -->
                     <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
-                        <button onclick="WheelSys.open()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Колесо удачи">🎡</button>
                         <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
                         <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
                         <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
@@ -1531,8 +1529,6 @@
                     </div>
 
                     
-                    <!-- SESSION GOAL -->
-                    <input type="text" id="session-goal" class="input-field" placeholder="🎯 Цель на сессию (опционально)..." style="text-align: center; font-size: 14px; padding: 10px;">
                     
                     <div class="zen-controls" style="position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
                         <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
@@ -2085,22 +2081,7 @@
             <h4 style="margin-top: 30px; margin-bottom: 10px;">Доступные для добавления</h4>
             <div id="available-subjects-list" class="subject-manage-grid"></div>
         </div>    
-        <div class="card" style="margin-bottom: 15px; border: 1px solid rgba(108, 99, 255, 0.2);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0; font-size: 16px;">☁️ Облачное облако</h3>
-            <div id="sync-status-dot" style="width: 10px; height: 10px; background: #00d26a; border-radius: 50%; box-shadow: 0 0 10px #00d26a;"></div>
-        </div>
         
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div id="last-sync-text" style="font-size: 12px; color: var(--text-light);">Последнее сохранение: только что</div>
-                <div style="font-size: 10px; color: var(--primary); font-weight: bold; margin-top: 2px;">Статус: Синхронизировано</div>
-            </div>
-            <button id="manual-sync-btn" onclick="App.manualSync()" class="btn btn-primary" style="width: auto; padding: 8px 15px; font-size: 12px;">
-                🔄 Обновить
-            </button>
-        </div>
-    </div>
         <!-- 🛡️ БЛОК БЕЗОПАСНОСТИ (NEW) -->
         <div class="card" style="border: 2px solid #FF4757; background: rgba(255, 71, 87, 0.05);">
             <h3 style="color: #FF4757; display: flex; align-items: center; gap: 10px;">
@@ -3092,7 +3073,7 @@
             if (this.lastSaveCall && now - this.lastSaveCall < 2000) return;
             this.lastSaveCall = now;
 
-            if (!DB || !Auth.currentUser) return;
+            if (!DB || !Auth.currentUser || !Auth.currentUser.id) return;
 
             // Пересчет времени
             let totalFromSubjects = 0;
@@ -3124,28 +3105,7 @@
         import(el) { const fr = new FileReader(); fr.onload = (e) => { try { DB = JSON.parse(e.target.result); this.save(); location.reload(); } catch(x) { alert("Ошибка файла"); } }; fr.readAsText(el.files[0]); }
     };
 
-    const Sync = {
-        autoSync: false,
-
-        init() {
-            const saved = localStorage.getItem('autoSync');
-            if (saved === 'true') {
-                this.autoSync = true;
-                document.getElementById('sync-status').innerText = 'Вкл';
-            }
-        },
-
-        toggleAuto() {
-            this.autoSync = !this.autoSync;
-            localStorage.setItem('autoSync', this.autoSync);
-            document.getElementById('sync-status').innerText = this.autoSync ? 'Вкл' : 'Выкл';
-            App.toast(this.autoSync ? "☁️ Автосинхра включена" : "☁️ Автосинхра выключена");
-            
-            if (this.autoSync && window.DB_Online && Auth.currentUser) {
-                Data.save(); // сразу синхронизируем
-            }
-        }
-    };
+    
 
     // --- WHITEBOARD & CALC ---
     const Whiteboard = {
@@ -3656,64 +3616,47 @@
             SoundSys.play('click'); 
         },
 
-        createAccount() {
-            // 1. ПРОВЕРКА ЛИМИТА (Максимум 3 аккаунта)
-            const MAX_ACCOUNTS = 2;
-            
-            if (this.users.length >= MAX_ACCOUNTS) {
-                App.toast(`⛔ Достигнут лимит: ${MAX_ACCOUNTS} профиля!`);
-                alert(`На этом устройстве уже создано ${MAX_ACCOUNTS} профиля.\n\nЧтобы создать новый, удалите один из старых (нажмите на крестик ✕ в списке).`);
-                return; // Останавливаем создание
-            }
+        async createAccount() {
+        const inputField = document.getElementById('reg-name');
+        const name = inputField.value.trim();
+        
+        if (!name) return App.toast('⚠️ Введите имя!');
+        
+        // 1. Создаем временный объект пользователя
+        const newUser = {
+            id: 'u' + Date.now(),
+            name: name,
+            avatar: this.selectedAvatar || '😎',
+            gender: this.selectedGender || 'male'
+        };
 
-            const inputField = document.getElementById('reg-name');
-            const name = inputField.value.trim();
-            
-            // 2. Проверка на пустое имя
-            if (!name) return App.toast('⚠️ Введите имя!');
-            // 👇 3. ЗАПРЕТ ЭМОДЗИ И СИМВОЛОВ 👇
-            // Разрешаем: a-z, А-Я, 0-9, пробел, точка, тире, нижнее подчеркивание
-            const validChars = /^[a-zA-Z0-9а-яА-ЯёЁ\s._-]+$/;
-            
-            if (!validChars.test(name)) {
-                return alert("⛔️ Эмодзи и спецсимволы запрещены!\nИспользуйте только буквы и цифры.");
-            }
-            // 4. --- 🛡️ ЗАЩИТА ОТ МАТА ---
-            if (!NameGuard.check(name)) {
-                alert("⛔️ Это имя запрещено политикой сообщества.\nПожалуйста, выберите вежливый никнейм.");
-                return;
-            }
-            // -------------------------
-            // 5. Проверка длины имени 
-            if (name.length < 2) return App.toast('⚠️ Имя слишком короткое');
-            // Удаляем лишние пробелы в начале и конце
-            const finalName = name.trim();
-            // 6. Создание пользователя
-            const user = {
-                id: 'u' + Date.now(),
-                name: name,
-                avatar: this.selectedAvatar,
-                gender: this.selectedGender
-            };
+        // 2. Сохраняем его в список профилей на телефоне
+        this.users.push(newUser);
+        localStorage.setItem('MathUsers', JSON.stringify(this.users));
 
-            this.users.push(user);
-            localStorage.setItem('MathUsers', JSON.stringify(this.users));
+        // 3. ВАЖНО: Сразу назначаем его текущим, чтобы Data.save не ломался
+        Auth.currentUser = newUser;
 
-            // Сразу сохраняем имя в облачную структуру
-            Data.load(user.id);
-            
-            if(DB && DB.user) {
-                DB.user.name = name;
-                DB.user.avatar = this.selectedAvatar;
-                Data.save();
-            }
-    this.login(user.id);
-            
-            // 🔥 ЗАПУСКАЕМ ЦЕПОЧКУ: СОГЛАШЕНИЕ -> ОБУЧЕНИЕ
-            setTimeout(() => {
-                Tutorial.startFlow(); 
-            }, 800);
-        },
+        // 4. Ждем входа (создания папок в базе)
+        await this.login(newUser.id);
+
+        // 5. Теперь, когда вход завершен, ПРИНУДИТЕЛЬНО пишем имя поверх "Игрока"
+        if (DB && DB.user) {
+            DB.user.name = name;
+            DB.user.avatar = newUser.avatar;
+            DB.user.gender = newUser.gender;
+            // Сохраняем окончательно
+            await Data.save();
+        }
+
+        // 6. Обновляем экран
+        App.updateUI();
+        
+        setTimeout(() => {
+            if (typeof Tutorial !== 'undefined') Tutorial.startFlow(); 
+        }, 800);
+    },
+
         async login(id) { 
             const user = this.users.find(u => u.id === id); 
             if (!user) return; 
@@ -5016,114 +4959,7 @@
         }
     };
 
-    const WheelSys = {
-        isSpinning: false,
-        prizes: [
-            { name: "50 💰", val: 50, type: "coins", color: "#6C63FF" },
-            { name: "10 💰", val: 10, type: "coins", color: "#FF7675" },
-            { name: "100 XP", val: 100, type: "xp", color: "#00d26a" },
-            { name: "🛡️ Щит", val: 1, type: "shield", color: "#FFD700" },
-            { name: "5 💰", val: 5, type: "coins", color: "#FF7675" },
-            { name: "⚡ Бустер", val: 1, type: "booster", color: "#00E0D0" },
-            { name: "20 💰", val: 20, type: "coins", color: "#6C63FF" },
-            { name: "💎 200 XP", val: 200, type: "xp", color: "#FFD700" }
-        ],
-
-        init() {
-            const canvas = document.getElementById('wheel-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const arc = Math.PI / (this.prizes.length / 2);
-
-            this.prizes.forEach((p, i) => {
-                const angle = i * arc;
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.moveTo(100, 100);
-                ctx.arc(100, 100, 100, angle, angle + arc, false);
-                ctx.fill();
-                
-                ctx.save();
-                ctx.fillStyle = "white";
-                ctx.shadowColor = "rgba(0,0,0,0.5)";
-                ctx.shadowBlur = 4;
-                
-                ctx.translate(100 + Math.cos(angle + arc / 2) * 70, 100 + Math.sin(angle + arc / 2) * 70);
-                ctx.rotate(angle + arc / 2 + Math.PI / 2);
-                ctx.font = "bold 12px Arial"; // Чуть крупнее
-                ctx.fillText(p.name, -ctx.measureText(p.name).width / 2, 0);
-                ctx.restore();
-            });
-        },
-
-        open() {
-            this.init();
-            const today = getUZDate();
-            const btn = document.getElementById('wheel-spin-btn');
-            
-            if (DB.user.lastSpinDate === today) {
-                btn.innerText = "💸 КРУТИТЬ (50 💰)";
-                // Вместо var(--text) используем акцентный цвет или оставляем primary с прозрачностью
-                btn.style.background = "#FF7675"; 
-                btn.style.color = "white";
-            } else {
-                btn.innerText = "🚀 КРУТИТЬ БЕСПЛАТНО";
-                btn.style.background = "var(--primary)";
-                btn.style.color = "white";
-            }
-            document.getElementById('wheel-modal').classList.add('show');
-        },
-
-        spin() {
-            if (!TimeGuard.isTimeValid) return alert("❌ Колесо заблокировано: Установите реальное время на телефоне!");
-
-            if (this.isSpinning) return;
-            const today = getUZDate();
-            const isPaid = DB.user.lastSpinDate === today;
-
-            if (isPaid) {
-                if (DB.user.coins < 50) return App.toast("Недостаточно монет!");
-                DB.user.coins -= 50;
-            }
-
-            this.isSpinning = true;
-            const canvas = document.getElementById('wheel-canvas');
-            const randDeg = 1800 + Math.floor(Math.random() * 360);
-            canvas.style.transform = `rotate(${randDeg}deg)`;
-
-            SoundSys.play('click');
-
-            setTimeout(() => {
-                this.isSpinning = false;
-                const actualDeg = randDeg % 360;
-                const prizeIndex = Math.floor((360 - actualDeg) / (360 / this.prizes.length)) % this.prizes.length;
-                const prize = this.prizes[prizeIndex];
-
-                this.givePrize(prize);
-                DB.user.lastSpinDate = today;
-                Data.save();
-                App.updateUI();
-                
-                // 👇 ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ КНОПКИ 👇
-                const btn = document.getElementById('wheel-spin-btn');
-                if (btn) {
-                    btn.innerText = "💸 КРУТИТЬ (50 💰)";
-                    btn.style.background = "#FF7675"; // Розовый цвет для платных круток
-                }
-            }, 4000);
-        },
-
-        givePrize(p) {
-            if (p.type === 'coins') DB.user.coins += p.val;
-            if (p.type === 'xp') App.addXP(p.val);
-            if (p.type === 'shield') DB.user.inventory.shield = (DB.user.inventory.shield || 0) + 1;
-            if (p.type === 'booster') DB.user.inventory.booster = (DB.user.inventory.booster || 0) + 1;
-
-            App.toast(`🎉 Выигрыш: ${p.name}`);
-            SoundSys.play('win');
-            FX.confetti();
-        }
-    };
+    
 
     const TimeGuard = {
         isTimeValid: false, // По умолчанию время НЕ валидно
@@ -5327,50 +5163,7 @@
         },
 
 
-        async manualSync() {
-            if (!window.DB_Online) return App.toast("❌ Нет доступа к Firebase!");
-            
-            const btn = document.getElementById('manual-sync-btn');
-            const statusText = document.querySelector('#last-sync-text').nextElementSibling;
-            const dot = document.getElementById('sync-status-dot');
-
-            // Визуальный эффект начала
-            btn.disabled = true;
-            btn.innerText = "⏳ Ждите...";
-            dot.style.background = "#FFD700"; // Желтый (процесс)
-            dot.style.boxShadow = "0 0 10px #FFD700";
-            statusText.innerText = "Статус: Загрузка...";
-
-            try {
-                // Принудительно вызываем сохранение
-                await Data.save();
-                
-                // Имитируем задержку для солидности (0.8 сек)
-                await new Promise(r => setTimeout(r, 800));
-
-                // Успех
-                const now = new Date();
-                const timeStr = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
-                
-                document.getElementById('last-sync-text').innerText = `Последнее сохранение: в ${timeStr}`;
-                statusText.innerText = "Статус: Успешно!";
-                statusText.style.color = "var(--success)";
-                dot.style.background = "#00d26a"; // Зеленый
-                dot.style.boxShadow = "0 0 10px #00d26a";
-                
-                App.toast("✅ Данные в облаке!");
-                SoundSys.play('success');
-            } catch (e) {
-                console.error(e);
-                statusText.innerText = "Статус: Ошибка сети";
-                statusText.style.color = "#FF4757";
-                dot.style.background = "#FF4757"; // Красный
-                App.toast("❌ Ошибка синхронизации");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "🔄 Обновить";
-            }
-        },
+        
         setText(id, text) {
             const el = document.getElementById(id);
             if (el) {
@@ -5523,7 +5316,9 @@
             }
         },
         updateUI() {
-            if(!DB) return;
+    if (!DB || !DB.user || !Auth.currentUser) return;
+
+            
             
             // Оптимизированная смена классов
             const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
@@ -6784,7 +6579,6 @@
         window.Timer = Timer;
         window.Trainer = Trainer;
         window.QuestSys = QuestSys;
-        window.WheelSys = WheelSys;
         window.DailySys = DailySys;
         window.Donation = Donation;
         window.Transfer = Transfer;
@@ -7543,21 +7337,7 @@
             <button class="btn btn-primary" style="background: #FFD700; color: #333; border: none;" onclick="document.getElementById('weekly-modal').classList.remove('show')">Погнали в новую неделю! ⚡</button>
         </div>
     </div>
-    <div id="wheel-modal" class="modal" style="z-index: 26000;">
-        <div class="modal-content" style="max-width: 350px; text-align: center;">
-            <h2 style="margin-bottom: 10px;">🎡 Колесо Фортуны</h2>
-            <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Испытай свою удачу сегодня!</p>
-            
-            <!-- Само Колесо -->
-            <div id="wheel-container" style="position: relative; width: 200px; height: 200px; margin: 0 auto 20px auto;">
-                <div id="wheel-pointer" style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 20px; height: 30px; background: #FF4757; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10;"></div>
-                <canvas id="wheel-canvas" width="200" height="200" style="width: 100%; height: 100%; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);"></canvas>
-            </div>
-
-            <button id="wheel-spin-btn" class="btn btn-primary" style="width: 100%;" onclick="WheelSys.spin()">🚀 КРУТИТЬ БЕСПЛАТНО</button>
-            <button class="btn btn-outline" style="margin-top: 10px; width: 100%; border: none;" onclick="document.getElementById('wheel-modal').classList.remove('show')">Закрыть</button>
-        </div>
-    </div>
+    
     </body>
     </html>
 
