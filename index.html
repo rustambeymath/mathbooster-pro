@@ -3801,7 +3801,15 @@
 
         preStart() {
             if (this.active) return;
-            this.isStrict = false; // Всегда обычный режим
+            
+            // ПРОВЕРКА СЕТИ ПЕРЕД СТАРТОМ
+            if (!navigator.onLine) {
+                App.toast("❌ Нужен интернет для начала учебы!");
+                SoundSys.play('error');
+                return;
+            }
+
+            this.isStrict = false; 
             this.start();
         },
 
@@ -3829,6 +3837,10 @@
             if (this.ref) clearInterval(this.ref);
             
             this.ref = setInterval(() => {
+                if (!navigator.onLine) {
+                    this.forcePause("Связь потеряна 🌐");
+                    return;
+                }
                 const now = Date.now();
                 const expectedSec = Math.floor((now - this.startTime) / 1000);
                 const diff = expectedSec - this.sec;
@@ -3937,17 +3949,15 @@
         
 
         forcePause(reason) {
-            // Останавливаем сам процесс, но не обнуляем секунды
             if (this.ref) clearInterval(this.ref);
             this.active = false;
             this.releaseWakeLock();
             
             SoundSys.play('error'); 
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500]); 
             
-            // Разблокируем интерфейс, чтобы кнопка СТОП сработала в любом случае
+            // Меняем текст кнопки, чтобы можно было продолжить только когда появится сеть
             document.getElementById('btn-start').innerText = "🚀 ПРОДОЛЖИТЬ";
-            App.toast("🛑 Пауза: " + reason);
+            alert("🛑 Пауза: " + reason);
         },
 
         stop(manual = true) {
@@ -5098,7 +5108,17 @@
                 document.body.innerHTML = this.getOfflineScreen();
                 return;
             }
+                // Следим за интернетом в реальном времени
+                window.addEventListener('offline', () => {
+                    if (Timer.active) {
+                        Timer.forcePause("Интернет отключен 📡");
+                    }
+                    App.toast("❌ Вы оффлайн. Таймер остановлен.");
+                });
 
+                window.addEventListener('online', () => {
+                    App.toast("🌐 Вы снова в сети!");
+                });
             Auth.init(); 
             InstallSys.init(); 
             TimeGuard.verify();
