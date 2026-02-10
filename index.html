@@ -130,8 +130,60 @@
             
             /* 1. СТАНДАРТНЫЕ */
             body.theme-standard { --primary: #6C63FF; --bg: #F4F7FE; --surface: #FFFFFF; --text: #2B3674; --text-light: #707EAE; }
-            body.theme-gold { --primary: #FFD700; --bg: #1E1E2E; --surface: #2D2D44; --text: #FFFFFF; --text-light: #B8B8D1; --shadow: 0 10px 30px rgba(255, 215, 0, 0.3); }
-            body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
+/* 👑 ROYAL GOLD THEME (Светлая версия) */
+        body.theme-gold { 
+            --primary: #C5A028;   /* Глубокое золото */
+            --bg: #F9F6E5;        /* Светло-кремовый королевский фон */
+            --surface: #FFFFFF; 
+            --text: #3D2B00;      /* Темно-коричневый (почти черный) для контраста */
+            --text-light: #8E7926; 
+            --shadow: 0 10px 40px rgba(197, 160, 40, 0.25); 
+        }
+
+        /* Золотые карточки с рамкой */
+        body.theme-gold .card {
+            border: 1px solid #D4AF37;
+            background: linear-gradient(180deg, #FFFFFF 0%, #FFFCF0 100%);
+        }
+
+        /* Кнопки как золотые слитки */
+        body.theme-gold .btn-primary,
+        body.theme-gold .nav-btn.active,
+        body.theme-gold .daily-day.active {
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C) !important;
+            color: #3D2B00 !important;
+            font-weight: 900 !important;
+            border: 1px solid #8A6D3B !important;
+            box-shadow: 0 4px 15px rgba(184, 134, 11, 0.4), inset 0 1px 1px rgba(255,255,255,0.5) !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Эффект блеска для кнопок */
+        body.theme-gold .btn-primary::after {
+            content: "";
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: gold-shine 3s infinite;
+        }
+
+        @keyframes gold-shine {
+            0% { left: -100%; }
+            20% { left: 100%; }
+            100% { left: 100%; }
+        }
+
+        /* Золотой текст для важных цифр */
+        body.theme-gold .stat-val, 
+        body.theme-gold .timer-display {
+            background: linear-gradient(to bottom, #CF9911 22%, #A47909 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }            body.theme-math { --primary: #00E0D0; --bg: #E0F7FA; --surface: #FFFFFF; --text: #006064; --text-light: #4DD0E1; --shadow: 0 10px 30px rgba(0, 224, 208, 0.2); }
             body.theme-neon { --primary: #D60270; --bg: #0B0014; --surface: #180028; --text: #DE05F8; --text-light: #9B4F96; }
             body.theme-pantone { 
                 --primary: #FF8A65;   /* Насыщенный персик */
@@ -275,8 +327,58 @@
     }
             /* === ТЕМНЫЙ РЕЖИМ === */
             body.dark-mode { --bg: #1A1A2E; --surface: #16213E; --text: #EAEAEA; --text-light: #8892B0; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
-            body.dark-mode.theme-gold { --primary: #FFEA80; --bg: #1E1E1E; --surface: #2A2A2A; --text-light: #D4AF37; }
-            body.dark-mode.theme-standard { --primary: #8B7EFF; }
+/* 👑 ROYAL GOLD DARK (Золото на черном бархате) */
+        body.dark-mode.theme-gold { 
+            --primary: #FFD700;   /* Яркое чистое золото */
+            --bg: #0A0A0A;        /* Глубокий черный (как бархат) */
+            --surface: #1A1A1A;   /* Темно-серые карточки */
+            --text: #F5E6BE;      /* Светло-кремовый текст (идеально читается) */
+            --text-light: #A68A56; /* Бронзовый приглушенный */
+            --shadow: 0 10px 40px rgba(255, 215, 0, 0.1); 
+        }
+
+        /* Карточки в темной теме с золотым свечением */
+        body.dark-mode.theme-gold .card {
+            border: 1px solid #4D3D0D; /* Тонкая темная золотая рамка */
+            background: #161616;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* Кнопки: Пылающее золото */
+        body.dark-mode.theme-gold .btn-primary,
+        body.dark-mode.theme-gold .nav-btn.active,
+        body.dark-mode.theme-gold .daily-day.active {
+            background: linear-gradient(135deg, #FFD700, #FFFACD, #D4AF37, #F7EF8A, #B8860B) !important;
+            color: #1A1A1A !important; /* Черный текст на золоте */
+            font-weight: 900 !important;
+            border: none !important;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4) !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Золотой металлический текст для таймера и цифр */
+        body.dark-mode.theme-gold .stat-val, 
+        body.dark-mode.theme-gold .timer-display {
+            background: linear-gradient(to bottom, #FFD700 0%, #FFFACD 50%, #D4AF37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.3));
+            font-weight: 900;
+        }
+
+        /* Полоски прогресса (XP Bar) */
+        body.dark-mode.theme-gold #prof-xp-bar {
+            background: linear-gradient(90deg, #B8860B, #FFD700) !important;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Инпуты (поля ввода) */
+        body.dark-mode.theme-gold .input-field {
+            background: #222 !important;
+            border: 1px solid #4D3D0D !important;
+            color: #FFD700 !important;
+        }            body.dark-mode.theme-standard { --primary: #8B7EFF; }
             body.dark-mode.theme-math { --primary: #00F5E0; }
             body.dark-mode.theme-pantone { 
                 --bg: #3E2723;        /* Темный шоколад */
@@ -1991,16 +2093,26 @@
                     <div style="font-size: 10px; color: #666;">~ $4.40</div>
                 </div>
             </div>
-
+            <!-- 5. ULTIMATE (НОВИНКА) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 2px solid #eee; background: linear-gradient(90deg, rgba(108, 99, 255, 0.05), transparent); margin: 0 -15px; padding: 12px 15px;">
+                <div style="text-align: left;">
+                    <div style="font-weight: 900; color: #6C63FF; font-size: 18px; text-shadow: 0 0 10px rgba(108, 99, 255, 0.2);">10 000 💰</div>
+                    <div style="font-size: 10px; background: #000; color: #fff; padding: 1px 6px; border-radius: 4px; display: inline-block; animation: pulse 2s infinite;">💎 ULTIMATE PACK</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 900; font-size: 16px; color: #2B3674;">100 000 UZS</div>
+                    <div style="font-size: 10px; color: #888;">~ $8.00</div>
+                </div>
+            </div>
         </div>
-            <!-- НОВАЯ ИНСТРУКЦИЯ -->
 
+            <!-- НОВАЯ ИНСТРУКЦИЯ -->
     <div style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 12px; margin-top: 15px; font-size: 12px; color: #333; text-align: left; border: 1px solid rgba(255,255,255,0.8);">
             <b>Как получить монеты?</b><br>
             1. Скопируй карту (кнопки ниже).<br>
             2. Оплати через Click / Payme.<br>
             3. Скинь скриншот в бота: 
-            <a href="https://t.me/mathboosterpro" target="_blank" style="font-weight: bold; color: #2B3674; text-decoration: none; border-bottom: 2px solid #2B3674;">@MathBoosterBot</a>
+            <a href="https://t.me/mathboosterpro" target="_blank" style="font-weight: bold; color: #2B3674; text-decoration: none; border-bottom: 2px solid #2B3674;">@Mmathboosterpro</a>
         </div>
         <!-- Кнопки действий -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:15px;">
@@ -3078,7 +3190,7 @@
 
                 // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard
                 // Здесь НЕТ журнала сессий и истории, поэтому это будет летать!
-                const topDoc = dbRef.doc(dbRef.db, "leaderboard", userId);
+            const topDoc = dbRef.doc(dbRef.db, "leaderboard", userId);
                 await dbRef.setDoc(topDoc, {
                     name: DB.user.name,
                     totalSec: DB.user.totalSec || 0,
@@ -3088,6 +3200,7 @@
                     currentFrame: DB.user.currentFrame || null,
                     isVip: DB.user.isVip || false,
                     isKing: DB.user.isKing || false,
+                    isTitan: DB.user.isTitan || false, //   
                     lastActive: Date.now()
                 });
 
@@ -3346,45 +3459,42 @@
 
         // Вспомогательная функция (чтобы не писать одно и то же 2 раза)
         applyReward(code, reward) {
-            DB.user.coins += reward.c;
-            
-            // Если это VIP код
-            if (reward.vip) {
-                if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
-                if (!DB.user.ownedTitles.includes('vip')) DB.user.ownedTitles.push('vip');
-                DB.user.currentTitle = "VIP";
-                App.toast("💎 Статус VIP получен!");
-            }
-    // 👇 ВЫДАЧА KING (Корона + Статус LEGEND)
-            if (reward.isKing) {
-                DB.user.isKing = true;
-                DB.user.isVip = true; 
-                
-                // Если списка нет - создаем
-                if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
-                
-                // Дарим статус LEGEND (чтобы он был в инвентаре)
-                if (!DB.user.ownedTitles.includes('legend')) {
-                    DB.user.ownedTitles.push('legend');
-                }
-                
-                // И сразу надеваем
-                DB.user.currentTitle = "LEGEND";
-                
-                App.toast("👑 КОРОЛЕВСКИЙ СТАТУС ПОЛУЧЕН!");
-            }
-
-            if(!DB.user.usedCodes) DB.user.usedCodes = [];
-            DB.user.usedCodes.push(code);
-            
-            Data.save(); 
-            App.updateUI(); 
-            App.renderShop(); 
-            
-            FX.confetti(); 
-            SoundSys.play('win'); 
-            alert(`✅ УСПЕШНО!\n\n${reward.msg}\nНачислено: +${reward.c} 💰`);
+        DB.user.coins += reward.c;
+        
+        if (reward.vip) {
+            if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+            if (!DB.user.ownedTitles.includes('vip')) DB.user.ownedTitles.push('vip');
+            DB.user.currentTitle = "VIP";
         }
+
+        if (reward.isKing) {
+            DB.user.isKing = true;
+            if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+            if (!DB.user.ownedTitles.includes('legend')) DB.user.ownedTitles.push('legend');
+            DB.user.currentTitle = "LEGEND";
+        }
+
+        // --- НОВЫЙ СТАТУС TITAN ---
+        if (reward.isTitan) {
+            DB.user.isTitan = true;
+            DB.user.isKing = true; // Титан автоматически включает в себя Короля
+            if (!DB.user.ownedTitles) DB.user.ownedTitles = [];
+            if (!DB.user.ownedTitles.includes('titan')) DB.user.ownedTitles.push('titan');
+            DB.user.currentTitle = "TITAN";
+            App.toast("🌌 СТАТУС ТИТАНА ПОЛУЧЕН!");
+        }
+
+        if(!DB.user.usedCodes) DB.user.usedCodes = [];
+        DB.user.usedCodes.push(code);
+        
+        Data.save(); 
+        App.updateUI(); 
+        App.renderShop(); 
+        
+        FX.confetti(); 
+        SoundSys.play('win'); 
+        alert(`✅ УСПЕШНО!\n\n${reward.msg}\nНачислено: +${reward.c} 💰`);
+    }
     };
 
     const Online = {
@@ -3424,8 +3534,7 @@
                                 ${isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%;"></div>' : ''}
                             </div>
                             <div>
-                                <b style="display:block; font-size:14px;">${u.isKing ? '👑 ' : (u.isVip ? '💎 ' : '')}${u.name}</b>
-                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
+                                <b style="display:block; font-size:14px;">${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isVip ? '💎 ' : ''))}${u.name}</b>                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
                             </div>
                         </div>
                         <b style="color:var(--primary); font-size:13px;">${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м</b>
@@ -4815,27 +4924,42 @@
 
 const TimeGuard = {
     serverOffset: 0,
-    isTimeValid: true, // Добавили эту строку
+    isTimeValid: true,
     isSyncing: false,
 
     async sync() {
         this.isSyncing = true;
-        try {
-            const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
-            const data = await response.json();
-            const serverTime = new Date(data.utc_datetime).getTime();
-            const localTime = Date.now();
-            
-            this.serverOffset = serverTime - localTime;
-            
-            // Если разница между телефоном и реальностью больше 10 минут — время невалидно
-            this.isTimeValid = Math.abs(this.serverOffset) < 600000; 
-            
-            console.log("✅ Время синхронизировано. Смещение: " + this.serverOffset + "ms");
-        } catch (e) {
-            console.error("❌ Ошибка синхронизации");
-            this.isTimeValid = true; // Если нет интернета, разрешаем (чтобы не блокировать вход)
+        // Список серверов времени (если один упадет, попробуем другой)
+        const servers = [
+            'https://timeapi.io/api/Time/current/zone?timeZone=UTC',
+            'https://worldtimeapi.org/api/timezone/Etc/UTC'
+        ];
+
+        for (let url of servers) {
+            try {
+                const response = await fetch(url, { cache: "no-store" });
+                if (!response.ok) throw new Error("Ошибка сервера");
+                
+                const data = await response.json();
+                // Обработка разных форматов данных от разных API
+                const serverTime = new Date(data.utc_datetime || data.dateTime).getTime();
+                const localTime = Date.now();
+                
+                this.serverOffset = serverTime - localTime;
+                this.isTimeValid = Math.abs(this.serverOffset) < 600000; 
+                
+                console.log("✅ Время синхронизировано через: " + url);
+                this.isSyncing = false;
+                return; // Если успешно — выходим из цикла
+            } catch (e) {
+                console.warn("⚠️ Сервер " + url + " недоступен, пробуем следующий...");
+            }
         }
+
+        // Если ни один сервер не ответил
+        console.error("❌ Все серверы времени недоступны. Используем локальное время.");
+        this.serverOffset = 0;
+        this.isTimeValid = true; 
         this.isSyncing = false;
     },
 
@@ -5324,15 +5448,13 @@ setTimeout(() => {
                 }
             }
 
-            // 2. Добавляем Эмодзи Донатера (Приоритет: Король > VIP)
-            if (DB.user.isKing) {
-                statusText = `👑 ${statusText}`; // Добавляем корону
+            // 2. Добавляем Эмодзи Донатера (Приоритет: Титан > Король > VIP)
+            if (DB.user.isTitan) {
+                statusText = `🌌 ${statusText}`; // Эмодзи космоса/вселенной для Титана
+            } else if (DB.user.isKing) {
+                statusText = `👑 ${statusText}`; 
             } else if (DB.user.isVip) {
-                statusText = `💎 ${statusText}`; // Добавляем бриллиант
-            } 
-            // Если статуса нет, но есть купленный титул - добавим звездочку для красоты
-            else if (DB.user.currentTitle) {
-                statusText = `★ ${statusText}`;
+                statusText = `💎 ${statusText}`; 
             }
 
             // 3. Выводим на экран
