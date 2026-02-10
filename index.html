@@ -3064,19 +3064,36 @@
         async save() {
         if (!DB || !Auth.currentUser || !Auth.currentUser.id) return;
 
-        // 1. Сохраняем локально
+        // 1. Сохраняем полный профиль локально
         localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
-        // 2. Отправляем в облако
         if (window.DB_Online) {
             const dbRef = window.DB_Online;
-            const docRef = dbRef.doc(dbRef.db, "users", Auth.currentUser.id);
+            const userId = Auth.currentUser.id;
+
             try {
-                // УБРАЛИ { merge: true }, чтобы удаленные предметы реально удалялись из базы
-                await dbRef.setDoc(docRef, DB); 
-                console.log("☁️ Данные успешно синхронизированы");
+                // 2. Отправляем ПОЛНЫЙ профиль в папку users
+                const userDoc = dbRef.doc(dbRef.db, "users", userId);
+                await dbRef.setDoc(userDoc, DB);
+
+                // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard
+                // Здесь НЕТ журнала сессий и истории, поэтому это будет летать!
+                const topDoc = dbRef.doc(dbRef.db, "leaderboard", userId);
+                await dbRef.setDoc(topDoc, {
+                    name: DB.user.name,
+                    totalSec: DB.user.totalSec || 0,
+                    avatar: DB.user.avatar,
+                    level: DB.user.level,
+                    currentTitle: DB.user.currentTitle || "",
+                    currentFrame: DB.user.currentFrame || null,
+                    isVip: DB.user.isVip || false,
+                    isKing: DB.user.isKing || false,
+                    lastActive: Date.now()
+                });
+
+                console.log("☁️ Синхронизация (Профиль + Топ) выполнена");
             } catch (e) { 
-                console.error("Cloud Save Error", e); 
+                console.error("Ошибка сохранения:", e); 
             }
         }
     },
@@ -3372,81 +3389,53 @@
 
     const Online = {
         async loadLeaderboard() {
-        if (!window.DB_Online) {
-            App.toast("⚠️ Нет подключения");
-            return;
-        }
+        if (!window.DB_Online) return App.toast("⚠️ Нет связи");
 
         const list = document.getElementById('leaderboard-list');
-        const countEl = document.getElementById('total-players-count');
-        list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">⏳ Загрузка рейтинга...</div>';
+        list.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Загрузка...</div>';
 
         try {
-            // 1. Уменьшаем лимит до 50 (этого достаточно для соревнований)
+            // Читаем из ЛЕГКОЙ коллекции leaderboard
             const q = window.DB_Online.query(
-                window.DB_Online.collection(window.DB_Online.db, "users"),
-                window.DB_Online.orderBy("user.totalSec", "desc"),
-                window.DB_Online.limit(100) 
+                window.DB_Online.collection(window.DB_Online.db, "leaderboard"),
+                window.DB_Online.orderBy("totalSec", "desc"),
+                window.DB_Online.limit(50)
             );
 
             const snap = await window.DB_Online.getDocs(q);
-            if (countEl) countEl.innerText = `Игроков в сети: ${snap.size}`;
-
-            if (snap.empty) {
-                list.innerHTML = '<div style="text-align:center; color:gray;">Топ пока пуст</div>';
-                return;
-            }
-
-            // 2. Формируем весь список в одну строку (это в 10 раз быстрее, чем добавлять по одному)
             let html = '';
             let rank = 1;
             const now = Date.now();
 
             snap.forEach(doc => {
-                const data = doc.data();
-                const u = data.user || {};
-                
-                const name = u.name || "Игрок";
-                const avatar = u.avatar || "😎";
+                const u = doc.data();
+                const isOnline = (now - (u.lastActive || 0)) < 300000;
                 const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
-                
-                // Проверка онлайна (5 минут)
-                const isOnline = (now - (u.lastActive || 0)) < 300000; 
-                const onlineBadge = isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:10;"></div>' : '';
-
-                const hours = Math.floor((u.totalSec || 0) / 3600);
-                const minutes = Math.floor(((u.totalSec || 0) % 3600) / 60);
-                
                 const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
-                const itemStyle = isMe ? "border: 2px solid var(--primary); background: rgba(108, 99, 255, 0.05);" : "";
-
+                
                 html += `
-                    <div class="user-list-item" style="justify-content: space-between; align-items: center; ${itemStyle}">
+                    <div class="user-list-item" style="${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="font-weight:bold; width:25px; text-align:center; color:var(--text-light);">#${rank}</div>
+                            <div style="font-weight:bold; width:25px; color:var(--text-light);">#${rank}</div>
                             <div style="position:relative; width:45px; height:45px;">
-                                <div class="${frameClass}" style="width:45px; height:45px; min-width:45px; font-size:24px; margin:0;">
-                                    <div>${avatar}</div>
+                                <div class="${frameClass}" style="width:45px; height:45px; font-size:24px;">
+                                    <div>${u.avatar || '😎'}</div>
                                 </div>
-                                ${onlineBadge}
+                                ${isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%;"></div>' : ''}
                             </div>
                             <div>
-                                <b style="display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px;">
-                                    ${u.isKing ? '👑 ' : (u.isVip ? '💎 ' : '')}${name}
-                                </b>
-                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level || 1} • ${u.currentTitle || 'Участник'}</small>
+                                <b style="display:block; font-size:14px;">${u.isKing ? '👑 ' : (u.isVip ? '💎 ' : '')}${u.name}</b>
+                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
                             </div>
                         </div>
-                        <b style="color:var(--primary); font-size:13px;">${hours}ч ${minutes}м</b>
+                        <b style="color:var(--primary); font-size:13px;">${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м</b>
                     </div>`;
                 rank++;
             });
-
             list.innerHTML = html;
-
         } catch (e) {
-            console.error("Leaderboard Error:", e);
-            list.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Ошибка загрузки. Проверьте интернет.</div>';
+            console.error(e);
+            list.innerHTML = '<div style="text-align:center; color:red;">Ошибка сети</div>';
         }
     },
     };
