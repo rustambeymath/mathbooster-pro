@@ -4950,36 +4950,39 @@ const TimeGuard = {
 
         for (let url of servers) {
             try {
-                // Создаем контроллер для отмены запроса через 3 секунды
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                
+                const startTime = Date.now(); // Засекаем время отправки
 
-                const response = await fetch(url, { 
-                    cache: "no-store",
-                    signal: controller.signal 
-                });
-                
-                clearTimeout(timeoutId); // Если успели — отменяем таймер отмены
-                
-                if (!response.ok) throw new Error();
-                
+                const response = await fetch(url, { cache: "no-store", signal: controller.signal });
                 const data = await response.json();
-                const serverTime = new Date(data.utc_datetime || data.dateTime).getTime();
-                const localTime = Date.now();
                 
-                this.serverOffset = serverTime - localTime;
-                this.isTimeValid = Math.abs(this.serverOffset) < 600000; 
+                clearTimeout(timeoutId);
                 
-                console.log("✅ Время синхронизировано");
+                const endTime = Date.now(); // Засекаем время получения
+                const rtt = endTime - startTime; // Время в пути (пинг)
+
+                // Берем время сервера и прибавляем половину пинга для точности
+                const serverTime = new Date(data.utc_datetime || data.dateTime || data.currentLocalTime).getTime();
+                const correctedServerTime = serverTime + (rtt / 2);
+                
+                this.serverOffset = correctedServerTime - endTime;
+                
+                // УВЕЛИЧИЛИ ПОРОГ: теперь допускается разница до 20 минут (1 200 000 мс)
+                // Это спасет тех, у кого часы спешат на пару минут
+                this.isTimeValid = Math.abs(this.serverOffset) < 1200000; 
+                
+                console.log("✅ Синхронизация: Офсет " + this.serverOffset + "ms, Валидно: " + this.isTimeValid);
                 this.isSyncing = false;
                 return; 
             } catch (e) {
-                console.warn("⚠️ Сервер недоступен или долго отвечает...");
+                console.warn("⚠️ Сервер " + url + " не ответил");
             }
         }
 
-        // Если за 3-6 секунд никто не ответил — не мучаем игрока
-        console.error("❌ Не удалось проверить время. Доверяем телефону.");
+        // Если интернет совсем плохой и проверить не удалось — 
+        // НЕ БЛОКИРУЕМ игрока, просто разрешаем забрать.
         this.serverOffset = 0;
         this.isTimeValid = true; 
         this.isSyncing = false;
