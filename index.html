@@ -3330,35 +3330,25 @@
         },
 
     async claim() {
-        // 1. Визуальный отклик
-        App.toast("📡 Проверка честности...");
+        App.toast("📡 Синхронизация с сервером...");
         
-        // Блокируем кнопку, чтобы не нажимали много раз
         const btn = document.querySelector('#daily-modal .btn');
         if (btn) {
             btn.disabled = true;
             btn.innerText = "⏳ Ждите...";
         }
 
-        // 2. Ждем синхронизацию (теперь она не дольше 3-5 секунд)
+        // Просто обновляем смещение времени, не блокируя игрока
         await TimeGuard.sync();
 
-        // 3. Если время совсем кривое (и это не ошибка сети)
-        if (!TimeGuard.isTimeValid) {
-            App.toast("❌ Установите правильное время в настройках!");
-            if (btn) {
-                btn.disabled = false;
-                btn.innerText = "Забрать Награду";
-            }
-            return;
-        }
-
-        // 4. Выдача награды
+        // Награда выдается ВСЕГДА, но дата берется честная (серверная)
         const currentDayIndex = DB.user.dailyStreak % 7;
         const reward = this.rewards[currentDayIndex];
         
         DB.user.coins += reward;
         DB.user.dailyStreak++;
+        
+        // getUZDate сама использует офсет от сервера, так что дата будет 100% верной
         DB.user.lastDailyClaim = getUZDate();
 
         Data.save();
@@ -3366,9 +3356,9 @@
         
         document.getElementById('daily-modal').classList.remove('show');
         SoundSys.play('coin');
-        App.toast(`Получено: ${reward} монет!`);
+        App.toast(`✅ Получено: ${reward} монет!`);
         
-        if (btn) btn.disabled = false; // На всякий случай
+        if (btn) btn.disabled = false;
     }
     };
 
@@ -4938,53 +4928,33 @@
 
 const TimeGuard = {
     serverOffset: 0,
-    isTimeValid: true,
     isSyncing: false,
 
     async sync() {
         this.isSyncing = true;
-        const servers = [
-            'https://timeapi.io/api/Time/current/zone?timeZone=UTC',
-            'https://worldtimeapi.org/api/timezone/Etc/UTC'
-        ];
+        // Используем только один самый надежный сервер
+        const url = 'https://timeapi.io/api/Time/current/zone?timeZone=UTC';
 
-        for (let url of servers) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
-                
-                const startTime = Date.now(); // Засекаем время отправки
-
-                const response = await fetch(url, { cache: "no-store", signal: controller.signal });
-                const data = await response.json();
-                
-                clearTimeout(timeoutId);
-                
-                const endTime = Date.now(); // Засекаем время получения
-                const rtt = endTime - startTime; // Время в пути (пинг)
-
-                // Берем время сервера и прибавляем половину пинга для точности
-                const serverTime = new Date(data.utc_datetime || data.dateTime || data.currentLocalTime).getTime();
-                const correctedServerTime = serverTime + (rtt / 2);
-                
-                this.serverOffset = correctedServerTime - endTime;
-                
-                // УВЕЛИЧИЛИ ПОРОГ: теперь допускается разница до 20 минут (1 200 000 мс)
-                // Это спасет тех, у кого часы спешат на пару минут
-                this.isTimeValid = Math.abs(this.serverOffset) < 1200000; 
-                
-                console.log("✅ Синхронизация: Офсет " + this.serverOffset + "ms, Валидно: " + this.isTimeValid);
-                this.isSyncing = false;
-                return; 
-            } catch (e) {
-                console.warn("⚠️ Сервер " + url + " не ответил");
-            }
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            
+            const startTime = Date.now();
+            const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+            const data = await response.json();
+            clearTimeout(timeoutId);
+            
+            const endTime = Date.now();
+            const serverTime = new Date(data.dateTime || data.currentLocalTime).getTime();
+            
+            // Вычисляем разницу между сервером и телефоном
+            this.serverOffset = serverTime - endTime;
+            
+            console.log("✅ Время скорректировано сервером. Разница: " + this.serverOffset + "ms");
+        } catch (e) {
+            console.warn("⚠️ Не удалось связаться с сервером времени, используем время телефона.");
+            this.serverOffset = 0;
         }
-
-        // Если интернет совсем плохой и проверить не удалось — 
-        // НЕ БЛОКИРУЕМ игрока, просто разрешаем забрать.
-        this.serverOffset = 0;
-        this.isTimeValid = true; 
         this.isSyncing = false;
     },
 
