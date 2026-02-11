@@ -1572,76 +1572,67 @@
 
         <!-- 1. DASHBOARD -->
         <section id="dashboard" class="section active">
-            <div class="grid">
-                <div class="card zen-target" style="text-align: center; position: relative;">
-                    <!-- TOOLS -->
-                    <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
-                        <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
-                        <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
-                        <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
-                    </div>
-                    
-                    <h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>
-                    <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
-                    
-                    <div id="timer" class="timer-display">00:00:00</div>
-                    
-                    <!-- 1. ИНФО О МОНЕТАХ -->
-                    <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
-                        🔥 <b>+2 монет</b> (растет каждые 10 мин)
-                    </div>
-
-                    <!-- 2. ИНФО О РОСТЕ НАГРАДЫ -->
-                    <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
-                        Чем дольше сидишь — тем больше награда! 📈
-                    </div>
-                    
-                    <!-- 3. ЦИТАТА ДНЯ (Вернули на место) -->
-                    <div id="daily-quote" style="font-size: 11px; font-style: italic; color: var(--text); opacity: 0.6; margin-bottom: 20px; padding: 0 30px; line-height: 1.4;">
-                        "Загрузка мудрости..."
-                    </div>
-
-                    
-                    
-                    <div class="zen-controls" style="position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                        <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
-                        <button class="btn btn-outline" onclick="Timer.stop()">⏹ СТОП</button>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3>🎧 Lo-Fi Радио</h3>
-                    <div class="music-widget">
-                        <div class="music-info">
-                            <span style="font-size: 20px;">🎵</span>
-                            <span>Chill Study Beats</span>
-                        </div>
-                        <div class="visualizer" id="music-vis" style="opacity: 0;">
-                            <div class="bar" style="animation-duration: 0.5s"></div>
-                            <div class="bar" style="animation-duration: 0.7s"></div>
-                            <div class="bar" style="animation-duration: 0.4s"></div>
-                            <div class="bar" style="animation-duration: 0.6s"></div>
-                        </div>
-                        <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px;" onclick="MusicPlayer.toggle()">▶</button>
-                    </div>
-                    <!-- FIXED AUDIO SOURCE -->
-                    <audio id="lofi-stream" crossorigin="anonymous" preload="none">
-                        <source src="https://lofi.stream.laut.fm/lofi" type="audio/mpeg">
-                        <source src="https://stream.zeno.fm/f3wvbbqmdg8uv" type="audio/mpeg">
-                    </audio>
-                    
-                    <h3 style="margin-top: 20px;">📚 Предметы</h3>
-                    <div id="subjects-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:15px; justify-items:center; position:relative; z-index:1;"></div>
-                </div>
+    <div class="grid">
+        <!-- ЛЕВАЯ КОЛОНКА: ТАЙМЕР -->
+        <div class="card zen-target" style="text-align: center; position: relative;">
+            <!-- TOOLS -->
+            <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
+                <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
+                <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
+                <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
             </div>
-            <div style="margin-top: 25px;">
-                    <h3 style="margin-bottom: 10px;">🎯 Квесты на сегодня</h3>
-                    <div id="quests-container"></div>
-                </div>
-                <div class="card" onclick="App.editMonthlyGoal()" style="margin-top: 20px; cursor: pointer; background: linear-gradient(135deg, var(--surface), #f0f3ff);">
+            
+            <h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>
+            <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
+            
+            <div id="timer" class="timer-display">00:00:00</div>
+            
+            <!-- 1. ИНФО О МОНЕТАХ -->
+            <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
+                💰 <b>Монеты капают каждую минуту</b>
+            </div>
+
+            <!-- 2. ИНФО О РОСТЕ НАГРАДЫ -->
+            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
+                Награда растет каждые 10 минут! 📈
+            </div>
+            
+            <!-- 3. ЦИТАТА ДНЯ -->
+            <div id="daily-quote" style="font-size: 11px; font-style: italic; color: var(--text); opacity: 0.6; margin-bottom: 20px; padding: 0 30px; line-height: 1.4;">
+                "Загрузка мудрости..."
+            </div>
+
+            <div class="zen-controls" style="position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
+                <button class="btn btn-outline" onclick="Timer.stop()">⏹ СТОП</button>
+            </div>
+        </div>
+        
+        <!-- ПРАВАЯ КОЛОНКА: РАДИО И ПРЕДМЕТЫ (Теперь они вместе) -->
+        <div class="dashboard-right-col">
+            <!-- БЛОК РАДИО -->
+            <div id="radio-widget-container"></div>
+
+            <!-- Скрытый элемент аудио (пусть лежит здесь, он не мешает) -->
+            <audio id="lofi-stream" crossorigin="anonymous" preload="none"></audio>
+
+            <!-- БЛОК ПРЕДМЕТОВ -->
+            <div class="card" style="margin-top: 20px;">
+                <h3>📚 Предметы</h3>
+                <div id="subjects-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:15px; justify-items:center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- НИЖНЯЯ ЧАСТЬ: КВЕСТЫ И ПЛАН -->
+    <div style="margin-top: 25px;">
+        <h3 style="margin-bottom: 10px;">🎯 Квесты на сегодня</h3>
+        <div id="quests-container"></div>
+    </div>
+
+    <div class="card" onclick="App.editMonthlyGoal()" style="margin-top: 20px; cursor: pointer; background: linear-gradient(135deg, var(--surface), #f0f3ff);">
         <h3 style="margin-bottom: 15px; font-size: 14px;">📅 План на месяц</h3>
         <div style="display: flex; align-items: center; gap: 20px;">
-            <!-- Круговой прогресс -->
             <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
                 <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg);">
                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="3" />
@@ -1656,7 +1647,7 @@
             </div>
         </div>
     </div>
-        </section>
+</section>
 
     <!-- 8. ABOUT SECTION (Новый красивый раздел) -->
         <section id="about" class="section">
@@ -1958,7 +1949,10 @@
                 <h3>🖼️ Рамки</h3>
                 <div id="frame-shop-list" class="shop-grid"></div>
             </div>
-
+            <div class="card" style="margin-top: 20px;">
+                <h3>📻 Радиостанции</h3>
+                <div id="radio-shop-list" class="shop-grid"></div>
+            </div>
             <div class="card" style="margin-top: 20px;">
                 <h3>🔊 Звуковые паки</h3>
                 <div id="sound-shop-list" class="shop-grid"></div>
@@ -2084,7 +2078,7 @@
             1. Скопируй карту (кнопки ниже).<br>
             2. Оплати через Click / Payme.<br>
             3. Скинь скриншот в бота: 
-            <a href="https://t.me/mathboosterpro" target="_blank" style="font-weight: bold; color: #2B3674; text-decoration: none; border-bottom: 2px solid #2B3674;">@Mmathboosterpro</a>
+            <a href="https://t.me/mathboosterpro" target="_blank" style="font-weight: bold; color: #2B3674; text-decoration: none; border-bottom: 2px solid #2B3674;">@mathboosterpro</a>
         </div>
         <!-- Кнопки действий -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:15px;">
@@ -2565,31 +2559,27 @@
         },
 
         toggle() {
-            if(!this.audio) this.init();
-            
-            const btn = document.getElementById('music-btn');
-            const vis = document.getElementById('music-vis');
-            
-            if(this.playing) {
-                this.audio.pause();
-                this.reset();
-            } else {
-                const playPromise = this.audio.play();
-                if (playPromise !== undefined) {
-                    btn.innerText = "⏳";
-                    playPromise.then(_ => {
-                        this.playing = true;
-                        btn.innerText = "⏸";
-                        vis.style.opacity = "1";
-                    })
-                    .catch(error => {
-                        console.error("Audio Play Error:", error);
-                        App.toast("⚠️ Не удалось включить радио");
-                        this.reset();
-                    });
-                }
+        if (!this.audio) this.audio = document.getElementById('lofi-stream');
+        const currentId = DB.user.currentRadio || (DB.user.ownedRadios ? DB.user.ownedRadios[0] : null);
+        if (!currentId) return App.toast("Купите радио в магазине!");
+        const station = SHOP_RADIOS.find(x => x.id === currentId);
+        const btn = document.getElementById('music-btn');
+        const vis = document.getElementById('music-vis');
+        
+        if(this.playing) {
+            this.audio.pause(); this.playing = false;
+            if(btn) btn.innerText = "▶"; if(vis) vis.style.opacity = "0";
+        } else {
+            if (this.audio.src !== station.url) { this.audio.src = station.url; this.audio.load(); }
+            const playPromise = this.audio.play();
+            if (playPromise !== undefined) {
+                if(btn) btn.innerText = "⏳";
+                playPromise.then(_ => {
+                    this.playing = true; if(btn) btn.innerText = "⏸"; if(vis) vis.style.opacity = "1";
+                }).catch(e => { App.toast("Ошибка потока 📻"); if(btn) btn.innerText = "▶"; });
             }
         }
+    }
     };
 
     const SoundSys = {
@@ -2763,7 +2753,9 @@
             coins: 0, streak: 0,
             lastStudyDate: null,
             lifetimeMathSolved: 0,
-            pvpWins: 0, 
+            pvpWins: 0,
+            ownedRadios: [], // Список купленных станций
+            currentRadio: null, // Какая станция выбрана сейчас 
             dailyStreak: 0, lastDailyClaim: null, 
             ownedThemes: ['standard'], ownedAvatars: [], 
             ownedTitles: [],
@@ -2906,6 +2898,25 @@
         { id: 'royal', name: 'Корона', price: 5000, css: 'frame-royal' }
     ];
 
+    // РАДИО
+    const SHOP_RADIOS = [
+    { 
+        id: 'lofi', 
+        name: 'Lo-Fi Chill', 
+        icon: '🎧', 
+        price: 100, 
+        url: 'https://lofi.stream.laut.fm/lofi' 
+    },
+    { 
+        id: 'classic', 
+        name: 'Классика IQ', 
+        icon: '🎻', 
+        price: 300, 
+        // Это поток Radio Swiss Classic — один из самых стабильных в мире
+        url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' 
+    }
+];
+
     // 🔊 ЗВУКИ (Синтезатор)
     const SHOP_SOUNDS = [
         { id: 'standard', name: 'Стандарт', price: 0 },
@@ -3041,7 +3052,9 @@
             if (!DB.achievements || DB.achievements.length < 5) DB.achievements = GenAch();
             if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0;
             if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = "";
-            
+            if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
+            if (!DB.user.currentRadio) DB.user.currentRadio = null;
+
             // 6. 📊 СИНХРОНИЗАЦИЯ СТАТИСТИКИ (Сумма всех предметов)
             let subjectsSum = 0;
             if (DB.subjects) {
@@ -4554,17 +4567,26 @@
 
         // --- ПРОВЕРКА ЗНАКОВ (Найди знак) ---
         checkSign(sign) {
-        if (this.isLocked) return; // Если уже нажали — игнорим остальные клики
-        this.isLocked = true; // МГНОВЕННАЯ БЛОКИРОВКА
+        if (this.isLocked) return; 
+        this.isLocked = true; // Закрыли
 
         if(sign === this.correctSign) {
-            const area = document.getElementById('sign-area');
-            this.success(area);
+            this.success(document.getElementById('sign-area'));
         } else {
-            const area = document.getElementById('sign-area');
-            this.fail(area);
+            this.fail(document.getElementById('sign-area'));
         }
-        },
+    },
+
+    check() {
+        if (this.isLocked) return;
+        const inputEl = document.getElementById('game-input');
+        const val = parseInt(inputEl.value); 
+        if (isNaN(val)) return;
+
+        this.isLocked = true; // Закрыли
+        if(val === this.ans) this.success(inputEl);
+        else this.fail(inputEl);
+    },
 
         // --- УСПЕХ ---
         success(el) {
@@ -4574,66 +4596,39 @@
         SoundSys.play('success');
         QuestSys.update('mathSolved', 1);
 
-        // Подсветка правильного ответа
         el.style.borderColor = 'var(--success)'; 
         
-        // Небольшая пауза (200мс), чтобы игрок увидел, что ответил верно
+        // Быстрая разблокировка для правильного ответа
         setTimeout(() => {
             el.style.borderColor = ''; 
-            this.nextProblem(); // Генерируем новый вопрос
-            this.isLocked = false; // ТОЛЬКО ТЕПЕРЬ снимаем блокировку
+            this.nextProblem(); 
+            this.unlockControls(); // Вызываем единый разблокировщик
         }, 200);
         
-        // Начисление XP
-        let pts = this.difficulty === 'easy' ? 2 : (this.difficulty === 'medium' ? 5 : 10);
         if (el && el.getBoundingClientRect) {
             const rect = el.getBoundingClientRect(); 
-            FX.floatText(rect.left + rect.width/2, rect.top, `+${pts} XP`, "#6C63FF");
+            FX.floatText(rect.left + rect.width/2, rect.top, `+XP`, "#6C63FF");
         }
     },
 
-        // --- 🔥 НАКАЗАНИЕ ЗА ОШИБКУ 🔥 ---
-        fail(el) {
-            if (this.isLocked) return;
-            this.isLocked = true; // 1. БЛОКИРУЕМ ВВОД
+    fail(el) {
+        SoundSys.play('error'); 
+        el.classList.add('error-shake');
+        
+        // Визуально блокируем кнопки
+        document.getElementById('input-area').classList.add('input-locked');
+        document.getElementById('sign-area').classList.add('input-locked');
 
-            SoundSys.play('error'); 
-            
-            // 2. Визуальный эффект (Тряска + Красный)
-            el.classList.add('error-shake');
-            
-            // 3. Блокируем кнопки визуально
-            document.getElementById('input-area').classList.add('input-locked');
-            document.getElementById('sign-area').classList.add('input-locked');
+        this.time -= 5;
+        if (this.time < 0) this.time = 0;
+        document.getElementById('game-time').innerText = this.time;
 
-            // 4. ШТРАФ ВРЕМЕНИ (-5 секунд)
-            this.time -= 5;
-            if (this.time < 0) this.time = 0;
-            document.getElementById('game-time').innerText = this.time;
-            
-            // Анимация штрафа
-            try {
-                const rect = el.getBoundingClientRect();
-                FX.floatText(rect.left + rect.width/2, rect.top, `-5 сек`, "#ff4d4d");
-            } catch(e){}
-
-            // Если время кончилось из-за штрафа
-            if (this.time <= 0) {
-                this.end();
-                return;
-            }
-
-            // 5. РАЗБЛОКИРОВКА ЧЕРЕЗ 1.2 СЕКУНДЫ
-            setTimeout(() => {
-                this.isLocked = false;
-                el.classList.remove('error-shake');
-                document.getElementById('input-area').classList.remove('input-locked');
-                document.getElementById('sign-area').classList.remove('input-locked');
-                
-                // Очищаем поле ввода, если это инпут
-                if(el.tagName === 'INPUT') el.value = '';
-            }, 1200);
-        },
+        // Штрафная разблокировка (1.2 секунды)
+        setTimeout(() => {
+            this.unlockControls(); // Вызываем тот же разблокировщик
+            if(el.tagName === 'INPUT') el.value = '';
+        }, 1200);
+    },
 
         end() {
             // 1. Останавливаем таймер
@@ -4816,13 +4811,20 @@
         },
 
         unlockControls() {
-            this.isLocked = false;
-            // Убираем все классы блокировок
-            document.getElementById('input-area').classList.remove('input-locked');
-            document.getElementById('sign-area').classList.remove('input-locked');
-            // Убираем тряску со всех кнопок
-            document.querySelectorAll('.error-shake').forEach(el => el.classList.remove('error-shake'));
-        }
+        this.isLocked = false; // Открываем замок
+        
+        // Убираем все красные рамки и тряску
+        const elements = document.querySelectorAll('.error-shake');
+        elements.forEach(el => el.classList.remove('error-shake'));
+        
+        // Убираем визуальную блокировку
+        document.getElementById('input-area').classList.remove('input-locked');
+        document.getElementById('sign-area').classList.remove('input-locked');
+        
+        // Возвращаем фокус на поле ввода, если это не режим знаков
+        const input = document.getElementById('game-input');
+        if (this.mode !== 'sign' && input) input.focus();
+        },
     };
 
     const AchievementSys = {
@@ -5207,6 +5209,30 @@ const TimeGuard = {
         },
         // ЛЕГКИЙ ВХОД (Без лагов)
         initAfterLogin() {
+            // --- АВТО-ЧИСТКА АНОМАЛЬНЫХ СЕССИЙ (> 10 ЧАСОВ) ---
+if (DB && DB.sessions && DB.sessions.length > 0) {
+    const MAX_ALLOWED_SEC = 36000; // 10 часов в секундах
+    const initialCount = DB.sessions.length;
+
+    // Оставляем в журнале только те записи, которые меньше или равны 10 часам
+    DB.sessions = DB.sessions.filter(session => {
+        return (Number(session.sec) || 0) <= MAX_ALLOWED_SEC;
+    });
+
+    // Если мы что-то удалили — нужно пересчитать общее время и сохранить
+    if (DB.sessions.length < initialCount) {
+        let newTotal = 0;
+        DB.sessions.forEach(s => { newTotal += (Number(s.sec) || 0); });
+        
+        DB.user.totalSec = newTotal; // Обновляем общий счетчик
+        
+        Data.save(); // Сохраняем чистые данные в облако
+        App.updateUI(); // Обновляем экран
+        console.log(`⚠️ Удалено подозрительных сессий: ${initialCount - DB.sessions.length}`);
+    }
+}
+// ------------------------------------------------
+            this.updateRadioWidget();
             QuestSys.render();
             this.updateUI();
             this.updateDailyQuote();
@@ -5549,7 +5575,92 @@ setTimeout(() => {
             }
        },
     // Внутри объекта App:
+// 1. Отрисовка радио в магазине
+    renderRadioShop() {
+        const radioList = document.getElementById('radio-shop-list');
+        if (!radioList) return;
+        const owned = DB.user.ownedRadios || [];
+        
+        radioList.innerHTML = SHOP_RADIOS.map(r => {
+            const isOwned = owned.includes(r.id);
+            const isActive = DB.user.currentRadio === r.id;
+            return `
+                <div class="shop-item ${isActive ? 'active' : ''}" onclick="App.buyRadio('${r.id}')">
+                    <div style="font-size: 32px;">${r.icon}</div>
+                    <div style="font-weight:bold; font-size:12px;">${r.name}</div>
+                    ${isOwned ? '<small style="color:var(--success);">Куплено</small>' : `<small class="shop-price-tag">${r.price} 💰</small>`}
+                </div>`;
+        }).join('');
+    },
 
+    // 2. Функция покупки/выбора
+    buyRadio(id) {
+        const r = SHOP_RADIOS.find(x => x.id === id);
+        if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
+
+        if (DB.user.ownedRadios.includes(id)) {
+            DB.user.currentRadio = id;
+            App.toast(`Выбрано: ${r.name}`);
+            if (MusicPlayer.playing) { // Если играет — меняем на лету
+                MusicPlayer.audio.pause();
+                MusicPlayer.playing = false;
+                MusicPlayer.toggle();
+            }
+        } else if (DB.user.coins >= r.price) {
+            if (confirm(`Купить ${r.name} за ${r.price} 💰?`)) {
+                DB.user.coins -= r.price;
+                DB.user.ownedRadios.push(id);
+                DB.user.currentRadio = id;
+                SoundSys.play('win');
+                FX.confetti();
+            }
+        } else { return App.toast("Недостаточно монет"); }
+        
+        Data.save();
+        this.renderRadioShop();
+        this.updateRadioWidget();
+    },
+
+    // 3. Виджет на главном экране
+    updateRadioWidget() {
+    const container = document.getElementById('radio-widget-container');
+    if (!container) return;
+
+    const ownedRadios = DB.user.ownedRadios || [];
+
+    // Если ничего не куплено — показываем заглушку
+    if (ownedRadios.length === 0) {
+        container.innerHTML = `
+            <div class="card">
+                <h3>📻 Радио</h3>
+                <p style="font-size:12px; color:var(--text-light); margin-bottom:10px;">Музыка для фокуса заблокирована.</p>
+                <button class="btn btn-primary" onclick="App.switchTab('shop')" style="font-size:12px;">В магазин 🛒</button>
+            </div>`;
+        return;
+    }
+
+    // Если куплено — показываем плеер
+    const currentId = DB.user.currentRadio || ownedRadios[0];
+    const current = SHOP_RADIOS.find(x => x.id === currentId);
+    
+    container.innerHTML = `
+        <div class="card">
+            <h3>📻 Радио</h3>
+            <div class="music-widget">
+                <div class="music-info">
+                    <span style="font-size: 20px;">${current.icon}</span>
+                    <span>${current.name}</span>
+                </div>
+                <div class="visualizer" id="music-vis" style="opacity: 0;">
+                    <div class="bar" style="animation-duration: 0.5s"></div>
+                    <div class="bar" style="animation-duration: 0.7s"></div>
+                    <div class="bar" style="animation-duration: 0.4s"></div>
+                </div>
+                <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px;" onclick="MusicPlayer.toggle()">▶</button>
+            </div>
+            <p style="font-size:10px; color:var(--text-light); margin-top:8px; text-align:center;">Сменить станцию можно в Магазине 🛒</p>
+        </div>`;
+},
         copyRescueCode() {
             const code = DB.user.rescueCode;
             if (!code) return;
@@ -5650,7 +5761,21 @@ setTimeout(() => {
                     </div>`;
                 }).join('');
             }
-
+                    //Радио
+                    const radioList = document.getElementById('radio-shop-list');
+                    if (radioList) {
+                        radioList.innerHTML = SHOP_RADIOS.map(r => {
+                            const owned = DB.user.ownedRadios.includes(r.id);
+                            const active = DB.user.currentRadio === r.id;
+                            return `
+                                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyRadio('${r.id}')">
+                                    <div style="font-size: 32px;">${r.icon}</div>
+                                    <div style="font-weight:bold; font-size:12px;">${r.name}</div>
+                                    ${owned ? '<small style="color:var(--success);">Куплено</small>' : `<small class="shop-price-tag">${r.price} 💰</small>`}
+                                </div>`;
+                        }).join('');
+                    }
+                    
             // Рамки
     // Рамки (ВНУТРИ renderShop)
             const frameList = document.getElementById('frame-shop-list');
@@ -5760,6 +5885,26 @@ setTimeout(() => {
         equipTitle(name) {
             DB.user.currentTitle = name; Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('click');
         },
+        buyRadio(id) {
+    const r = SHOP_RADIOS.find(x => x.id === id);
+    if (DB.user.ownedRadios.includes(id)) {
+        DB.user.currentRadio = id;
+        App.toast(`Выбрано: ${r.name}`);
+    } else if (DB.user.coins >= r.price) {
+        if (confirm(`Купить доступ к ${r.name} за ${r.price} 💰?`)) {
+            DB.user.coins -= r.price;
+            DB.user.ownedRadios.push(id);
+            DB.user.currentRadio = id;
+            SoundSys.play('win');
+            FX.confetti();
+        }
+    } else {
+        return App.toast("Недостаточно монет");
+    }
+    Data.save();
+    this.renderShop();
+    this.updateRadioWidget(); // Обновим виджет на главном
+},
         buyFrame(id) {
             const f = SHOP_FRAMES.find(x => x.id === id);
             if (DB.user.ownedFrames.includes(id)) { DB.user.currentFrame = f.css; Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('click'); } 
@@ -5903,31 +6048,39 @@ setTimeout(() => {
         renderStats() {
             const statsSection = document.getElementById('stats');
             if (!statsSection || !statsSection.classList.contains('active')) return;
+            const currentTimestamp = new Date().getTime();
 
             // 1. ГАРАНТИРОВАННЫЙ ПЕРЕСЧЕТ ВСЕГО ВРЕМЕНИ (Сумма всех предметов)
             // --- УМНЫЙ РАСЧЕТ ДЛЯ СТАТИСТИКИ ---
-let sSumStats = 0;
-if (DB.sessions) DB.sessions.forEach(s => { sSumStats += (Number(s.sec) || 0); });
+            let sSumStats = 0;
+            if (DB.sessions) DB.sessions.forEach(s => { sSumStats += (Number(s.sec) || 0); });
 
-let subSumStats = 0;
-if (DB.subjects) Object.values(DB.subjects).forEach(s => { subSumStats += (Number(s.sec) || 0); });
+            let subSumStats = 0;
+            if (DB.subjects) Object.values(DB.subjects).forEach(s => { subSumStats += (Number(s.sec) || 0); });
 
-DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
-// ----------------------------------
+            DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
 
             // 2. РАСЧЕТ ЗА НЕДЕЛЮ И МЕСЯЦ (из истории)
-            const currentTimestamp = new Date().getTime();
+            const now = new Date();
+            const today = getUZDate(now);
             let weekSec = 0, monthSec = 0;
-            
+
+            // Собираем статистику СТРОГО по календарным дням
             for (let i = 0; i < 30; i++) {
-                const d = new Date(currentTimestamp - (i * 86400000));
+                const d = new Date(now);
+                d.setDate(d.getDate() - i); // Вычитаем ровно i дней от СЕГОДНЯ
                 const key = getUZDate(d);
+                
+                // Защита от дубликатов (если getUZDate глючит)
+                if (key > today) continue;
+                
                 const seconds = (DB.history && DB.history[key]) ? DB.history[key] : 0;
                 monthSec += seconds;
-                if (i < 7) weekSec += seconds; 
+                if (i < 7) weekSec += seconds;
             }
 
             // Вспомогательная функция для текста
+            // 1. Сначала объявляем помощников
             const fmtTime = (s) => {
                 const h = Math.floor(s / 3600);
                 const m = Math.floor((s % 3600) / 60);
@@ -5935,13 +6088,13 @@ DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
             };
             const estXP = (s) => Math.floor(s / 60) * 10;
 
-            // Обновляем верхние карточки
+            // 2. Потом выводим данные на экран
             this.setText('stat-week-time', fmtTime(weekSec));
             this.setText('stat-week-xp', `~${estXP(weekSec)} XP`);
             this.setText('stat-month-time', fmtTime(monthSec));
             this.setText('stat-month-xp', `~${estXP(monthSec)} XP`);
             this.setText('stat-total-time', fmtTime(DB.user.totalSec));
-            
+
             const totalXP = DB.user.lifetimeXP || DB.user.xp || 0; 
             this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
@@ -6013,7 +6166,7 @@ DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
                         options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
                     });
                 }
-    // --- BAR CHART (НЕДЕЛЯ - МИНУТЫ) ---
+                 // --- BAR CHART (НЕДЕЛЯ - МИНУТЫ) ---
                 const weekCtx = document.getElementById('weekChart');
                 const totalWeekEl = document.getElementById('week-total-display');
 
@@ -6174,6 +6327,15 @@ DB.user.totalSec = Math.max(sSumStats, subSumStats, (DB.user.totalSec || 0));
             }
 
             });
+                        // 🛡️ ЗАЩИТА ОТ АНОМАЛИЙ (добавь перед обновлением текстов)
+            if (weekSec > DB.user.totalSec) {
+                console.warn("⚠️ Недельная статистика больше общей! Чиним...");
+                weekSec = DB.user.totalSec;
+            }
+            if (monthSec > DB.user.totalSec) {
+                console.warn("⚠️ Месячная статистика больше общей! Чиним...");
+                monthSec = DB.user.totalSec;
+            }
         },
 
         renderSubjects() {
