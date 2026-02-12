@@ -3262,7 +3262,9 @@ body.dark-mode .subject-item-fixed {
             if (!DB.user.lastWeeklyReportDate) DB.user.lastWeeklyReportDate = ""; 
             if (!DB.user.lastSpinDate) DB.user.lastSpinDate = ""; 
             if (!DB.user.lastNotifyDate) DB.user.lastNotifyDate = "";
-
+            // Принудительное создание недостающих полей для старых игроков
+            if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
+            if (DB.user.currentRadio === undefined) DB.user.currentRadio = null;
             // 10. Запускаем онлайн-слушатель
             if(window.DB_Online) this.startListening(userId);
         },
@@ -5804,6 +5806,7 @@ setTimeout(() => {
     const container = document.getElementById('radio-widget-container');
     if (!container) return;
 
+    // ЗАЩИТА: Если поля нет, считаем список пустым
     const ownedRadios = DB.user.ownedRadios || [];
 
     // Если ничего не куплено — показываем заглушку
@@ -5943,7 +5946,7 @@ setTimeout(() => {
                     const radioList = document.getElementById('radio-shop-list');
                     if (radioList) {
                         radioList.innerHTML = SHOP_RADIOS.map(r => {
-                            const owned = DB.user.ownedRadios.includes(r.id);
+                            const owned = (DB.user.ownedRadios || []).includes(r.id);
                             const active = DB.user.currentRadio === r.id;
                             return `
                                 <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyRadio('${r.id}')">
