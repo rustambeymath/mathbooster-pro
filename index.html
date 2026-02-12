@@ -5776,36 +5776,44 @@ setTimeout(() => {
     // 2. Функция покупки/выбора
     buyRadio(id) {
         const r = SHOP_RADIOS.find(x => x.id === id);
-        
-        // 🛡️ ЗАЩИТА: Если у игрока нет этого поля в базе, создаем его прямо сейчас
-        if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
+        if (!r) return;
 
-        // Теперь .includes() не выдаст ошибку, так как список точно существует
-        if (DB.user.ownedRadios.includes(id)) {
+        // 🛡️ ПУЛЕНЕПРОБИВАЕМАЯ ЗАЩИТА
+        // Если раздела user или ownedRadios нет — создаем их в памяти прямо сейчас
+        if (!DB.user) DB.user = {};
+        if (!Array.isArray(DB.user.ownedRadios)) DB.user.ownedRadios = [];
+
+        // Проверяем покупку через безопасную переменную
+        const isOwned = DB.user.ownedRadios.includes(id);
+
+        if (isOwned) {
             DB.user.currentRadio = id;
             App.toast(`Выбрано: ${r.name}`);
             
-            // Если музыка играет — переключаем станцию мгновенно
             if (MusicPlayer.playing) {
                 MusicPlayer.audio.pause();
                 MusicPlayer.playing = false;
                 MusicPlayer.toggle();
             }
-        } else if (DB.user.coins >= r.price) {
-            if (confirm(`Купить ${r.name} за ${r.price} 💰?`)) {
-                DB.user.coins -= r.price;
-                DB.user.ownedRadios.push(id);
-                DB.user.currentRadio = id;
-                SoundSys.play('win');
-                FX.confetti();
-            }
         } else {
-            return App.toast("Недостаточно монет");
+            // Логика покупки
+            const userCoins = DB.user.coins || 0;
+            if (userCoins >= r.price) {
+                if (confirm(`Купить ${r.name} за ${r.price} 💰?`)) {
+                    DB.user.coins -= r.price;
+                    DB.user.ownedRadios.push(id);
+                    DB.user.currentRadio = id;
+                    SoundSys.play('win');
+                    FX.confetti();
+                }
+            } else {
+                return App.toast("Недостаточно монет");
+            }
         }
         
         Data.save();
-        this.renderRadioShop(); // Обновляем вид в магазине
-        this.updateRadioWidget(); // Обновляем вид на главном экране
+        this.renderRadioShop(); 
+        this.updateRadioWidget();
     },
 
     // 3. Виджет на главном экране
@@ -6073,26 +6081,7 @@ setTimeout(() => {
         equipTitle(name) {
             DB.user.currentTitle = name; Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('click');
         },
-        buyRadio(id) {
-    const r = SHOP_RADIOS.find(x => x.id === id);
-    if (DB.user.ownedRadios.includes(id)) {
-        DB.user.currentRadio = id;
-        App.toast(`Выбрано: ${r.name}`);
-    } else if (DB.user.coins >= r.price) {
-        if (confirm(`Купить доступ к ${r.name} за ${r.price} 💰?`)) {
-            DB.user.coins -= r.price;
-            DB.user.ownedRadios.push(id);
-            DB.user.currentRadio = id;
-            SoundSys.play('win');
-            FX.confetti();
-        }
-    } else {
-        return App.toast("Недостаточно монет");
-    }
-    Data.save();
-    this.renderShop();
-    this.updateRadioWidget(); // Обновим виджет на главном
-},
+        
         buyFrame(id) {
             const f = SHOP_FRAMES.find(x => x.id === id);
             if (DB.user.ownedFrames.includes(id)) { DB.user.currentFrame = f.css; Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('click'); } 
