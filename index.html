@@ -421,6 +421,86 @@
     body.theme-dark.theme-math { --primary: #00F5E0; }
     body.theme-dark.theme-pantone { --primary: #FFAB91; }
     body.theme-dark.theme-gold { --primary: #FFD700; --bg: #1E1E1E; --surface: #2A2A2A; }
+
+/* 💿 ТЕМА PLATINUM 3D (Контрастная версия) */
+body.theme-platinum {
+    --bg: #cfd8e3;        /* Более темный, холодный стальной фон */
+    --surface: #f0f4f8;   /* Светлая, почти белая платиновая поверхность */
+    --primary: #4a5568;   /* Темный графит для акцентов */
+    --text: #1a202c;      /* Глубокий черный для текста */
+    --text-light: #718096;
+    /* Усиленные тени для четкого отделения от фона */
+    --shadow: 8px 8px 16px #b1bccb, -8px -8px 16px #ffffff;
+}
+
+/* Карточки: эффект "выпуклой платиновой пластины" */
+body.theme-platinum .card {
+    background: linear-gradient(145deg, #ffffff, #e6eef7) !important; /* Градиент для объема */
+    border-radius: 25px;
+    position: relative;
+    overflow: hidden;
+    
+    /* Четкая граница, которая видна на сером фоне */
+    border: 1px solid #ffffff !important; 
+    box-shadow: 6px 6px 15px #b1bccb, -4px -4px 12px #ffffff !important;
+}
+
+/* Кнопки: эффект полированного металла */
+body.theme-platinum .btn-primary,
+body.theme-platinum .nav-btn.active {
+    background: linear-gradient(145deg, #e2e8f0, #cbd5e0) !important;
+    color: #2d3748 !important;
+    border: 1px solid #a0aec0 !important;
+    box-shadow: 3px 3px 6px #b1bccb, -2px -2px 6px #ffffff !important;
+    font-weight: 800;
+}
+
+/* Темная версия (Вороненая сталь) — тоже добавляем контраст */
+body.dark-mode.theme-platinum {
+    --bg: #0f1115;        /* Почти черный фон */
+    --surface: #1a1d23;   /* Темно-серые карточки */
+    --text: #e2e8f0;
+    --primary: #a0aec0;
+    --shadow: 6px 6px 12px #050608, -2px -2px 8px #2a2f38;
+}
+
+body.dark-mode.theme-platinum .card {
+    background: linear-gradient(145deg, #1e2329, #16191d) !important;
+    border: 1px solid #2d333b !important; /* Граница видна в темноте */
+    box-shadow: 8px 8px 16px #050608, -3px -3px 10px #2a2f38 !important;
+}
+
+/* Таймер: четкий и контрастный */
+body.theme-platinum .timer-display {
+    color: #2d3748 !important;
+    text-shadow: 2px 2px 0px #ffffff;
+}
+
+body.dark-mode.theme-platinum .timer-display {
+    color: #ffffff !important;
+    text-shadow: 0 0 15px rgba(255,255,255,0.2);
+}
+/* Специальное исправление для ярких кнопок в теме Platinum */
+body.theme-platinum:not(.dark-mode) #install-promo-card,
+body.theme-platinum:not(.dark-mode) [onclick="App.shareApp()"],
+body.theme-platinum:not(.dark-mode) a[href*="t.me"] .card {
+    color: #000000 !important; /* Делаем текст черным */
+}
+
+/* Исправляем цвет подзаголовков (те, что с opacity) */
+body.theme-platinum:not(.dark-mode) #install-promo-card div,
+body.theme-platinum:not(.dark-mode) [onclick="App.shareApp()"] div,
+body.theme-platinum:not(.dark-mode) a[href*="t.me"] .card div {
+    color: #000000 !important;
+}
+
+/* Возвращаем белый цвет в ТЕМНОМ режиме Платины, чтобы текст не исчез */
+body.theme-platinum.dark-mode #install-promo-card,
+body.theme-platinum.dark-mode [onclick="App.shareApp()"],
+body.theme-platinum.dark-mode a[href*="t.me"] .card {
+    color: #ffffff !important;
+}
+
         /* Кнопка удаления на экране входа */
     .delete-user-btn {
         background: #ff4d4d;
@@ -596,8 +676,21 @@
             .btn-primary { background: var(--primary); color: white; }
             .btn-outline { background: transparent; border: 2px solid var(--text-light); color: var(--text-light); }
             .input-field { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--bg); background: var(--bg); color: var(--text); font-size: 16px; margin-bottom: 15px; outline: none; -webkit-appearance: none; }
-            .timer-display { font-size: 72px; font-weight: 800; color: var(--text); text-align: center; margin: 15px 0; font-variant-numeric: tabular-nums; transition: 0.3s; }
-            
+.timer-display {
+    font-size: 72px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    margin: 15px 0;
+    
+    /* ВАЖНО: эти 3 строки убирают прыжки */
+    display: inline-block;
+    min-width: 280px; 
+    font-variant-numeric: tabular-nums; /* Цифры не будут "плясать" при смене */
+    
+    transition: color 0.3s ease;
+    will-change: transform, opacity; /* Подсказка браузеру для плавности */
+}            
             .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
             .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
             .shop-item { padding: 15px; border-radius: 15px; background: var(--bg); cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; position:relative; overflow:hidden;}
@@ -640,7 +733,53 @@
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 12px;
     }
+/* Единый стандарт для карточек предметов */
+/* Единый стандарт для карточек предметов с видимыми границами */
+.subject-item-fixed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
+    height: 100px !important; 
+    width: 100% !important;
+    
+    padding: 10px !important;
+    border-radius: 18px;
+    
+    /* ВИДИМАЯ ГРАНИЦА ПО УМОЛЧАНИЮ */
+    border: 2px solid rgba(0, 0, 0, 0.08); 
+    background: var(--surface);
+    
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-sizing: border-box;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02); /* Легкая тень */
+}
 
+/* Цвет границы в темном режиме */
+body.dark-mode .subject-item-fixed {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.subject-item-fixed .icon {
+    font-size: 26px;
+    margin-bottom: 6px;
+}
+
+.subject-item-fixed .name {
+    font-size: 11px;
+    font-weight: 800; /* Сделаем шрифт жирнее для читаемости */
+    line-height: 1.2;
+    text-align: center;
+    color: var(--text);
+    
+    word-wrap: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
     .subject-item {
         padding: 12px;
         border-radius: 12px;
@@ -1342,17 +1481,29 @@
                 margin-top: 4px; 
                 display: inline-block;
             }
-            /* Анимация дыхания для таймера */
-        @keyframes timer-breath {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.8; }
-        100% { transform: scale(1); opacity: 1; }
-        }
-        .timer-active-anim {
-        animation: timer-breath 2s infinite ease-in-out;
-        text-shadow: 0 0 20px var(--primary);
-        }
-        /* Эффект нажатия для всех кликабельных элементов */
+        /* Анимация "дыхания" для таймера */
+            @keyframes timer-breath-pro {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0px var(--primary));
+    }
+    50% {
+        transform: scale(1.04); /* Чуть-чуть увеличиваем */
+        filter: drop-shadow(0 0 15px var(--primary)); /* Мягкое свечение */
+        opacity: 0.85; /* Легкое затухание */
+    }
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0px var(--primary));
+    }
+}
+
+/* Класс активации */
+.timer-active-anim {
+    animation: timer-breath-pro 2.5s infinite ease-in-out !important;
+    color: var(--primary) !important;
+}
+    
 
 
     /* Элитное свечение для ветеранов (14+ дней) */
@@ -2828,6 +2979,8 @@
         // Легендарная
         { id: 'magma', name: 'MAGMA', icon: '🔥', price: 2500 },
         { id: 'joker', name: 'JOKER', icon: '🃏', price: 3000 },
+        { id: 'platinum', name: 'PLATINUM', icon: '💿', price: 4000 },
+
 
 
         // КОСМИЧЕСКАЯ ТЕМА
@@ -3532,22 +3685,37 @@
                 const isOnline = (now - (u.lastActive || 0)) < 300000;
                 const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
                 const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
-                
+                const isTitan = u.isTitan === true;
+                const titanStyle = isTitan ? 'box-shadow: inset 0 0 15px rgba(0, 210, 255, 0.3), 0 0 10px rgba(0, 210, 255, 0.2); border: 1px solid #00d2ff !important; background: rgba(0, 210, 255, 0.05);' : '';
                 html += `
-                    <div class="user-list-item" style="${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
+                    <div class="user-list-item" style="display: flex; justify-content: space-between; align-items: center; ${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
+                        
+                        <!-- ЛЕВАЯ ЧАСТЬ (Номер + Аватар + Имя) -->
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="font-weight:bold; width:25px; color:var(--text-light);">#${rank}</div>
+                            <div style="font-weight:bold; min-width:40px; white-space:nowrap; color:var(--text-light);">#${rank}</div>
+                            
                             <div style="position:relative; width:45px; height:45px;">
                                 <div class="${frameClass}" style="width:45px; height:45px; font-size:24px;">
                                     <div>${u.avatar || '😎'}</div>
                                 </div>
                                 ${isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%;"></div>' : ''}
                             </div>
+
                             <div>
-                                <b style="display:block; font-size:14px;">${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isVip ? '💎 ' : ''))}${u.name}</b>                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
+                                <b style="display:block; font-size:14px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    ${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isVip ? '💎 ' : ''))}${u.name}
+                                </b>
+                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
                             </div>
                         </div>
-                        <b style="color:var(--primary); font-size:13px;">${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м</b>
+
+                        <!-- ПРАВАЯ ЧАСТЬ (Часы) -->
+                        <div style="text-align:right; min-width:70px;">
+                            <b style="color:var(--primary); font-size:14px; white-space:nowrap;">
+                                ${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м
+                            </b>
+                        </div>
+
                     </div>`;
                 rank++;
             });
@@ -3872,6 +4040,9 @@
         this.active = true;
         this.startTime = TimeGuard.getTrueTime();
         
+        document.getElementById('timer').classList.add('timer-active-anim');
+        document.body.classList.add('timer-active');
+
         // Записываем в Firebase время начала сессии (Server Side)
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
@@ -3913,8 +4084,6 @@
             }
         }, 1000);
 
-        // Запускаем "Сердцебиение" (Heartbeat) - проверка каждые 30 секунд
-        this.heartbeatRef = setInterval(() => this.ping(), 30000);
 
         document.getElementById('btn-start').innerText = "🔥 УЧУСЬ...";
         App.toast("🚀 Сессия подтверждена сервером");
@@ -3935,9 +4104,17 @@
             alert("❌ Нет интернета! Подключитесь к сети, чтобы завершить сессию и сохранить монеты.");
             return; // Не даем остановить таймер, пока нет связи
         }
+        const timerEl = document.getElementById('timer');
+            if (timerEl) {
+                timerEl.classList.remove('timer-active-anim');
+                timerEl.style.color = "var(--text)"; // Возвращаем обычный цвет текста
+            }
+
         clearInterval(this.ref);
         clearInterval(this.heartbeatRef);
-        
+        document.body.classList.remove('timer-active');
+        document.getElementById('timer').classList.remove('timer-active-anim');
+
         const stopTime = TimeGuard.getTrueTime();
         
         // ЗАПРАШИВАЕМ ДАННЫЕ С СЕРВЕРА ДЛЯ РАСЧЕТА
@@ -5393,9 +5570,10 @@ setTimeout(() => {
         },
         updateUI() {
             if (!DB || !DB.user || !Auth.currentUser) return;
+            const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
+
   
             // Оптимизированная смена классов
-            const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
             if (document.body.className !== newClass) document.body.className = newClass;
             
             const toggle = document.getElementById('dark-toggle');
@@ -6347,17 +6525,18 @@ setTimeout(() => {
             if (DB.subjects[item.id]) {
                 const isActive = DB.user.subject === item.id;
                 
-                let style = `padding:15px; text-align:center; cursor:pointer; border-radius:15px; transition: 0.2s; border: 2px solid ${isActive ? 'var(--primary)' : 'transparent'}; background: ${isActive ? 'rgba(108,99,255,0.05)' : 'var(--surface)'};`;
+                // Если предмет активен — красим границу в главный цвет темы
+                let activeStyle = isActive ? 'border-color: var(--primary); background: rgba(108,99,255,0.08); box-shadow: 0 4px 15px rgba(108,99,255,0.1);' : '';
                 
-                // Передаем event в функцию
-let clickAction = Timer.active ? '' : `App.selectSubject('${item.id}', event)`;
-                if (Timer.active && !isActive) style += "opacity:0.5; filter:grayscale(1); cursor:default;";
+                // Если таймер запущен, блокируем остальные
+                let timerStyle = (Timer.active && !isActive) ? 'opacity: 0.3; filter: grayscale(1); pointer-events: none; border-color: transparent;' : '';
+                let clickAction = Timer.active ? '' : `App.selectSubject('${item.id}', event)`;
 
                 html += `
-                    <div class="card" style="${style}" onclick="event.stopPropagation(); event.preventDefault(); ${clickAction}">
-                        <div style="font-size:24px; pointer-events:none;">${item.icon}</div>
-                        <div style="font-weight:bold; font-size:12px; margin-top:5px; pointer-events:none;">${item.name}</div>
-                    </div>`;
+                <div class="subject-item-fixed" style="${activeStyle} ${timerStyle}" onclick="${clickAction}">
+                    <div class="icon">${item.icon}</div>
+                    <div class="name">${item.name}</div>
+                </div>`;
             }
         });
         grid.innerHTML = html;
