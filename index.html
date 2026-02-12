@@ -5776,12 +5776,17 @@ setTimeout(() => {
     // 2. Функция покупки/выбора
     buyRadio(id) {
         const r = SHOP_RADIOS.find(x => x.id === id);
+        
+        // 🛡️ ЗАЩИТА: Если у игрока нет этого поля в базе, создаем его прямо сейчас
         if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
 
+        // Теперь .includes() не выдаст ошибку, так как список точно существует
         if (DB.user.ownedRadios.includes(id)) {
             DB.user.currentRadio = id;
             App.toast(`Выбрано: ${r.name}`);
-            if (MusicPlayer.playing) { // Если играет — меняем на лету
+            
+            // Если музыка играет — переключаем станцию мгновенно
+            if (MusicPlayer.playing) {
                 MusicPlayer.audio.pause();
                 MusicPlayer.playing = false;
                 MusicPlayer.toggle();
@@ -5794,11 +5799,13 @@ setTimeout(() => {
                 SoundSys.play('win');
                 FX.confetti();
             }
-        } else { return App.toast("Недостаточно монет"); }
+        } else {
+            return App.toast("Недостаточно монет");
+        }
         
         Data.save();
-        this.renderRadioShop();
-        this.updateRadioWidget();
+        this.renderRadioShop(); // Обновляем вид в магазине
+        this.updateRadioWidget(); // Обновляем вид на главном экране
     },
 
     // 3. Виджет на главном экране
