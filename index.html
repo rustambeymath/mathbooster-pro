@@ -4048,19 +4048,33 @@ const Timer = {
             });
         }
 
-        // 2. Визуальный счетчик
-        this.ref = setInterval(() => {
+        // 2. Визуальный счетчик с защитой от прыжков
+        this.ref = setInterval(async () => {
+            if (!navigator.onLine) { this.forcePause("Связь потеряна"); return; }
+
             const now = Number(TimeGuard.getTrueTime());
-            this.visualSec = Math.floor((now - this.startTime) / 1000);
+            const calculatedSec = Math.floor((now - this.startTime) / 1000);
+
+            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ (АНТИ-ЧИТ)
+            // Если время прыгнуло вперед более чем на 3 секунды за 1 секунду реальности
+            if (calculatedSec - this.visualSec > 3) {
+                console.warn("⚠️ Обнаружен скачок времени! Перепроверка...");
+                await TimeGuard.sync(); // Срочно обновляем офсет с сервера
+                return; // Пропускаем этот тик, чтобы время пересчиталось в следующем
+            }
+
+            this.visualSec = calculatedSec;
             
-            // Авто-выплата (каждые 10 мин)
+            // --- АВТО-ВЫПЛАТА (Только за честные 10 минут) ---
             let currentBlock = Math.floor(this.visualSec / 600);
             if (currentBlock > this.lastPaidBlock) {
                 let reward = 5 + (currentBlock - 1) * 2;
                 if (reward > 20) reward = 20;
+                
                 DB.user.coins += reward;
                 this.sessionCoins += reward;
                 this.lastPaidBlock = currentBlock;
+                
                 Data.save();
                 App.updateUI();
                 SoundSys.play('coin');
@@ -4068,11 +4082,9 @@ const Timer = {
 
             const timeString = new Date(Math.max(0, this.visualSec) * 1000).toISOString().substr(11, 8);
             
-            // ОБНОВЛЯЕМ ОБЫЧНЫЙ ТАЙМЕР
+            // Обновляем оба таймера
             const mainTimer = document.getElementById('timer');
             if (mainTimer) mainTimer.innerText = timeString;
-
-            // 🔥 ОБНОВЛЯЕМ ЭКО-ТАЙМЕР (Чтобы в черном режиме время шло)
             const ecoTimer = document.getElementById('eco-timer-display');
             if (ecoTimer) ecoTimer.innerText = timeString;
 
