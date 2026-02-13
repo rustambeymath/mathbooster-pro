@@ -4017,35 +4017,29 @@ body.dark-mode .subject-item-fixed {
         }
     };
 
-   const Timer = {
-    lastPaidBlock: 0, // Сколько 10-минутных блоков уже оплачено
-    sessionCoins: 0,  // Всего монет за текущую сессию
+const Timer = {
     active: false,
     ref: null,
-    startTime: 0, // Время старта по "Честным часам"
-    visualSec: 0,
     heartbeatRef: null,
+    visualSec: 0,
+    startTime: 0,
+    sessionCoins: 0, // Счетчик монет за текущую сессию
+    lastPaidBlock: 0,
 
-    // ПРОВЕРКА ПЕРЕД СТАРТОМ
     async preStart() {
         if (this.active) return;
         if (!navigator.onLine) return App.toast("❌ Нужен интернет!");
-
-        // Синхронизируем время перед началом, чтобы исключить подделку
         await TimeGuard.sync();
         this.start();
     },
 
     async start() {
-        this.lastPaidBlock = 0; 
-        this.sessionCoins = 0;
         this.active = true;
-        this.startTime = TimeGuard.getTrueTime();
+        this.sessionCoins = 0;
+        this.lastPaidBlock = 0;
+        this.startTime = Number(TimeGuard.getTrueTime());
         
-        document.getElementById('timer').classList.add('timer-active-anim');
-        document.body.classList.add('timer-active');
-
-        // Записываем в Firebase время начала сессии (Server Side)
+        // 1. Фиксируем старт в Firebase
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             await window.DB_Online.updateDoc(docRef, {
@@ -4054,156 +4048,157 @@ body.dark-mode .subject-item-fixed {
             });
         }
 
-        // Запускаем "Красивую картинку" (визуальный счетчик)
+        // 2. Визуальный счетчик
         this.ref = setInterval(() => {
-            if (!navigator.onLine) { this.forcePause("Связь потеряна"); return; }
-
-            const now = TimeGuard.getTrueTime();
+            const now = Number(TimeGuard.getTrueTime());
             this.visualSec = Math.floor((now - this.startTime) / 1000);
             
-            // --- АВТО-ВЫПЛАТА КАЖДЫЕ 10 МИНУТ ---
+            // Авто-выплата (каждые 10 мин)
             let currentBlock = Math.floor(this.visualSec / 600);
             if (currentBlock > this.lastPaidBlock) {
-                // Считаем награду за этот блок (5, 7, 9... до 20)
-                let blockIndex = currentBlock - 1;
-                let reward = 5 + (blockIndex * 2);
+                let reward = 5 + (currentBlock - 1) * 2;
                 if (reward > 20) reward = 20;
-
                 DB.user.coins += reward;
                 this.sessionCoins += reward;
                 this.lastPaidBlock = currentBlock;
-
-                Data.save(); // Сохраняем в облако
+                Data.save();
                 App.updateUI();
                 SoundSys.play('coin');
-                App.toast(`💰 +${reward} монет (10 мин пройдены!)`);
             }
 
-            const timeString = new Date(this.visualSec * 1000).toISOString().substr(11, 8);
-            document.getElementById('timer').innerText = timeString;
-            if(document.getElementById('eco-timer-display')) {
-                document.getElementById('eco-timer-display').innerText = timeString;
-            }
+            const timeString = new Date(Math.max(0, this.visualSec) * 1000).toISOString().substr(11, 8);
+            
+            // ОБНОВЛЯЕМ ОБЫЧНЫЙ ТАЙМЕР
+            const mainTimer = document.getElementById('timer');
+            if (mainTimer) mainTimer.innerText = timeString;
+
+            // 🔥 ОБНОВЛЯЕМ ЭКО-ТАЙМЕР (Чтобы в черном режиме время шло)
+            const ecoTimer = document.getElementById('eco-timer-display');
+            if (ecoTimer) ecoTimer.innerText = timeString;
+
+            if (mainTimer) mainTimer.classList.add('timer-active-anim');
         }, 1000);
 
+        // 3. Heartbeat (Пинг каждые 30 секунд)
+        this.heartbeatRef = setInterval(async () => {
+            if (this.active && window.DB_Online) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                await window.DB_Online.updateDoc(docRef, {
+                    "user.lastPing": Number(TimeGuard.getTrueTime())
+                });
+            }
+        }, 30000);
 
         document.getElementById('btn-start').innerText = "🔥 УЧУСЬ...";
-        App.toast("🚀 Сессия подтверждена сервером");
-    },
-
-    // Сигнал серверу, что мы всё еще онлайн
-    async ping() {
-        if (!this.active || !window.DB_Online) return;
-        const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-        await window.DB_Online.updateDoc(docRef, {
-            "user.lastPing": TimeGuard.getTrueTime()
-        });
+        document.body.classList.add('timer-active');
     },
 
     async stop() {
         if (!this.active) return;
         if (!navigator.onLine) {
-            alert("❌ Нет интернета! Подключитесь к сети, чтобы завершить сессию и сохранить монеты.");
-            return; // Не даем остановить таймер, пока нет связи
+            alert("❌ Нет интернета! Подключитесь к сети для сохранения.");
+            return;
         }
-        const timerEl = document.getElementById('timer');
-            if (timerEl) {
-                timerEl.classList.remove('timer-active-anim');
-                timerEl.style.color = "var(--text)"; // Возвращаем обычный цвет текста
-            }
 
         clearInterval(this.ref);
         clearInterval(this.heartbeatRef);
-        document.body.classList.remove('timer-active');
-        document.getElementById('timer').classList.remove('timer-active-anim');
 
-        const stopTime = TimeGuard.getTrueTime();
-        
-        // ЗАПРАШИВАЕМ ДАННЫЕ С СЕРВЕРА ДЛЯ РАСЧЕТА
+        // 1. Получаем данные с сервера
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
         const snap = await window.DB_Online.getDoc(docRef);
         const data = snap.data();
         
-        const serverStart = data.user.activeSessionStart;
-        const serverLastPing = data.user.lastPing;
+        // Превращаем всё в числа для точности
+        const serverStart = Number(data.user.activeSessionStart || 0);
+        const serverLastPing = Number(data.user.lastPing || serverStart);
+        const stopTime = Number(TimeGuard.getTrueTime());
 
-        // РЕАЛЬНОЕ ВРЕМЯ - это разница между стартом и последним сигналом (или стопом)
-        // Мы берем минимальное, чтобы нельзя было накрутить время, выключив инет
-        const realSec = Math.floor((Math.min(stopTime, serverLastPing + 40000) - serverStart) / 1000);
+        // 🛡️ ТВОЯ ФОРМУЛА РАСЧЕТА (Защита от оффлайна)
+        // Берем либо время СТОП, либо последний пинг + 40 сек
+        const endPoint = Math.min(stopTime, serverLastPing + 40000);
+        const trueSec = Math.floor((endPoint - serverStart) / 1000);
 
-        if (realSec > 5) { // Если сессия дольше 5 секунд
-            this.finalizeSession(realSec);
+        console.log("Итог сессии (сек):", trueSec);
+
+        if (trueSec > 5 && serverStart > 0) {
+            this.finalizeSession(trueSec);
+        } else {
+            App.toast("⚠️ Сессия слишком короткая или сбой данных");
         }
 
-        // Очищаем сессию на сервере
+        // Очистка
         await window.DB_Online.updateDoc(docRef, {
             "user.activeSessionStart": null,
             "user.lastPing": null
         });
 
-        this.active = false;
-        this.visualSec = 0;
-        document.getElementById('timer').innerText = "00:00:00";
-        document.getElementById('btn-start').innerText = "🚀 СТАРТ";
-        App.updateUI();
+        this.resetTimer();
     },
 
     finalizeSession(seconds) {
-        // 1. Считаем, сколько полных блоков по 10 мин прошло
+        // 1. Считаем СУММАРНУЮ честную награду за все секунды
         let fullBlocks = Math.floor(seconds / 600);
-        // 2. Считаем "хвост" (оставшиеся секунды)
         let remainingSec = seconds % 600;
+        let totalVerifiedCoins = 0;
 
-        // 3. Определяем цену минуты для текущего блока
-        let nextBlockReward = 5 + (fullBlocks * 2);
-        if (nextBlockReward > 20) nextBlockReward = 20;
-        
-        // 4. Пропорциональный расчет за "хвост" (округляем до ближайшего целого)
-        let extraCoins = Math.round(remainingSec * (nextBlockReward / 600));
-
-        if (extraCoins > 0) {
-            DB.user.coins += extraCoins;
-            this.sessionCoins += extraCoins;
+        // Монеты за полные блоки
+        for (let i = 1; i <= fullBlocks; i++) {
+            let r = 5 + (i - 1) * 2;
+            if (r > 20) r = 20;
+            totalVerifiedCoins += r;
         }
 
-        // 5. Начисляем время в историю (Heatmap)
+        // Пропорциональный "хвост"
+        let nextBlockReward = 5 + (fullBlocks * 2);
+        if (nextBlockReward > 20) nextBlockReward = 20;
+        totalVerifiedCoins += Math.round(remainingSec * (nextBlockReward / 600));
+
+        // 2. Добавляем только разницу (то, что еще не выплатил setInterval)
+        let finalBonus = totalVerifiedCoins - this.sessionCoins;
+        if (finalBonus > 0) {
+            DB.user.coins += finalBonus;
+            this.sessionCoins += finalBonus;
+        }
+
+        // 3. Сохраняем время в историю
         const k = getUZDate();
         if (!DB.history) DB.history = {};
         DB.history[k] = (DB.history[k] || 0) + seconds;
+        DB.user.totalSec = (Number(DB.user.totalSec) || 0) + seconds;
 
-        // 6. Обновляем общее время
-        DB.user.totalSec = (DB.user.totalSec || 0) + seconds;
-
-        // 7. Записываем в Журнал (показываем СУММУ всех монет за сессию)
+        // 4. Записываем в Журнал
         const currentSubName = (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) 
                                 ? DB.subjects[DB.user.subject].name : 'Учеба';
         const log = {
             date: new Date().toISOString(),
             subject: currentSubName,
             sec: seconds,
-            coins: this.sessionCoins // Здесь теперь честная сумма
+            coins: this.sessionCoins
         };
-        
         if (!DB.sessions) DB.sessions = [];
         DB.sessions.unshift(log);
         if (DB.sessions.length > 50) DB.sessions.pop();
 
         Data.save();
-        
-        if (this.sessionCoins > 0) {
-            App.toast(`✅ Засчитано: ${Math.floor(seconds/60)} мин. и +${this.sessionCoins} 💰`);
-            SoundSys.play('coin');
-        } else {
-            App.toast(`✅ Засчитано: ${Math.floor(seconds/60)} мин.`);
-        }
+        App.toast(`✅ Засчитано: ${Math.floor(seconds/60)} мин. и +${this.sessionCoins} 💰`);
+        if (this.sessionCoins > 0) SoundSys.play('coin');
     },
 
-    forcePause(reason) {
-        alert("🛑 " + reason);
-        this.stop();
+    resetTimer() {
+        this.active = false;
+        this.visualSec = 0;
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            timerEl.innerText = "00:00:00";
+            timerEl.classList.remove('timer-active-anim');
+            timerEl.style.color = "var(--text)";
+        }
+        document.getElementById('btn-start').innerText = "🚀 СТАРТ";
+        document.body.classList.remove('timer-active');
+        App.updateUI();
     }
 };
-    
+
     const QuestSys = {
         // 1. Список квестов (цели обновляются в checkDay)
         list: [
