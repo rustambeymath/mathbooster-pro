@@ -51,36 +51,35 @@
 
         <!-- FIREBASE (База Данных) -->
         <script type="module">
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, collection, getDocs, query, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // ДОБАВЛЕН ИМПОРТ СООБЩЕНИЙ
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-            // КОНФИГ
-            const firebaseConfig = {
-                apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
-                authDomain: "mathbooster-pro.firebaseapp.com",
-                projectId: "mathbooster-pro",
-                storageBucket: "mathbooster-pro.firebasestorage.app",
-                messagingSenderId: "990295839020",
-                appId: "1:990295839020:web:ba5bb8cfa471c2c4a89c89",
-                measurementId: "G-8N8MYJPCHR"
-            };
-        
-            let DB_Online; 
+    const firebaseConfig = {
+        apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
+        authDomain: "mathbooster-pro.firebaseapp.com",
+        projectId: "mathbooster-pro",
+        storageBucket: "mathbooster-pro.firebasestorage.app",
+        messagingSenderId: "990295839020",
+        appId: "1:990295839020:web:ba5bb8cfa471c2c4a89c89",
+        measurementId: "G-8N8MYJPCHR"
+    };
 
-            // 1. Инициализация (в самом начале скрипта)
     try {
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        // Привязываем КРАЙНЕ БЫСТРО
+        const messaging = getMessaging(app); // Активируем мессенджер
+
         window.DB_Online = { 
             db, doc, setDoc, getDoc, updateDoc, deleteDoc, 
             onSnapshot, runTransaction, 
-            collection, getDocs, query, orderBy, limit, getCountFromServer 
+            collection, getDocs, query, orderBy, limit, getCountFromServer,
+            messaging, getToken, onMessage // Добавили в глобальный доступ
         };
         
-        window.isFirebaseLoaded = true; // Сигнал готовности
-        console.log("✅ База данных подключена");
+        window.isFirebaseLoaded = true;
+        console.log("✅ БД и Push-сервер подключены");
     } catch(e) {
         console.error("Критическая ошибка Firebase:", e);
     }
@@ -385,6 +384,45 @@
         color: var(--primary) !important;
         border-color: var(--primary) !important;
     }
+
+/* 💻 ТЕМА CYBER (МАТРИЦА) - Элитная хакерская тема */
+            body.theme-cyber { 
+                --primary: #00FF41;   /* Терминальный неоново-зеленый */
+                --bg: #050505;        /* Абсолютный черный */
+                --surface: #0a110a;   /* Глубокий темно-зеленый фон карточек */
+                --text: #e0ffe0;      /* Бледно-зеленый текст (чтобы глаза не уставали) */
+                --text-light: #008f11; /* Классический зеленый код */
+                --shadow: 0 0 20px rgba(0, 255, 65, 0.15); 
+            }
+
+            /* Кнопки выглядят как ввод в консоли */
+            body.theme-cyber .btn-primary,
+            body.theme-cyber .nav-btn.active,
+            body.theme-cyber .daily-day.active,
+            body.theme-cyber .shop-item.active {
+                background: #000000 !important;
+                color: #00FF41 !important;
+                border: 1px solid #00FF41 !important;
+                box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), inset 0 0 10px rgba(0, 255, 65, 0.1) !important;
+                font-family: monospace !important;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+
+            /* Таймер и цифры статистики светятся как голограмма */
+            body.theme-cyber .timer-display,
+            body.theme-cyber .stat-val,
+            body.theme-cyber .trainer-problem {
+                font-family: monospace !important;
+                text-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
+            }
+
+            /* Фиксируем цвета для темного режима (она и так темная) */
+            body.dark-mode.theme-cyber {
+                --bg: #020202;
+                --surface: #050a05;
+            }
+
             /* === ТЕМНЫЙ РЕЖИМ === */
             body.dark-mode { --bg: #1A1A2E; --surface: #16213E; --text: #EAEAEA; --text-light: #8892B0; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
 /* 👑 ROYAL GOLD DARK (Золото на черном бархате) */
@@ -476,7 +514,7 @@
         --shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
 
-    /* Если хочешь комбо с другими темами в тёмном режиме */
+    /* комбо с другими темами в тёмном режиме */
     body.theme-dark.theme-standard { --primary: #8B7EFF; }
     body.theme-dark.theme-math { --primary: #00F5E0; }
     body.theme-dark.theme-pantone { --primary: #FFAB91; }
@@ -718,18 +756,192 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
             .stat-label { font-size: 10px; color: var(--text-light); text-transform: uppercase; font-weight: bold; }
 
             /* FIXED BOTTOM NAV FOR MOBILE */
+            /* === СОВРЕМЕННАЯ НАВИГАЦИЯ === */
+            /* === МОБИЛЬНАЯ НАВИГАЦИЯ (TOUCH-FRIENDLY) === */
             .nav { 
-                position: fixed; bottom: 0; left: 0; width: 100%; 
-                background: var(--surface); z-index: 1000;
-                display: flex; gap: 8px; overflow-x: auto; 
-                padding: 10px 10px calc(10px + var(--safe-bottom)) 10px; 
-                box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-                scrollbar-width: none; 
+                position: fixed; 
+                bottom: 0; 
+                left: 0; 
+                width: 100%; 
+                background: var(--surface);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                z-index: 1000;
+                display: flex; 
+                justify-content: space-around; /* Равномерно распределяем */
+                align-items: center;
+                padding: 6px 4px calc(6px + var(--safe-bottom)) 4px; 
+                box-shadow: 0 -2px 20px rgba(0,0,0,0.08);
+                border-top: 1px solid rgba(0,0,0,0.05);
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+                scrollbar-width: none;
             }
-            .nav::-webkit-scrollbar { display: none; }
-            .nav-btn { background: var(--bg); border: none; padding: 12px 20px; border-radius: 18px; color: var(--text-light); font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; font-size: 15px; }
-            .nav-btn.active { background: var(--primary); color: white; transform: scale(1.05); box-shadow: 0 5px 15px rgba(108, 99, 255, 0.3); }
 
+            body.dark-mode .nav {
+                border-top: 1px solid rgba(255,255,255,0.05);
+            }
+
+            .nav::-webkit-scrollbar { display: none; }
+
+            .nav-btn { 
+                background: transparent;
+                border: none; 
+                padding: 8px 4px;
+                border-radius: 12px; 
+                color: var(--text-light); 
+                font-weight: 600;
+                cursor: pointer; 
+                transition: all 0.2s ease; /* Быстрее для тача */
+                white-space: nowrap; 
+                flex-shrink: 0; 
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                min-width: 48px; /* Минимум для удобного тача */
+                min-height: 48px; /* Apple рекомендует 44-48px */
+                position: relative;
+                -webkit-tap-highlight-color: transparent; /* Убираем синюю вспышку на iOS */
+                touch-action: manipulation; /* Отключаем double-tap zoom */
+            }
+
+            .nav-icon {
+                font-size: 22px; /* Крупнее для телефона */
+                transition: transform 0.2s ease;
+                display: block;
+                line-height: 1;
+            }
+
+            .nav-label {
+                font-size: 9px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                opacity: 0.8;
+                line-height: 1;
+            }
+
+            /* Активная кнопка (без hover, только тач) */
+            .nav-btn.active { 
+                background: var(--primary);
+                color: white;
+                transform: scale(1.05); /* Легкое увеличение */
+                box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+            }
+
+            .nav-btn.active .nav-icon {
+                transform: scale(1.1);
+            }
+
+            .nav-btn.active .nav-label {
+                opacity: 1;
+            }
+
+            /* Индикатор активной вкладки (полоска сверху) */
+            .nav-btn.active::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 24px;
+                height: 3px;
+                background: white;
+                border-radius: 0 0 3px 3px;
+            }
+
+            /* Эффект нажатия (feedback для пальца) */
+            .nav-btn:active {
+                transform: scale(0.92);
+                opacity: 0.7;
+            }
+
+            .nav-btn.active:active {
+                transform: scale(0.98);
+            }
+
+            /* Ripple эффект при тапе */
+            .nav-btn::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(108, 99, 255, 0.3);
+                transform: translate(-50%, -50%);
+                pointer-events: none;
+            }
+
+            .nav-btn:active::after {
+                width: 60px;
+                height: 60px;
+                transition: width 0.3s, height 0.3s, opacity 0.3s;
+                opacity: 0;
+            }
+
+            /* === АДАПТАЦИЯ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ === */
+            @media (max-width: 380px) {
+                .nav { 
+                    padding: 4px 2px calc(4px + var(--safe-bottom)) 2px;
+                    gap: 2px;
+                }
+                
+                .nav-btn { 
+                    min-width: 44px;
+                    min-height: 44px;
+                    padding: 6px 2px;
+                }
+                
+                .nav-icon { 
+                    font-size: 20px; 
+                }
+                
+                .nav-label { 
+                    font-size: 8px;
+                    letter-spacing: 0.2px;
+                }
+            }
+
+            /* === АДАПТАЦИЯ ДЛЯ ОЧЕНЬ МАЛЕНЬКИХ (iPhone SE, старые Android) === */
+            @media (max-width: 340px) {
+                .nav-label {
+                    display: none; /* Скрываем текст, только иконки */
+                }
+                
+                .nav-btn {
+                    min-width: 40px;
+                    padding: 10px 4px;
+                }
+                
+                .nav-icon {
+                    font-size: 24px; /* Компенсируем отсутствие текста */
+                }
+            }
+
+            /* === ЛАНДШАФТ (горизонтальная ориентация) === */
+            @media (max-height: 500px) and (orientation: landscape) {
+                .nav {
+                    padding: 4px 4px calc(4px + var(--safe-bottom)) 4px;
+                }
+                
+                .nav-btn {
+                    min-height: 40px;
+                    padding: 6px 4px;
+                }
+                
+                .nav-icon {
+                    font-size: 18px;
+                }
+                
+                .nav-label {
+                    font-size: 8px;
+                }
+            }
             .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
             .card { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); transition: 0.2s; }
             .btn { padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; font-size: 16px; display:flex; justify-content:center; align-items:center; gap:5px; -webkit-tap-highlight-color: transparent; }
@@ -758,10 +970,25 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
             .shop-price-tag { font-size:12px; font-weight:bold; margin-top:5px; color:var(--text-light); }
             .shop-price-tag.affordable { color: var(--primary); }
 
-            .section { display: none; animation: fadeIn 0.3s; }
-            .section.active { display: block; }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-            
+            .section { 
+                display: none;
+            }
+
+            .section.active { 
+                display: block;
+                animation: fadeInUp 0.3s ease;
+            }
+
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
             .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 6000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; }
             .modal.show { display: flex; animation: popIn 0.3s; }
             @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -1642,6 +1869,73 @@ body.dark-mode .subject-item-fixed {
     #session-log::-webkit-scrollbar-track {
         background: rgba(0,0,0,0.05);
     }
+
+    /* 🌌 ЭЛИТНАЯ РАМКА: ТИТАН (КОСМОС) - КРУЧЕ КОРОНЫ */
+            @keyframes titan-pulse {
+                0% { box-shadow: 0 0 20px #00F0FF, inset 0 0 15px #7000FF; border-color: #00F0FF; }
+                33% { box-shadow: 0 0 40px #7000FF, 0 0 20px #FF00FF, inset 0 0 25px #00F0FF; border-color: #7000FF; }
+                66% { box-shadow: 0 0 30px #FF00FF, inset 0 0 20px #00F0FF; border-color: #FF00FF; }
+                100% { box-shadow: 0 0 20px #00F0FF, inset 0 0 15px #7000FF; border-color: #00F0FF; }
+            }
+
+            /* Анимация орбиты (Комета) */
+            @keyframes orbit-star-1 {
+                from { transform: rotate(0deg) translateY(-32px) rotate(0deg) scale(1); filter: hue-rotate(0deg); }
+                to   { transform: rotate(360deg) translateY(-32px) rotate(-360deg) scale(1.3); filter: hue-rotate(360deg); }
+            }
+
+            /* Анимация орбиты (Искра - летит с противоположной стороны) */
+            @keyframes orbit-star-2 {
+                from { transform: rotate(180deg) translateY(-32px) rotate(-180deg) scale(1.3); filter: hue-rotate(360deg); }
+                to   { transform: rotate(540deg) translateY(-32px) rotate(-540deg) scale(1); filter: hue-rotate(0deg); }
+            }
+
+            .frame-titan {
+                border: 4px solid #00F0FF !important;
+                animation: titan-pulse 3s infinite linear;
+                /* Глубокий космос внутри рамки */
+                background: radial-gradient(circle, #1a0033 0%, #000000 100%) !important;
+                position: relative;
+                overflow: visible !important;
+            }
+
+            /* Летающая комета */
+            .frame-titan::before {
+                content: '☄️';
+                position: absolute;
+                top: 50%; left: 50%;
+                /* Центрируем точку вращения */
+                margin-top: -10px; margin-left: -10px;
+                font-size: 20px;
+                z-index: 100;
+                animation: orbit-star-1 4s linear infinite;
+            }
+
+            /* Летающая искра */
+            .frame-titan::after {
+                content: '✨';
+                position: absolute;
+                top: 50%; left: 50%;
+                margin-top: -10px; margin-left: -10px;
+                font-size: 20px;
+                z-index: 100;
+                animation: orbit-star-2 4s linear infinite;
+            }
+            
+            .shop-item.blocked {
+                pointer-events: none;
+                position: relative;
+            }
+
+            .shop-item.blocked::after {
+                content: '🔒';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 48px;
+                opacity: 0.3;
+            }
         </style>
         
     </head>
@@ -1772,13 +2066,34 @@ body.dark-mode .subject-item-fixed {
         </div>
 
         <nav class="nav">
-            <button class="nav-btn active" onclick="App.switchTab('dashboard', this)">⏱️ Учеба</button>
-            <button class="nav-btn" onclick="App.switchTab('trainer', this)">🧠 Тренажер</button>
-            <button class="nav-btn" onclick="App.switchTab('stats', this)">📊 Статистика</button>
-            <button class="nav-btn" onclick="App.switchTab('leaderboard', this)">🏆 Топ</button>
-            <button class="nav-btn" onclick="App.switchTab('shop', this)">🛒 Магазин</button>
-            <button class="nav-btn" onclick="App.switchTab('achievements', this)">🏅 Награды</button>
-            <button class="nav-btn" onclick="App.switchTab('settings', this)">⚙️ Опции</button>
+            <button class="nav-btn active" data-tab="dashboard" onclick="App.switchTab('dashboard', this)">
+                <span class="nav-icon">⏱️</span>
+                <span class="nav-label">Учеба</span>
+            </button>
+            <button class="nav-btn" data-tab="trainer" onclick="App.switchTab('trainer', this)">
+                <span class="nav-icon">🧠</span>
+                <span class="nav-label">Тренажер</span>
+            </button>
+            <button class="nav-btn" data-tab="stats" onclick="App.switchTab('stats', this)">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Статистика</span>
+            </button>
+            <button class="nav-btn" data-tab="leaderboard" onclick="App.switchTab('leaderboard', this)">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">Топ</span>
+            </button>
+            <button class="nav-btn" data-tab="shop" onclick="App.switchTab('shop', this)">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label">Магазин</span>
+            </button>
+            <button class="nav-btn" data-tab="achievements" onclick="App.switchTab('achievements', this)">
+                <span class="nav-icon">🏅</span>
+                <span class="nav-label">Награды</span>
+            </button>
+            <button class="nav-btn" data-tab="settings" onclick="App.switchTab('settings', this)">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Опции</span>
+            </button>
         </nav>
 
         <!-- 1. DASHBOARD -->
@@ -1798,14 +2113,12 @@ body.dark-mode .subject-item-fixed {
             
             <div id="timer" class="timer-display">00:00:00</div>
             
-            <!-- 1. ИНФО О МОНЕТАХ -->
-            <div style="font-size: 13px; color: var(--text-light); margin-bottom: 5px;">
-                💰 <b>Монеты капают каждую минуту</b>
-            </div>
-
-            <!-- 2. ИНФО О РОСТЕ НАГРАДЫ -->
-            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
-                Награда растет каждые 10 минут! 📈
+            <!-- ИНФО О МОНЕТАХ (КЛИКАБЕЛЬНАЯ ПОДСКАЗКА) -->
+            <div class="card" style="background: rgba(108, 99, 255, 0.05); border: 1px dashed var(--primary); padding: 10px; margin-bottom: 15px; cursor: pointer; display: inline-block; box-shadow: none;" onclick="document.getElementById('timer-rules-modal').classList.add('show')">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 18px;">💡</span>
+                    <span style="font-size: 12px; font-weight: bold; color: var(--text);">Как начисляются монеты?</span>
+                </div>
             </div>
             
             <!-- 3. ЦИТАТА ДНЯ -->
@@ -2722,32 +3035,31 @@ body.dark-mode .subject-item-fixed {
     0. PWA & SOUND
     ========================================== */
     const PWA = {
-    prompt: null,
-    init() {
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Предотвращаем автоматический показ баннера браузером
-            e.preventDefault(); 
-            this.prompt = e;
-            
-            // Показываем твою карточку установки (если она есть)
-            const installCard = document.getElementById('install-promo-card');
-            if (installCard) {
-                installCard.style.display = 'block';
-            }
-        });
-    },
-    install() {
-        if(this.prompt) {
-            this.prompt.prompt();
-            this.prompt.userChoice.then(() => {
+        prompt: null,
+        init() {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Блокируем системный всплывающий баннер (отсюда и идет предупреждение в консоли - это нормально)
+                e.preventDefault(); 
+                this.prompt = e;
+                
+                // Показываем вашу красивую карточку установки
                 const installCard = document.getElementById('install-promo-card');
-                if (installCard) installCard.style.display = 'none'; 
-                this.prompt = null;
+                if (installCard) installCard.style.display = 'block';
             });
+        },
+        install() {
+            if(this.prompt) {
+                this.prompt.prompt(); // Вызываем системное окно установки Android/Chrome
+                this.prompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        const installCard = document.getElementById('install-promo-card');
+                        if (installCard) installCard.style.display = 'none'; 
+                    }
+                    this.prompt = null;
+                });
+            }
         }
-    }
-};
-
+    };
     const MusicPlayer = {
         playing: false,
         audio: null,
@@ -2770,27 +3082,36 @@ body.dark-mode .subject-item-fixed {
         },
 
         toggle() {
-        if (!this.audio) this.audio = document.getElementById('lofi-stream');
-        const currentId = DB.user.currentRadio || (DB.user.ownedRadios ? DB.user.ownedRadios[0] : null);
-        if (!currentId) return App.toast("Купите радио в магазине!");
-        const station = SHOP_RADIOS.find(x => x.id === currentId);
-        const btn = document.getElementById('music-btn');
-        const vis = document.getElementById('music-vis');
-        
-        if(this.playing) {
-            this.audio.pause(); this.playing = false;
-            if(btn) btn.innerText = "▶"; if(vis) vis.style.opacity = "0";
-        } else {
-            if (this.audio.src !== station.url) { this.audio.src = station.url; this.audio.load(); }
-            const playPromise = this.audio.play();
-            if (playPromise !== undefined) {
-                if(btn) btn.innerText = "⏳";
-                playPromise.then(_ => {
-                    this.playing = true; if(btn) btn.innerText = "⏸"; if(vis) vis.style.opacity = "1";
-                }).catch(e => { App.toast("Ошибка потока 📻"); if(btn) btn.innerText = "▶"; });
+            if (!this.audio) this.audio = document.getElementById('lofi-stream');
+            const currentId = DB.user.currentRadio || (DB.user.ownedRadios ? DB.user.ownedRadios[0] : null);
+            if (!currentId) return App.toast("Купите радио в магазине!");
+            const station = SHOP_RADIOS.find(x => x.id === currentId);
+            
+            const btn = document.getElementById('music-btn');
+            const vis = document.getElementById('music-vis');
+            
+            if(this.playing) {
+                // ПАУЗА
+                this.audio.pause(); this.playing = false;
+                if(btn) btn.innerText = "▶"; 
+                if(vis) vis.style.opacity = "0";
+            } else {
+                // ПЛЕЙ
+                if (this.audio.src !== station.url) { this.audio.src = station.url; this.audio.load(); }
+                const playPromise = this.audio.play();
+                if (playPromise !== undefined) {
+                    if(btn) btn.innerText = "⏳";
+                    playPromise.then(_ => {
+                        this.playing = true; 
+                        if(btn) btn.innerText = "⏸"; 
+                        if(vis) vis.style.opacity = "1";
+                    }).catch(e => { 
+                        App.toast("Ошибка потока 📻"); 
+                        if(btn) btn.innerText = "▶"; 
+                    });
+                }
             }
         }
-    }
     };
 
     const SoundSys = {
@@ -2918,11 +3239,6 @@ body.dark-mode .subject-item-fixed {
         add("Неделя в огне", "Держи огонь 7 дней", 7, "🔥", "streak");
         add("Железная привычка", "Держи огонь 30 дней", 30, "🌋", "streak");
 
-        // --- 🔒 ХАРДКОР (СИЛА ВОЛИ) ---
-        add("Смельчак", "1 час в Хардкор режиме", 3600, "🛡️", "strict_time");
-        add("Стальные нервы", "5 часов в Хардкор режиме", 18000, "⛓️", "strict_time");
-        add("Титановая воля", "10 часов в Хардкор режиме", 36000, "🗿", "strict_time");
-
         // --- 🧠 ТРЕНАЖЕР И PVP ---
         add("Счетовод", "100 решенных примеров", 100, "🔢", "math_total");
         add("Калькулятор", "1000 решенных примеров", 1000, "🤖", "math_total");
@@ -3020,7 +3336,7 @@ body.dark-mode .subject-item-fixed {
     const THEMES = [
         // Бесплатные и Дешевые
         { id: 'standard', name: 'Стандарт', icon: '💜', price: 0 },
-        { id: 'dark', name: 'Темная', icon: '🌙', price: 0 }, /* Сделал бесплатной для удобства */
+        { id: 'dark', name: 'Темная', icon: '🌙', price: 0 }, 
         
         // Новые Дневные (Легкие)
         { id: 'paper', name: 'Бумага', icon: '📝', price: 300 },
@@ -3042,10 +3358,12 @@ body.dark-mode .subject-item-fixed {
         { id: 'joker', name: 'JOKER', icon: '🃏', price: 3000 },
         { id: 'platinum', name: 'PLATINUM', icon: '💿', price: 4000 },
 
-
-
         // КОСМИЧЕСКАЯ ТЕМА
-        { id: 'galaxy', name: 'Галактика', icon: '🌌', price: 5000 }
+        { id: 'galaxy', name: 'Галактика', icon: '🌌', price: 5000 },
+
+        //    СЕКРЕТНАЯ ТЕМА
+        { id: 'cyber', name: 'Матрица', icon: '💻', price: 8000 }
+
     ];
 
     const SHOP_AVATARS = [
@@ -3076,11 +3394,19 @@ body.dark-mode .subject-item-fixed {
         { id: 'skull', icon: '💀', name: 'Череп', price: 350 },
         { id: 'dragon', icon: '🐲', name: 'Дракон', price: 500 },
         { id: 'samurai', icon: '👺', name: 'Самурай', price: 600 },
+        { id: 'unicorn', icon: '🦄', name: 'Единорог', price: 1200 },  
+        { id: 'sigma', icon: '🗿', name: 'Сигма', price: 1500 },
         { id: 'diamond', icon: '💎', name: 'Магнат', price: 2000 },
+        { id: 'wolf', icon: '🐺', name: 'Альфа', price: 2500 },
 
         // 🚀 LEGENDARY (Для миллионеров)
         { id: 'hacker', icon: '🕵️‍♂️', name: 'Анонимус', price: 5000 },
-        { id: 'elon', icon: '🚀', name: 'SpaceX', price: 10000 }
+        { id: 'joker', icon: '🤡', name: 'Джокер', price: 7500 },
+        { id: 'elon', icon: '🚀', name: 'SpaceX', price: 10000 },
+        { id: 'astronaut', icon: '👨‍🚀', name: 'Космонавт', price: 12000 },
+
+        // 🌌 MYTHIC (Секретный уровень роскоши)
+        { id: 'god', icon: '👁️', name: 'Абсолют', price: 15000 }
     ];
 
     const SHOP_ITEMS = [
@@ -3109,27 +3435,49 @@ body.dark-mode .subject-item-fixed {
         { id: 'glitch', name: 'Хакер', price: 2000, css: 'frame-glitch' },
         { id: 'neon', name: 'Неон', price: 3000, css: 'frame-neon' },
         { id: 'fire', name: 'Огонь 🔥', price: 4000, css: 'frame-fire' },
-        { id: 'royal', name: 'Корона', price: 5000, css: 'frame-royal' }
+        { id: 'royal', name: 'Корона', price: 5000, css: 'frame-royal' },
+        { id: 'titan', name: 'Титан 🌌', price: 10000, css: 'frame-titan' }
+
     ];
 
     // РАДИО
     const SHOP_RADIOS = [
-    { 
-        id: 'lofi', 
-        name: 'Lo-Fi Chill', 
-        icon: '🎧', 
-        price: 100, 
-        url: 'https://lofi.stream.laut.fm/lofi' 
-    },
-    { 
-        id: 'classic', 
-        name: 'Классика IQ', 
-        icon: '🎻', 
-        price: 300, 
-        // Это поток Radio Swiss Classic — один из самых стабильных в мире
-        url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' 
-    }
-];
+        { 
+            id: 'lofi', 
+            name: 'Lo-Fi Chill', 
+            icon: '🎧', 
+            price: 100, 
+            url: 'https://lofi.stream.laut.fm/lofi' 
+        },
+        { 
+            id: 'classic', 
+            name: 'Классика IQ', 
+            icon: '🎻', 
+            price: 300, 
+            url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' 
+        },
+        { 
+            id: 'jazz', 
+            name: 'Smooth Jazz 24/7', 
+            icon: '🎷', 
+            price: 250, 
+            url: 'https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3' // Swiss Jazz Radio (стабильный!)
+        },
+        { 
+            id: 'nature', 
+            name: 'Nature Sounds', 
+            icon: '🌿', 
+            price: 200, 
+            url: 'https://radio.stereoscenic.com/asp-s' // Plaza One (ambient/nature)
+        },
+        { 
+            id: 'electronic', 
+            name: 'Deep Focus', 
+            icon: '⚡', 
+            price: 400, 
+            url: 'https://ice1.somafm.com/deepspaceone-128-mp3' // SomaFM Deep Space One
+        }
+    ];
 
     // 🔊 ЗВУКИ (Синтезатор)
     const SHOP_SOUNDS = [
@@ -3588,11 +3936,11 @@ body.dark-mode .subject-item-fixed {
         payUz() { 
             // При нажатии покажет окно с номером карты, который можно скопировать
             prompt("Скопируйте номер карты для перевода (Payme/Click):", this.uzCard);
-            alert("После перевода скинь скриншот мне в тг @rustambey708, чтобы получить код!");
+            alert("После перевода скинь скриншот мне в тг @mathboosterpro, чтобы получить код!");
         },
         payWorld() { 
             prompt("Скопируйте номер карты для перевода (Visa):", this.worldCard);
-            alert("После перевода скинь скриншот мне в тг @rustambey708, чтобы получить код!");
+            alert("После перевода скинь скриншот мне в тг @mathboosterpro, чтобы получить код!");
         },
         async enterCode() {
             const c = prompt("Введите промокод:"); 
@@ -3719,85 +4067,94 @@ body.dark-mode .subject-item-fixed {
     };
 
     const Online = {
-        lastLoadTime: 0, // Время последнего обновления Топа
+        lastLoadTime: 0, 
 
         async loadLeaderboard() {
-        if (!window.DB_Online) return App.toast("⚠️ Нет связи");
+            if (!window.DB_Online) return App.toast("⚠️ Нет связи");
 
-        // --- ПРОВЕРКА ОГРАНИЧЕНИЯ (1 минута) ---
-        const now = Date.now();
-        const cooldown = 60000; // 60 000 миллисекунд = 1 минута
-
-        if (now - this.lastLoadTime < cooldown) {
-            const secondsLeft = Math.ceil((cooldown - (now - this.lastLoadTime)) / 1000);
-            App.toast(`⏳ Подождите ${secondsLeft} сек. перед обновлением`);
-            return; // Прерываем выполнение, если минута еще не прошла
-        }
-
-        this.lastLoadTime = now; 
-
-
-        const list = document.getElementById('leaderboard-list');
-        list.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Загрузка...</div>';
-
-        try {
-            // Читаем из ЛЕГКОЙ коллекции leaderboard
-            const q = window.DB_Online.query(
-                window.DB_Online.collection(window.DB_Online.db, "leaderboard"),
-                window.DB_Online.orderBy("totalSec", "desc"),
-                window.DB_Online.limit(50)
-            );
-
-            const snap = await window.DB_Online.getDocs(q);
-            let html = '';
-            let rank = 1;
             const now = Date.now();
+            const cooldown = 60000;
 
-            snap.forEach(doc => {
-                const u = doc.data();
-                const isOnline = (now - (u.lastActive || 0)) < 300000;
-                const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
-                const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
-                const isTitan = u.isTitan === true;
-                const titanStyle = isTitan ? 'box-shadow: inset 0 0 15px rgba(0, 210, 255, 0.3), 0 0 10px rgba(0, 210, 255, 0.2); border: 1px solid #00d2ff !important; background: rgba(0, 210, 255, 0.05);' : '';
-                html += `
-                    <div class="user-list-item" style="display: flex; justify-content: space-between; align-items: center; ${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
-                        
-                        <!-- ЛЕВАЯ ЧАСТЬ (Номер + Аватар + Имя) -->
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="font-weight:bold; min-width:40px; white-space:nowrap; color:var(--text-light);">#${rank}</div>
+            if (now - this.lastLoadTime < cooldown) {
+                const secondsLeft = Math.ceil((cooldown - (now - this.lastLoadTime)) / 1000);
+                App.toast(`⏳ Подождите ${secondsLeft} сек. перед обновлением`);
+                return; 
+            }
+
+            this.lastLoadTime = now; 
+
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Загрузка...</div>';
+
+            try {
+                const q = window.DB_Online.query(
+                    window.DB_Online.collection(window.DB_Online.db, "leaderboard"),
+                    window.DB_Online.orderBy("totalSec", "desc"),
+                    window.DB_Online.limit(50)
+                );
+
+                const snap = await window.DB_Online.getDocs(q);
+                let html = '';
+                let rank = 1;
+                const nowTime = Date.now();
+
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
+                    const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
+                    const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
+                    const isTitan = u.isTitan === true;
+                    
+                    html += `
+                        <div class="user-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; gap: 10px; ${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
                             
-                            <div style="position:relative; width:45px; height:45px;">
-                                <div class="${frameClass}" style="width:45px; height:45px; font-size:24px;">
-                                    <div>${u.avatar || '😎'}</div>
+                            <!-- ЛЕВАЯ ЧАСТЬ (Номер + Аватар + Имя) -->
+                            <!-- 🌟 УВЕЛИЧЕН GAP ДО 15px 🌟 -->
+                            <div style="display:flex; align-items:center; gap:15px; flex: 1; min-width: 0;">
+                                
+                                <div style="font-weight:bold; width:25px; text-align:center; flex-shrink:0; color:var(--text-light);">#${rank}</div>
+                                
+                                <!-- Аватарка -->
+                                <div style="position:relative; width:45px; height:45px; flex-shrink: 0;">
+                                    <div class="${frameClass}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative;">
+                                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) !important; font-size:22px !important; width:100%; text-align:center; line-height:1; overflow:hidden; white-space:nowrap;">
+                                            ${u.avatar || '😎'}
+                                        </div>
+                                    </div>
+                                    ${isOnline ? '<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:2;"></div>' : ''}
                                 </div>
-                                ${isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#00d26a; border:2px solid var(--surface); border-radius:50%;"></div>' : ''}
+
+                                <!-- ИМЯ И СТАТУС -->
+                                <!-- 🌟 ДОБАВЛЕН margin-left: 8px ДЛЯ ЗАЩИТЫ ОТ ШИРОКИХ РАМОК 🌟 -->
+                                <div style="display:flex; flex-direction:column; justify-content:center; flex: 1; min-width: 0; margin-left: 8px;">
+                                    
+                                    <!-- 🌟 ДОБАВЛЕН margin-bottom: 3px ЧТОБЫ ИМЯ И СТАТУС НЕ СЛИПАЛИСЬ 🌟 -->
+                                    <b style="display:block; font-size: clamp(13px, 4vw, 15px); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 3px;">
+                                        ${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isVip ? '💎 ' : ''))}${u.name}
+                                    </b>
+                                    
+                                    <small style="font-size:11px; opacity:0.7; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        Lvl ${u.level} • ${u.currentTitle || 'Участник'}
+                                    </small>
+                                </div>
                             </div>
 
-                            <div>
-                                <b style="display:block; font-size:14px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    ${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isVip ? '💎 ' : ''))}${u.name}
+                            <!-- ПРАВАЯ ЧАСТЬ (Часы) -->
+                            <div style="text-align:right; flex-shrink: 0; padding-left: 10px;">
+                                <b style="color:var(--primary); font-size:15px; white-space:nowrap;">
+                                    ${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м
                                 </b>
-                                <small style="font-size:10px; opacity:0.7;">Lvl ${u.level} • ${u.currentTitle || 'Участник'}</small>
                             </div>
-                        </div>
 
-                        <!-- ПРАВАЯ ЧАСТЬ (Часы) -->
-                        <div style="text-align:right; min-width:70px;">
-                            <b style="color:var(--primary); font-size:14px; white-space:nowrap;">
-                                ${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м
-                            </b>
-                        </div>
-
-                    </div>`;
-                rank++;
-            });
-            list.innerHTML = html;
-        } catch (e) {
-            console.error(e);
-            list.innerHTML = '<div style="text-align:center; color:red;">Ошибка сети</div>';
+                        </div>`;
+                    rank++;
+                });
+                list.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = '<div style="text-align:center; color:red;">Ошибка сети</div>';
+            }
         }
-    },
     };
 
     /* ==========================================
@@ -4108,343 +4465,503 @@ body.dark-mode .subject-item-fixed {
     };
 
 const Timer = {
-    ref: null,          
-    heartbeatRef: null, 
-    sec: 0,             
-    visualSec: 0,       
     active: false,
-    startTime: 0,
-    lastPaidBlock: 0,   
-    sessionCoins: 0,
-    sessionDuration: 0, // Общее время сессии
-    
-    // Настройки времени
-    maxSessionTime: 60 * 60,       // 60 минут (Лимит сессии)
-    maxIdleTime: 35 * 60 * 1000,   // 35 минут (Анти-АФК)
-    lastActive: 0,                 // Время последнего касания
-    
-    // Хардкор
+    isRunning: false,
+    isPaused: false,
     isStrict: false,
-    strictGraceTimeout: null,
+    
+    startTime: 0,
+    pausedTime: 0,
+    totalPausedDuration: 0,
+    realSec: 0,
+    visualSec: 0,
+    
+    interval: null,
+    checkInterval: null,
+    lastCheckTime: 0,
+    
+    // Настройки проверки
+    CHECK_AFTER_SECONDS: 3600,  // Проверка 
+    CHECK_TIMEOUT: 60,          // Время на решение капчи
+    
+    lastRewardTime: 0,
+    REWARD_INTERVAL: 600,
 
-    // WakeLock
-    wakeLock: null,
-    useWakeLock: localStorage.getItem('useWakeLock') !== 'false',
-
-    async requestWakeLock() {
-        if (!this.useWakeLock) return;
-        try {
-            if ('wakeLock' in navigator) {
-                this.wakeLock = await navigator.wakeLock.request('screen');
-                this.wakeLock.addEventListener('release', () => {
-                    if (this.active && document.visibilityState === 'visible') {
-                        this.requestWakeLock();
-                    }
-                });
-            }
-        } catch (err) { console.log("WakeLock error"); }
+    getTrueTime() {
+        return TimeGuard.getTrueTime();
     },
 
-    releaseWakeLock() {
-        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
-    },
-
-    // Проверка перед стартом (Хардкор)
     preStart() {
-        if (this.active) return;
+        if (!navigator.onLine) return App.toast("❌ Нужен интернет для работы таймера");
+        if (this.active) return App.toast("Таймер уже запущен");
+
+        const options = [
+            { 
+                label: '🎯 Обычный', 
+                value: 'normal', 
+                reward: '5-20 💰',
+                desc: 'Можно ставить на паузу'
+            },
+            { 
+                label: '🔥 Хардкор', 
+                value: 'strict', 
+                reward: '7-30 💰',
+                desc: 'Награда ×1.5, но нельзя паузу'
+            }
+        ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.style.zIndex = '15000';
+        modal.innerHTML = `
+            <div class="modal-content" style="text-align:center; max-width: 340px;">
+                <h3 style="margin-bottom: 10px;">⏱️ Выбери режим</h3>
+                
+                <div style="display:grid; gap:10px; margin-bottom: 15px;">
+                    ${options.map(o => `
+                        <div class="mode-btn" onclick="Timer.selectMode('${o.value}')" 
+                             style="padding:15px; border:2px solid var(--bg); border-radius:15px; cursor:pointer; transition:0.2s; text-align:left; background: var(--surface);">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <div style="font-size:20px; font-weight: bold;">${o.label}</div>
+                                <div style="font-size:16px; font-weight: bold; color: var(--primary);">${o.reward}</div>
+                            </div>
+                            
+                            <div style="font-size:12px; color: var(--text-light);">
+                                ${o.desc}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="background: rgba(108, 99, 255, 0.05); padding: 10px; border-radius: 10px; margin-bottom: 15px; cursor: pointer;" onclick="document.querySelector('.modal.show').remove(); document.getElementById('timer-rules-modal').classList.add('show');">
+                    <div style="font-size: 11px; color: var(--primary); font-weight: bold;">
+                        💡 Как начисляются монеты? (нажми)
+                    </div>
+                </div>
+
+                <button class="btn btn-outline" onclick="this.closest('.modal').remove()" style="width: 100%;">
+                    Отмена
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+
+        setTimeout(() => {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.onmouseenter = function() {
+                    this.style.borderColor = 'var(--primary)';
+                    this.style.transform = 'scale(1.02)';
+                    this.style.boxShadow = '0 5px 15px rgba(108, 99, 255, 0.15)';
+                };
+                btn.onmouseleave = function() {
+                    this.style.borderColor = 'var(--bg)';
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                };
+            });
+        }, 100);
+    },
+
+    selectMode(mode) {
+        this.isStrict = (mode === 'strict');
+        document.querySelector('.modal.show')?.remove();
         
-        const strictToggle = document.getElementById('strict-mode-toggle');
-        this.isStrict = strictToggle ? strictToggle.checked : false;
-
         if (this.isStrict) {
-            if(!confirm("⚠️ РЕЖИМ ХАРДКОР!\n\nНе сворачивай приложение и не выключай экран, иначе таймер сбросится.\n\nНачать?")) return;
+            const confirm = window.confirm(
+                "⚠️ РЕЖИМ ХАРДКОР\n\n" +
+                "• Нельзя ставить на паузу\n" +
+                "• Нельзя выходить с экрана\n" +
+                "• Награда ×1.5\n\n" +
+                "Ты готов?"
+            );
+            if (!confirm) return;
         }
-
+        
         this.start();
     },
 
-    async start() {
-        if (this.active) return;
-        
-        this.active = true;
-        this.sessionCoins = 0;
-        this.lastPaidBlock = 0;
-        this.sessionDuration = 0;
-        
-        // 1. Время старта
-        const now = (window.TimeGuard && TimeGuard.getTrueTime) ? Number(TimeGuard.getTrueTime()) : Date.now();
-        this.startTime = now - (this.sec * 1000);
-        this.visualSec = this.sec;
-        this.lastActive = Date.now();
-        this.lastKnownTime = Date.now();
-
-        // 2. Блокировки и Слушатели
-        this.requestWakeLock();
-        
-        // Слушаем активность
-        window.onmousemove = window.onkeypress = window.ontouchstart = () => { 
-            this.lastActive = Date.now(); 
-        };
-        // Слушаем сворачивание (для Хардкора)
-        document.addEventListener("visibilitychange", this.handleVisibility);
-
-        // 3. Firebase статус
-        if (window.DB_Online && Auth.currentUser) {
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-            window.DB_Online.updateDoc(docRef, {
-                "user.activeSessionStart": this.startTime,
-                "user.lastPing": this.startTime,
-                "user.isStudying": true
-            }).catch(() => {});
+        async start() {
+        // 🛡️ ПРОВЕРКА ИНТЕРНЕТА ПЕРЕД СТАРТОМ
+        if (!navigator.onLine) {
+            SoundSys.play('error');
+            return App.toast("❌ Нужен интернет для работы таймера (защита от читов)");
         }
 
-        // 4. UI
-        document.getElementById('btn-start').innerText = this.isStrict ? "💀 HARDCORE..." : "🔥 УЧУСЬ...";
-        document.getElementById('timer').style.color = this.isStrict ? "#FF4757" : "var(--primary)";
+        if (this.active) {
+            this.resume();
+            return;
+        }
+
+        App.toast("⏳ Синхронизация времени...");
+        
+        // 🛡️ ПРОВЕРКА ИНТЕРНЕТА ВО ВРЕМЯ СИНХРОНИЗАЦИИ
+        try {
+            await TimeGuard.sync();
+        } catch (e) {
+            SoundSys.play('error');
+            return App.toast("❌ Не удалось синхронизировать время. Проверь интернет.");
+        }
+
+        this.active = true;
+        this.isRunning = true;
+        this.isPaused = false;
+        this.startTime = this.getTrueTime();
+        this.pausedTime = 0;
+        this.totalPausedDuration = 0;
+        this.realSec = 0;
+        this.visualSec = 0;
+        this.lastCheckTime = 0;
+        this.lastRewardTime = 0;
+
+        const btn = document.getElementById('btn-start');
+        if (btn) {
+            btn.innerText = this.isStrict ? '🔥 ХАРДКОР' : '⏸ ПАУЗА';
+            btn.onclick = () => this.pause();
+            btn.disabled = this.isStrict;
+            btn.style.opacity = this.isStrict ? '0.5' : '1';
+        }
+
         document.getElementById('timer').classList.add('timer-active-anim');
+        startAfkCheck();
+        this.tick();
+        SoundSys.play('click');
+        App.toast(this.isStrict ? "🔥 Режим ХАРДКОР!" : "⏱️ Таймер запущен");
+
+        if (typeof ym !== 'undefined') ym(105919372, 'reachGoal', 'timer_start');
+    },
+
+        tick() {
+        if (this.interval) clearInterval(this.interval);
         
-        if (window.App) App.renderSubjects();
-        const strictToggle = document.getElementById('strict-mode-toggle');
-        if (strictToggle) strictToggle.disabled = true;
+        this.interval = setInterval(() => {
+            if (!this.isRunning || this.isPaused) return;
 
-        // 5. ГЛАВНЫЙ ЦИКЛ
-        if (this.ref) clearInterval(this.ref);
-        
-        this.ref = setInterval(async () => {
-            const currentTime = (window.TimeGuard && TimeGuard.getTrueTime) ? Number(TimeGuard.getTrueTime()) : Date.now();
-            
-            // Реальные секунды
-            const actualSec = Math.floor((currentTime - this.startTime) / 1000);
-            const diff = actualSec - this.visualSec;
-
-            if (diff > 0) {
-                // --- ПРОВЕРКИ БЕЗОПАСНОСТИ ---
-                
-                // 1. Анти-АФК (Если телефон спал > 35 мин или не трогали экран)
-                const sleepTime = currentTime - this.lastKnownTime;
-                if (sleepTime > this.maxIdleTime || (currentTime - this.lastActive > this.maxIdleTime)) {
-                    this.forcePause("🛑 Таймер остановлен: Нет активности 35 минут.");
-                    return;
-                }
-
-                // 2. Лимит сессии (1 час)
-                if (this.sessionDuration >= this.maxSessionTime) {
-                    if(window.Notify) Notify.send("⏱️ Время вышло!", "Сессия завершена.");
-                    this.forcePause("👮 Проверка реальностью! Решите пример.");
-                    MathGame.show(true);
-                    return;
-                }
-
-                // --- ПРИМЕНЕНИЕ ВРЕМЕНИ ---
-                this.visualSec = actualSec;
-                this.sec = actualSec;
-                this.sessionDuration += diff;
-
-                // Статистика
-                DB.user.totalSec = (DB.user.totalSec || 0) + diff;
-                if (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) {
-                    DB.subjects[DB.user.subject].sec = (DB.subjects[DB.user.subject].sec || 0) + diff;
-                }
-                
-                // Хардкор статистика
-                if (this.isStrict) {
-                    DB.user.lifetimeStrictSec = (DB.user.lifetimeStrictSec || 0) + diff;
-                }
-
-                // --- КВЕСТЫ (Раз в минуту) ---
-                const minutesPassed = Math.floor(this.visualSec / 60);
-                const prevMinutes = Math.floor((this.visualSec - diff) / 60);
-                if (minutesPassed > prevMinutes) {
-                    if(window.QuestSys) QuestSys.update('studyMin', minutesPassed - prevMinutes);
-                    Data.save();
-                }
-
-                // --- МОНЕТЫ (Каждые 10 минут) ---
-                const currentBlock = Math.floor(this.visualSec / 600);
-                if (currentBlock > this.lastPaidBlock) {
-                    const blocksEarned = currentBlock - this.lastPaidBlock;
-                    let totalReward = 0;
-                    
-                    for (let i = 0; i < blocksEarned; i++) {
-                        let blockNum = this.lastPaidBlock + i + 1;
-                        // Прогрессивная шкала: 5, 7, 9... макс 20
-                        let reward = 5 + (blockNum - 1) * 2;
-                        if (reward > 20) reward = 20;
-                        
-                        // Бонус Хардкора (x2)
-                        if (this.isStrict) reward *= 2;
-                        
-                        totalReward += reward;
-                    }
-
-                    DB.user.coins += totalReward;
-                    this.sessionCoins += totalReward;
-                    this.lastPaidBlock = currentBlock;
-                    
-                    SoundSys.play('coin');
-                    const coinEl = document.getElementById('coin-display'); 
-                    if(coinEl) {
-                        let txt = `+${totalReward} 💰`;
-                        if (this.isStrict) txt += " 🔥";
-                        FX.floatText(coinEl.getBoundingClientRect().left, coinEl.getBoundingClientRect().top, txt);
-                    }
-                    
-                    App.updateUI();
-                }
-                
-                this.lastKnownTime = currentTime;
+            // 🛡️ ПРОВЕРКА ИНТЕРНЕТА КАЖДУЮ СЕКУНДУ
+            if (!navigator.onLine) {
+                console.error("🚨 Интернет пропал во время сессии!");
+                this.stop(true); // Останавливаем и сохраняем
+                return;
             }
 
-            // Обновление цифр
-            const timeString = new Date(this.visualSec * 1000).toISOString().substr(11, 8);
-            const mainTimer = document.getElementById('timer');
-            if (mainTimer) mainTimer.innerText = timeString;
-            const ecoTimer = document.getElementById('eco-timer-display');
-            if (ecoTimer) ecoTimer.innerText = timeString;
+            const now = this.getTrueTime();
+            this.realSec = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+            this.visualSec = this.realSec;
+
+            this.updateDisplay();
+
+            if (this.realSec > 0 && this.realSec - this.lastCheckTime >= this.CHECK_AFTER_SECONDS) {
+                this.lastCheckTime = this.realSec;
+                this.showMathCheck();
+                return;
+            }
+
+            const rewardsPassed = Math.floor(this.realSec / this.REWARD_INTERVAL);
+            const lastRewardsPassed = Math.floor(this.lastRewardTime / this.REWARD_INTERVAL);
+            
+            if (rewardsPassed > lastRewardsPassed) {
+                this.giveReward(rewardsPassed);
+                this.lastRewardTime = this.realSec;
+            }
 
         }, 1000);
-
-        // 6. Пинг сервера (Heartbeat)
-        if (this.heartbeatRef) clearInterval(this.heartbeatRef);
-        this.heartbeatRef = setInterval(async () => {
-            if (this.active && window.DB_Online && navigator.onLine) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-                const now = (window.TimeGuard && TimeGuard.getTrueTime) ? Number(TimeGuard.getTrueTime()) : Date.now();
-                await window.DB_Online.updateDoc(docRef, {
-                    "user.lastPing": now
-                }).catch(() => {}); 
-            }
-        }, 30000);
     },
 
-    // Слежка за выходом (Хардкор)
-    handleVisibility() {
-        if (document.hidden && Timer.active && Timer.isStrict) {
-            // Даем 5 секунд на возврат (защита от случайного свайпа)
-            App.toast("⚠️ ВЕРНИСЬ! (5 сек)");
-            Timer.strictGraceTimeout = setTimeout(() => {
-                if (document.hidden) {
-                    Timer.failStrictSession("Вы свернули приложение!");
-                }
-            }, 5000); 
+    showMathCheck() {
+        this.pause(true);
+
+        const a = Math.floor(Math.random() * 9) + 2;
+        const b = Math.floor(Math.random() * 9) + 2;
+        const correctAnswer = a * b;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.style.zIndex = '99999';
+        modal.innerHTML = `
+            <div class="modal-content" style="text-align:center;">
+                <h2 style="color:var(--primary);">👮 Проверка присутствия</h2>
+                <p style="margin:10px 0;">Ты долго учишься. Реши пример за 60 секунд:</p>
+                <div class="trainer-problem" style="font-size:48px; margin:20px 0;">${a} × ${b}</div>
+                <input type="number" id="check-answer" class="input-field" placeholder="?" 
+                       style="text-align:center; font-size:32px; margin-bottom:15px;">
+                <div id="check-timer" style="font-size:18px; color:var(--accent); margin-bottom:15px;">
+                    Осталось: <b>60</b> сек
+                </div>
+                <button class="btn btn-primary" onclick="Timer.checkAnswer(${correctAnswer}, this)">
+                    Ответить ➜
+                </button>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const input = document.getElementById('check-answer');
+        input.focus();
+        input.onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                const btn = modal.querySelector('.btn-primary');
+                if (btn) Timer.checkAnswer(correctAnswer, btn);
+            }
+        };
+
+        let timeLeft = this.CHECK_TIMEOUT;
+        const countdown = setInterval(() => {
+            timeLeft--;
+            const timerEl = document.getElementById('check-timer');
+            if (timerEl) {
+                timerEl.innerHTML = `Осталось: <b style="color:${timeLeft < 10 ? '#FF4757' : 'var(--accent)'}">${timeLeft}</b> сек`;
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                this.failCheck(modal);
+            }
+        }, 1000);
+
+        modal.dataset.countdown = countdown;
+    },
+
+    checkAnswer(correct, btn) {
+        const input = document.getElementById('check-answer');
+        const userAnswer = parseInt(input.value);
+        const modal = btn.closest('.modal');
+        
+        if (modal.dataset.countdown) {
+            clearInterval(parseInt(modal.dataset.countdown));
+        }
+
+        if (userAnswer && !isNaN(userAnswer)) {
+            if (userAnswer === correct) {
+                SoundSys.play('success');
+                App.toast("✅ Правильно! Продолжай!");
+            } else {
+                SoundSys.play('error');
+                App.toast("❌ Неверно, но продолжаем!");
+            }
+            modal.remove();
+            this.resume();
         } else {
-            if (Timer.strictGraceTimeout) {
-                clearTimeout(Timer.strictGraceTimeout);
-                Timer.strictGraceTimeout = null;
-            }
+            SoundSys.play('error');
+            input.classList.add('error-shake');
+            setTimeout(() => input.classList.remove('error-shake'), 400);
+            App.toast("⚠️ Введи хоть что-то!");
         }
     },
 
-    // Наказание за Хардкор
-    failStrictSession(reason) {
-        this.stop(false);
+    failCheck(modal) {
+        SoundSys.play('error');
+        App.toast("⏰ Время вышло. Таймер остановлен.");
+        modal.remove();
+        this.stop(true);
+    },
+
+    pause(isCheckPause = false) {
+        if (!this.active || this.isPaused) return;
+        if (this.isStrict && !isCheckPause) {
+            SoundSys.play('error');
+            return App.toast("🔒 В режиме ХАРДКОР нельзя ставить на паузу!");
+        }
+
+        this.isPaused = true;
+        this.isRunning = false;
+        this.pausedTime = this.getTrueTime();
         
-        // Штраф: сгорают монеты сессии
-        if (this.sessionCoins > 0) {
-            DB.user.coins = Math.max(0, DB.user.coins - this.sessionCoins);
-            App.toast(`🔥 Сгорело ${this.sessionCoins} монет!`);
+        if (!isCheckPause) {
+            const btn = document.getElementById('btn-start');
+            if (btn) {
+                btn.innerText = '▶️ ПРОДОЛЖИТЬ';
+                btn.onclick = () => this.resume();
+                btn.disabled = false;
+            }
+            App.toast("⏸ Пауза");
         }
         
-        this.sec = 0; 
-        this.visualSec = 0;
-        
-        SoundSys.play('error');
-        if (navigator.vibrate) navigator.vibrate([500, 100, 500]);
-        
-        alert("💀 GAME OVER\n\n" + reason + "\n\nПрогресс этой сессии аннулирован.");
-        App.updateUI();
+        stopAfkCheck();
+    },
+
+    resume() {
+        if (!this.active || !this.isPaused) return;
+
+        const pauseDuration = this.getTrueTime() - this.pausedTime;
+        this.totalPausedDuration += pauseDuration;
+
+        this.isPaused = false;
+        this.isRunning = true;
+
+        const btn = document.getElementById('btn-start');
+        if (btn) {
+            btn.innerText = this.isStrict ? '🔥 ХАРДКОР' : '⏸ ПАУЗА';
+            btn.onclick = () => this.pause();
+            btn.disabled = this.isStrict;
+        }
+
+        startAfkCheck();
+        App.toast("▶️ Продолжаем!");
     },
 
     forcePause(reason) {
-        this.stop(false);
-        SoundSys.play('error');
-        if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-        alert("🛑 " + reason);
+        if (!this.active) return;
+        this.pause(true);
+        App.toast("⚠️ " + reason);
     },
 
-    stop(manual = true) {
+    async stop(saveSession = true) {
         if (!this.active) return;
 
-        if (this.ref) { clearInterval(this.ref); this.ref = null; }
-        if (this.heartbeatRef) { clearInterval(this.heartbeatRef); this.heartbeatRef = null; }
-
-        document.removeEventListener("visibilitychange", this.handleVisibility);
-        
         this.active = false;
-        this.isStrict = false;
-        this.releaseWakeLock();
-        SoundSys.play('click');
+        this.isRunning = false;
+        this.isPaused = false;
 
-        // Сохранение истории
-        if (this.sec > 5 && DB && DB.user) {
-            const k = getUZDate(); 
-            if (!DB.history) DB.history = {};
-            DB.history[k] = (DB.history[k] || 0) + this.sec; 
-            
-            const currentSubName = (DB.subjects && DB.user.subject && DB.subjects[DB.user.subject]) 
-                                    ? DB.subjects[DB.user.subject].name : 'Учеба';
-
-            const log = { 
-                date: new Date().toISOString(), 
-                subject: currentSubName, 
-                sec: this.sec, 
-                coins: this.sessionCoins || 0
-            }; 
-            if (!DB.sessions) DB.sessions = [];
-            DB.sessions.unshift(log); 
-            if (DB.sessions.length > 50) DB.sessions.pop(); 
-            
-            // Обновляем статус в Firebase
-            if (window.DB_Online && Auth.currentUser) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-                window.DB_Online.updateDoc(docRef, { "user.isStudying": false }).catch(()=>{});
-            }
-
-            // Проверка стрика
-            if (this.sessionDuration > 300) {
-                const today = getUZDate();
-                const last = DB.user.lastStudyDate;
-                if (last !== today) {
-                    const d = new Date(); d.setDate(d.getDate() - 1);
-                    const yesterdayStr = getUZDate(d);
-                    if (last === yesterdayStr) { DB.user.streak++; App.toast("🔥 Стрик увеличен!"); }
-                    else { DB.user.streak = 1; App.toast("🔥 Стрик начат!"); }
-                    DB.user.lastStudyDate = today;
-                    SoundSys.play('success'); FX.confetti();
-                }
-            }
-
-            Data.save();
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
         }
 
-        // Сброс UI
+        stopAfkCheck();
+        document.getElementById('timer').classList.remove('timer-active-anim');
+
+        const btn = document.getElementById('btn-start');
+        if (btn) {
+            btn.innerText = '🚀 СТАРТ';
+            btn.onclick = () => Timer.preStart();
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+
+        if (saveSession && this.realSec >= 60) {
+            await this.saveSession();
+        } else if (this.realSec < 60) {
+            App.toast("⚠️ Минимум 1 минута для сохранения");
+        }
+
+        this.realSec = 0;
+        this.visualSec = 0;
+        this.updateDisplay();
+        SoundSys.play('click');
+    },
+
+    giveReward(intervals) {
+        const baseReward = 5;
+        let coinsEarned = baseReward + Math.min(intervals - 1, 15);
+
+        if (this.isStrict) coinsEarned = Math.floor(coinsEarned * 1.5);
+
+        DB.user.coins += coinsEarned;
+        
         const timerEl = document.getElementById('timer');
         if (timerEl) {
-            timerEl.style.color = "var(--text)";
-            timerEl.classList.remove('timer-active-anim');
-            if (manual) timerEl.innerText = "00:00:00";
+            const rect = timerEl.getBoundingClientRect();
+            FX.floatText(rect.left + rect.width / 2, rect.top, `+${coinsEarned} 💰`, '#FFD700');
         }
 
-        const btnStart = document.getElementById('btn-start');
-        if (btnStart) btnStart.innerText = "🚀 СТАРТ";
+        SoundSys.play('coin');
+        Data.save();
+        App.updateUI();
+    },
+
+    async saveSession() {
+    await TimeGuard.sync();
+    
+    const subject = DB.subjects[DB.user.subject];
+    
+    // 🔥 ПРОПОРЦИОНАЛЬНОЕ НАЧИСЛЕНИЕ МОНЕТ
+    // Считаем сколько полных 10-минутных интервалов прошло
+    const fullIntervals = Math.floor(this.realSec / this.REWARD_INTERVAL);
+    
+    // Остаток секунд после последнего полного интервала
+    const remainingSeconds = this.realSec % this.REWARD_INTERVAL;
+    
+    // Базовая награда за полные интервалы
+    let earnedCoins = 0;
+    for (let i = 1; i <= fullIntervals; i++) {
+        const baseReward = 5;
+        let intervalReward = baseReward + Math.min(i - 1, 15);
+        if (this.isStrict) intervalReward = Math.floor(intervalReward * 1.5);
+        earnedCoins += intervalReward;
+    }
+    
+    // Пропорциональная награда за неполный интервал (например, 9 из 10 минут)
+    if (remainingSeconds > 0) {
+        const nextIntervalNumber = fullIntervals + 1;
+        const baseReward = 5;
+        let nextIntervalReward = baseReward + Math.min(nextIntervalNumber - 1, 15);
+        if (this.isStrict) nextIntervalReward = Math.floor(nextIntervalReward * 1.5);
         
-        const strictToggle = document.getElementById('strict-mode-toggle');
-        if (strictToggle) strictToggle.disabled = false;
+        // Пропорция: (секунды / 600) * награда следующего интервала
+        const proportionalReward = Math.floor((remainingSeconds / this.REWARD_INTERVAL) * nextIntervalReward);
+        earnedCoins += proportionalReward;
+    }
 
-        if (manual) {
-            this.sec = 0;
-            this.visualSec = 0;
-            this.sessionCoins = 0;
+    DB.user.coins += earnedCoins;
+    DB.user.totalSec += this.realSec;
+    subject.sec += this.realSec;
+    
+    if (this.isStrict) {
+        DB.user.lifetimeStrictSec = (DB.user.lifetimeStrictSec || 0) + this.realSec;
+    }
+
+    const today = getUZDate();
+    if (!DB.history[today]) DB.history[today] = 0;
+    DB.history[today] += this.realSec;
+
+    DB.user.lastStudyDate = today;
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getUZDate(yesterday);
+
+    if (DB.user.lastStudyDate === yesterdayStr || DB.user.lastStudyDate === today) {
+        if (DB.user.lastStudyDate !== today) {
+            DB.user.streak = (DB.user.streak || 0) + 1;
+            DB.user.dailyStreak = (DB.user.dailyStreak || 0) + 1;
+        }
+    } else if (DB.user.lastStudyDate !== today) {
+        DB.user.streak = 1;
+    }
+
+    DB.sessions.unshift({
+        subject: subject.name,
+        sec: this.realSec,
+        coins: earnedCoins,
+        date: new Date(this.getTrueTime()).toISOString()
+    });
+
+    if (DB.sessions.length > 100) DB.sessions = DB.sessions.slice(0, 100);
+
+    const xpEarned = Math.floor(this.realSec / 60) * 10;
+    App.addXP(xpEarned);
+    
+    QuestSys.update('studyMin', Math.floor(this.realSec / 60));
+    
+    await Data.save();
+    App.updateUI();
+    App.renderHistory();
+    App.renderMonthlyWidget();
+    AchievementSys.check();
+
+    const h = Math.floor(this.realSec / 3600);
+    const m = Math.floor((this.realSec % 3600) / 60);
+    App.toast(`✅ Сохранено: ${h}ч ${m}м (+${earnedCoins} 💰)`);
+    SoundSys.play('success');
+    FX.confetti();
+},
+
+    updateDisplay() {
+        const display = document.getElementById('timer');
+        if (display) {
+            const h = Math.floor(this.visualSec / 3600);
+            const m = Math.floor((this.visualSec % 3600) / 60);
+            const s = this.visualSec % 60;
+            display.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
-        if (window.App) {
-            App.updateUI(); 
-            App.renderHistory();
-            App.renderSubjects();
+        const ecoDisplay = document.getElementById('eco-timer-display');
+        if (ecoDisplay) {
+            const h = Math.floor(this.visualSec / 3600);
+            const m = Math.floor((this.visualSec % 3600) / 60);
+            const s = this.visualSec % 60;
+            ecoDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
     }
 };
-    
+window.Timer = Timer;    
 const QuestSys = {
         // 1. Список квестов (цели обновляются в checkDay)
         list: [
@@ -5528,6 +6045,10 @@ const TimeGuard = {
     };
 
     const App = {
+
+        // Радио
+            radioPlayer: null,
+            radioPlaying: false,
         async init() { 
             // 1. Проверяем интернет перед запуском
             if (!navigator.onLine) {
@@ -5535,16 +6056,57 @@ const TimeGuard = {
                 return;
             }
                 // Следим за интернетом в реальном времени
-                window.addEventListener('offline', () => {
-                    if (Timer.active) {
-                        Timer.forcePause("Интернет отключен 📡");
-                    }
-                    App.toast("❌ Вы оффлайн. Таймер остановлен.");
-                });
+                // === ЗАЩИТА ОТ ОФФЛАЙН ЧИТИНГА ===
 
-                window.addEventListener('online', () => {
-                    App.toast("🌐 Вы снова в сети!");
-                });
+            // Слушатель потери интернета
+            window.addEventListener('offline', () => {
+                if (Timer.active) {
+                    console.warn("🚨 Интернет отключен - останавливаем таймер");
+                    Timer.stop(true); // Останавливаем и сохраняем время
+                    
+                    // Показываем предупреждение
+                    const offlineWarning = document.createElement('div');
+                    offlineWarning.id = 'offline-warning';
+                    offlineWarning.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: #FF4757;
+                        color: white;
+                        padding: 30px;
+                        border-radius: 20px;
+                        text-align: center;
+                        z-index: 100000;
+                        box-shadow: 0 10px 40px rgba(255, 71, 87, 0.5);
+                    `;
+                    offlineWarning.innerHTML = `
+                        <div style="font-size: 60px; margin-bottom: 15px;">📡</div>
+                        <h2 style="margin: 0 0 10px 0;">Интернет отключен</h2>
+                        <p style="margin: 0; font-size: 14px; opacity: 0.9;">
+                            Таймер остановлен автоматически.<br>
+                            Время сохранено: <b>${Math.floor(Timer.realSec / 60)} мин</b>
+                        </p>
+                    `;
+                    document.body.appendChild(offlineWarning);
+                    
+                    App.toast("❌ Таймер остановлен (нет интернета)");
+                    SoundSys.play('error');
+                }
+            });
+
+            // Слушатель восстановления интернета
+            window.addEventListener('online', () => {
+                const warning = document.getElementById('offline-warning');
+                if (warning) {
+                    warning.style.transition = 'opacity 0.5s';
+                    warning.style.opacity = '0';
+                    setTimeout(() => warning.remove(), 500);
+                }
+                
+                App.toast("🌐 Интернет восстановлен! Можешь снова запускать таймер.");
+                SoundSys.play('success');
+            });
             Auth.init(); 
             TimeGuard.sync();
             InstallSys.init(); 
@@ -5999,107 +6561,124 @@ setTimeout(() => {
     // Внутри объекта App:
 // 1. Отрисовка радио в магазине
     renderRadioShop() {
+        //Радио
         const radioList = document.getElementById('radio-shop-list');
-        if (!radioList) return;
-        const owned = DB.user.ownedRadios || [];
-        
-        radioList.innerHTML = SHOP_RADIOS.map(r => {
-            const isOwned = owned.includes(r.id);
-            const isActive = DB.user.currentRadio === r.id;
-            return `
-                <div class="shop-item ${isActive ? 'active' : ''}" onclick="App.buyRadio('${r.id}')">
-                    <div style="font-size: 32px;">${r.icon}</div>
-                    <div style="font-weight:bold; font-size:12px;">${r.name}</div>
-                    ${isOwned ? '<small style="color:var(--success);">Куплено</small>' : `<small class="shop-price-tag">${r.price} 💰</small>`}
-                </div>`;
-        }).join('');
+        if (radioList) {
+            const isRadioPlaying = this.radioPlaying; // Проверяем, играет ли радио
+            
+            radioList.innerHTML = SHOP_RADIOS.map(r => {
+                const owned = (DB.user.ownedRadios || []).includes(r.id);
+                const active = DB.user.currentRadio === r.id;
+                const isBlocked = isRadioPlaying && !active; // Блокируем если играет другая станция
+                
+                return `
+                    <div class="shop-item ${active ? 'active' : ''} ${isBlocked ? 'blocked' : ''}" 
+                        onclick="App.buyRadio('${r.id}')"
+                        style="${isBlocked ? 'opacity: 0.4; pointer-events: none;' : ''}">
+                        <div style="font-size: 32px;">${r.icon}</div>
+                        <div style="font-weight:bold; font-size:12px;">${r.name}</div>
+                        ${!owned ? `<small class="shop-price-tag">${r.price} 💰</small>` : 
+                        active && isRadioPlaying ? '<small style="color:var(--accent); font-weight:bold;">⏸ Играет...</small>' :
+                        active ? '<small style="color:var(--success); font-weight:bold;">▶️ Включить</small>' : 
+                        isBlocked ? '<small style="color:var(--text-light);">🔒 Заблокировано</small>' :
+                        '<small style="color:var(--success);">Куплено</small>'}
+                    </div>`;
+            }).join('');
+        }
     },
 
     // 2. Функция покупки/выбора
     buyRadio(id) {
-        const r = SHOP_RADIOS.find(x => x.id === id);
-        if (!r) return;
+    const radio = SHOP_RADIOS.find(r => r.id === id);
+    if (!radio) return;
 
-        // 🛡️ ПУЛЕНЕПРОБИВАЕМАЯ ЗАЩИТА
-        // Если раздела user или ownedRadios нет — создаем их в памяти прямо сейчас
-        if (!DB.user) DB.user = {};
-        if (!Array.isArray(DB.user.ownedRadios)) DB.user.ownedRadios = [];
+    const owned = (DB.user.ownedRadios || []).includes(id);
+    const isCurrentStation = DB.user.currentRadio === id;
 
-        // Проверяем покупку через безопасную переменную
-        const isOwned = DB.user.ownedRadios.includes(id);
+    // 🔒 БЛОКИРОВКА: Если радио играет И это НЕ текущая станция - запрещаем
+    if (MusicPlayer.playing && !isCurrentStation) {
+        SoundSys.play('error');
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        return App.toast("⚠️ Останови радио, чтобы сменить станцию!");
+    }
 
-        if (isOwned) {
-            DB.user.currentRadio = id;
-            App.toast(`Выбрано: ${r.name}`);
-            
-            if (MusicPlayer.playing) {
-                MusicPlayer.audio.pause();
-                MusicPlayer.playing = false;
-                MusicPlayer.toggle();
-            }
-        } else {
-            // Логика покупки
-            const userCoins = DB.user.coins || 0;
-            if (userCoins >= r.price) {
-                if (confirm(`Купить ${r.name} за ${r.price} 💰?`)) {
-                    DB.user.coins -= r.price;
-                    DB.user.ownedRadios.push(id);
-                    DB.user.currentRadio = id;
-                    SoundSys.play('win');
-                    FX.confetti();
-                }
-            } else {
-                return App.toast("Недостаточно монет");
-            }
+    // Покупка новой станции
+    if (!owned) {
+        if (DB.user.coins < radio.price) {
+            SoundSys.play('error');
+            return App.toast(`❌ Нужно ${radio.price} 💰`);
         }
-        
-        Data.save();
-        this.renderRadioShop(); 
-        this.updateRadioWidget();
-    },
 
-    // 3. Виджет на главном экране
+        DB.user.coins -= radio.price;
+        if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
+        DB.user.ownedRadios.push(id);
+        DB.user.currentRadio = id;
+        SoundSys.play('success');
+        App.toast(`${radio.icon} ${radio.name} куплено и выбрано!`);
+    } 
+    // Если уже куплено - просто выбираем
+    else {
+        DB.user.currentRadio = id;
+        SoundSys.play('click');
+        App.toast(`📻 Выбрана станция: ${radio.name}`);
+    }
+
+    Data.save();
+    this.renderShop();
+    this.updateUI();
+},
+
+    // 3. Виджет на главном экране (ОБНОВЛЕННЫЙ)
     updateRadioWidget() {
-    const container = document.getElementById('radio-widget-container');
-    if (!container) return;
+        const container = document.getElementById('radio-widget-container');
+        if (!container) return;
 
-    // ЗАЩИТА: Если поля нет, считаем список пустым
-    const ownedRadios = DB.user.ownedRadios || [];
+        const ownedRadios = DB.user.ownedRadios ||[];
 
-    // Если ничего не куплено — показываем заглушку
-    if (ownedRadios.length === 0) {
+        // Если ничего не куплено — показываем заглушку с умным скроллом
+        if (ownedRadios.length === 0) {
+            container.innerHTML = `
+                <div class="card">
+                    <h3>📻 Радио</h3>
+                    <p style="font-size:12px; color:var(--text-light); margin-bottom:10px;">Музыка для фокуса заблокирована.</p>
+                    <button class="btn btn-primary" onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);" style="font-size:12px;">
+                        В магазин 🛒
+                    </button>
+                </div>`;
+            return;
+        }
+
+        // Если куплено — показываем компактный плеер как раньше
+        const currentId = DB.user.currentRadio || ownedRadios[0];
+        const current = SHOP_RADIOS.find(x => x.id === currentId);
+        
         container.innerHTML = `
             <div class="card">
                 <h3>📻 Радио</h3>
-                <p style="font-size:12px; color:var(--text-light); margin-bottom:10px;">Музыка для фокуса заблокирована.</p>
-                <button class="btn btn-primary" onclick="App.switchTab('shop')" style="font-size:12px;">В магазин 🛒</button>
+                
+                <div class="music-widget" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg); padding: 10px 15px; border-radius: 15px; margin-bottom: 10px;">
+                    <div class="music-info" style="display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 13px;">
+                        <span style="font-size: 20px;">${current.icon}</span>
+                        <span>${current.name}</span>
+                    </div>
+                    <div class="visualizer" id="music-vis" style="opacity: ${MusicPlayer.playing ? '1' : '0'}; display: flex; gap: 2px; align-items: flex-end; height: 15px;">
+                        <div class="bar" style="animation-duration: 0.5s"></div>
+                        <div class="bar" style="animation-duration: 0.7s"></div>
+                        <div class="bar" style="animation-duration: 0.4s"></div>
+                    </div>
+                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px; margin: 0;" onclick="MusicPlayer.toggle()">
+                        ${MusicPlayer.playing ? '⏸' : '▶'}
+                    </button>
+                </div>
+                
+                <button class="btn btn-outline" style="font-size:11px; width:100%; padding: 8px;" onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);">
+                    Сменить станцию 🛒
+                </button>
             </div>`;
-        return;
-    }
+    },
+        
 
-    // Если куплено — показываем плеер
-    const currentId = DB.user.currentRadio || ownedRadios[0];
-    const current = SHOP_RADIOS.find(x => x.id === currentId);
-    
-    container.innerHTML = `
-        <div class="card">
-            <h3>📻 Радио</h3>
-            <div class="music-widget">
-                <div class="music-info">
-                    <span style="font-size: 20px;">${current.icon}</span>
-                    <span>${current.name}</span>
-                </div>
-                <div class="visualizer" id="music-vis" style="opacity: 0;">
-                    <div class="bar" style="animation-duration: 0.5s"></div>
-                    <div class="bar" style="animation-duration: 0.7s"></div>
-                    <div class="bar" style="animation-duration: 0.4s"></div>
-                </div>
-                <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px;" onclick="MusicPlayer.toggle()">▶</button>
-            </div>
-            <p style="font-size:10px; color:var(--text-light); margin-top:8px; text-align:center;">Сменить станцию можно в Магазине 🛒</p>
-        </div>`;
-},
-        copyRescueCode() {
+copyRescueCode() {
             const code = DB.user.rescueCode;
             if (!code) return;
             
@@ -6199,20 +6778,29 @@ setTimeout(() => {
                     </div>`;
                 }).join('');
             }
-                    //Радио
-                    const radioList = document.getElementById('radio-shop-list');
-                    if (radioList) {
-                        radioList.innerHTML = SHOP_RADIOS.map(r => {
-                            const owned = (DB.user.ownedRadios || []).includes(r.id);
-                            const active = DB.user.currentRadio === r.id;
-                            return `
-                                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyRadio('${r.id}')">
-                                    <div style="font-size: 32px;">${r.icon}</div>
-                                    <div style="font-weight:bold; font-size:12px;">${r.name}</div>
-                                    ${owned ? '<small style="color:var(--success);">Куплено</small>' : `<small class="shop-price-tag">${r.price} 💰</small>`}
-                                </div>`;
-                        }).join('');
-                    }
+//Радио
+const radioList = document.getElementById('radio-shop-list');
+if (radioList) {
+    const isRadioPlaying = MusicPlayer.playing; // ← Используем MusicPlayer
+    
+    radioList.innerHTML = SHOP_RADIOS.map(r => {
+        const owned = (DB.user.ownedRadios || []).includes(r.id);
+        const active = DB.user.currentRadio === r.id;
+        const isBlocked = isRadioPlaying && !active;
+        
+        return `
+            <div class="shop-item ${active ? 'active' : ''}" 
+                 onclick="App.buyRadio('${r.id}')"
+                 style="${isBlocked ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
+                <div style="font-size: 32px;">${r.icon}</div>
+                <div style="font-weight:bold; font-size:12px;">${r.name}</div>
+                ${!owned ? `<small class="shop-price-tag">${r.price} 💰</small>` : 
+                  active ? '<small style="color:var(--success); font-weight:bold;">✓ Выбрано</small>' : 
+                  isBlocked ? '<small style="color:var(--text-light);">🔒 Останови радио</small>' :
+                  '<small style="color:var(--text-light);">Выбрать</small>'}
+            </div>`;
+    }).join('');
+}
                     
             // Рамки
     // Рамки (ВНУТРИ renderShop)
@@ -6434,35 +7022,59 @@ setTimeout(() => {
             Data.save(); this.updateUI(); AchievementSys.check();
         },
 
-        switchTab(id, btn) {
-            // 🔒 ЗАЩИТА ХАРДКОРА: Не даем уйти с Дашборда, если идет жесткая сессия
-            if (Timer.active && Timer.isStrict && id !== 'dashboard') {
-                SoundSys.play('error');
-                App.toast("🔒 В режиме ХАРДКОР нельзя уходить с экрана!");
-                return;
-            }
-            document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
-            const sec = document.getElementById(id);
-            if(sec) sec.classList.add('active');
-        
-            document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-        
-            // --- ЛЕНИВАЯ ЗАГРУЗКА ---
-            if (id === 'dashboard') {
-                this.renderMonthlyWidget();
+            switchTab(id, btn) {
+                // 🔒 ЗАЩИТА ХАРДКОРА
+                if (Timer.active && Timer.isStrict && id !== 'dashboard') {
+                    SoundSys.play('error');
+                    
+                    if (navigator.vibrate) {
+                        navigator.vibrate([100, 50, 100]);
+                    }
+                    
+                    App.toast("🔒 В режиме ХАРДКОР нельзя уходить с экрана!");
+                    return;
+                }
 
-                QuestSys.render(); // Обновляем квесты
-                setTimeout(() => this.renderSubjects(), 50); // Обновляем предметы
-            }
-            
-            if (id === 'trainer') setTimeout(() => Trainer.init(), 50);
-            if (id === 'stats') setTimeout(() => { this.renderHistory(); this.renderStats(); }, 50);
-            if (id === 'shop') this.renderShop();
-            if (id === 'profile') this.updateUI();
+                // Мгновенное переключение
+                document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+                const newSection = document.getElementById(id);
+                if (newSection) {
+                    newSection.classList.add('active');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
 
-            if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
-        },
+                // Обновление активной кнопки
+                document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                } else {
+                    const targetBtn = document.querySelector(`.nav-btn[data-tab="${id}"]`);
+                    if (targetBtn) {
+                        targetBtn.classList.add('active');
+                        targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                }
+
+                // ❌ УБРАЛИ: SoundSys.play('click'); - теперь звук играет автоматически
+
+                // Ленивая загрузка контента
+                requestAnimationFrame(() => {
+                    if (id === 'dashboard') {
+                        this.renderMonthlyWidget();
+                        QuestSys.render();
+                        this.renderSubjects();
+                    }
+                    
+                    if (id === 'trainer') Trainer.init();
+                    if (id === 'stats') { this.renderHistory(); this.renderStats(); }
+                    if (id === 'shop') this.renderShop();
+                    if (id === 'profile') this.updateUI();
+                });
+
+                // Аналитика
+                if (typeof ym !== 'undefined') ym(105919372, 'hit', '#' + id, { title: id.toUpperCase() });
+            },
         
         renderStats() {
         const statsSection = document.getElementById('stats');
@@ -6553,10 +7165,148 @@ setTimeout(() => {
 
         // 4. ГРАФИКИ
         requestAnimationFrame(() => {
+            if (typeof this.renderCharts === 'function')
+            
             this.renderCharts(weekSec);
+            this.renderHeatmap();
         });
     },
+         renderHeatmap() {
+        const heatmapEl = document.getElementById('heatmap');
+        if (!heatmapEl) return;
+
+        let html = '';
+        const now = new Date();
+        const daysHtml =[];
+
+        // Генерируем 30 дней (от 29 дней назад до сегодня)
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            
+            // Получаем правильную дату по Ташкенту для поиска в истории
+            const dateStr = getUZDate(d);
+            
+            // Ищем сколько секунд учились в этот день
+            const seconds = (DB && DB.history && DB.history[dateStr]) ? DB.history[dateStr] : 0;
+            const minutes = Math.floor(seconds / 60);
+            
+            // Определяем яркость кубика в зависимости от времени
+            let opacity = 0.1; // Пустой день (бледный)
+            let color = 'var(--text-light)'; // Серый цвет
+            
+            if (minutes > 0) {
+                color = 'var(--primary)'; // Красим в главный цвет темы
+                if (minutes <= 15) opacity = 0.3;       // До 15 мин - полупрозрачный
+                else if (minutes <= 60) opacity = 0.6;  // До 1 часа - средний
+                else opacity = 1.0;                     // Больше 1 часа - яркий
+            }
+            
+            // Форматируем дату для подсказки при наведении
+            const displayDate = d.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'});
+            const tooltip = `${displayDate}: ${minutes > 0 ? minutes + ' мин' : 'Нет активности'}`;
+            
+            // Добавляем HTML кубика (с анимацией при наведении)
+            daysHtml.push(`
+                <div title="${tooltip}" style="
+                    aspect-ratio: 1; 
+                    border-radius: 6px; 
+                    background: ${color}; 
+                    opacity: ${opacity}; 
+                    cursor: pointer;
+                    transition: transform 0.2s ease, opacity 0.2s;
+                " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>
+            `);
+        }
         
+        heatmapEl.innerHTML = daysHtml.join('');
+    },
+   
+renderCharts(weekSec) {
+        if (typeof Chart === 'undefined') return;
+
+        // 1. График истории за неделю
+        const weekCtx = document.getElementById('weekChart');
+        if (weekCtx) {
+            const labels = [];
+            const data =[];
+            // Собираем данные за последние 7 дней
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const key = getUZDate(d);
+                const sec = (DB.history && DB.history[key]) ? DB.history[key] : 0;
+                labels.push(d.toLocaleDateString('ru-RU', { weekday: 'short' }));
+                data.push((sec / 60).toFixed(1)); // Перевод в минуты
+            }
+
+            // Удаляем старый график, если он был (чтобы не дублировался)
+            if (window.weekChartInstance) window.weekChartInstance.destroy();
+            
+            window.weekChartInstance = new Chart(weekCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets:[{
+                        label: 'Минут учебы',
+                        data: data,
+                        backgroundColor: '#6C63FF',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // 2. Круговой график по предметам
+        const subjectCtx = document.getElementById('subjectChart');
+        if (subjectCtx && DB.subjects) {
+            const labels = [];
+            const data = [];
+            const bgColors =['#6C63FF', '#FF7675', '#00d26a', '#FFD700', '#00E0D0', '#DE05F8', '#FF8A65', '#4DD0E1'];
+
+            Object.values(DB.subjects).forEach(s => {
+                if (s.sec > 0) {
+                    labels.push(s.name);
+                    data.push((s.sec / 60).toFixed(1));
+                }
+            });
+
+            if (window.subjectChartInstance) window.subjectChartInstance.destroy();
+            
+            if (data.length > 0) {
+                window.subjectChartInstance = new Chart(subjectCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets:[{
+                            data: data,
+                            backgroundColor: data.map((_, i) => bgColors[i % bgColors.length]),
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                        }
+                    }
+                });
+            } else {
+                // Если данных еще нет, просто очищаем канвас
+                const ctx = subjectCtx.getContext('2d');
+                ctx.clearRect(0, 0, subjectCtx.width, subjectCtx.height);
+            }
+        }
+    },
+
     renderSubjects() {
         const grid = document.getElementById('subjects-grid');
         if (!grid || !DB || !DB.subjects) return;
@@ -6826,93 +7576,88 @@ setTimeout(() => {
             });
         }
     };
-    const InstallSys = {
-        // Проверяем, где мы: в браузере или в приложении
+        const InstallSys = {
         init() {
-            // Если это уже установленное приложение - скрываем кнопку установки
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             
-            if (!isStandalone) {
-                // Мы в браузере - показываем кнопку
+            // На iOS событие PWA не работает, поэтому мы показываем кнопку вручную
+            if (!isStandalone && isIOS) {
                 const btn = document.getElementById('install-promo-card');
                 if (btn) btn.style.display = 'block';
             }
         },
 
-        // Запуск процесса
         startFlow() {
             if (!Auth.currentUser) return App.toast("Сначала создайте профиль!");
 
-            // 1. Генерируем код
+            // 1. ЕСЛИ ЭТО ANDROID ИЛИ PC (Быстрая нативная установка)
+            if (window.PWA && PWA.prompt) {
+                PWA.install();
+                return; // Прерываем функцию, код спасения здесь генерировать не нужно
+            }
+
+            // 2. ЕСЛИ ЭТО iOS ИЛИ Safari (Генерируем код спасения и показываем инструкцию)
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let code = '';
             for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
 
-            // 2. Сохраняем данные
             DB.user.name = Auth.currentUser.name;
             DB.user.avatar = Auth.currentUser.avatar;
             DB.user.id = Auth.currentUser.id;
             
-            App.toast("⏳ Сохранение данных...");
+            App.toast("⏳ Подготовка к установке...");
 
-            // 3. Отправляем в облако
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-            window.DB_Online.setDoc(docRef, {
-                userId: Auth.currentUser.id,
-                data: DB,
-                createdAt: new Date().toISOString(),
-                expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
-            }).then(() => {
-                // 4. КОПИРУЕМ КОД
-                navigator.clipboard.writeText(code).then(() => {
-                    this.showInstruction();
-                }).catch(() => {
-                    // Если авто-копирование не сработало (редко)
-                    prompt("Скопируйте код вручную:", code);
-                    this.showInstruction();
+            if(window.DB_Online) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
+                window.DB_Online.setDoc(docRef, {
+                    userId: Auth.currentUser.id,
+                    data: DB,
+                    createdAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
+                }).then(() => {
+                    navigator.clipboard.writeText(code).then(() => {
+                        this.showInstruction();
+                    }).catch(() => {
+                        prompt("Скопируйте код вручную:", code);
+                        this.showInstruction();
+                    });
+                }).catch(e => {
+                    console.error(e);
+                    App.toast("Ошибка сети. Попробуйте позже.");
                 });
-            }).catch(e => {
-                console.error(e);
-                App.toast("Ошибка сети. Попробуйте позже.");
-            });
+            } else {
+                App.toast("⚠️ Нет интернета для создания кода.");
+            }
         },
 
-        // ФУНКЦИЯ ПОКАЗА ИНСТРУКЦИИ
         showInstruction() {
             const modal = document.getElementById('install-modal');
             const iosBlock = document.getElementById('ios-instruction');
             const androidBlock = document.getElementById('android-instruction');
 
-            // Определяем устройство
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (isIOS) {
                 iosBlock.style.display = 'block';
                 androidBlock.style.display = 'none';
             } else {
-                // Для всех остальных считаем что это Android/PC
                 iosBlock.style.display = 'none';
                 androidBlock.style.display = 'block';
             }
 
             modal.classList.add('show');
-            FX.confetti(); // Праздник, что код скопирован
+            if (window.FX) FX.confetti(); 
         }
     };
-    const Notify = {
-        isSupported: 'Notification' in window,
-        checkInterval: null,
 
-        messages: [
-            { t: "🔥 Стрик под угрозой!", b: "Твой огонь может погаснуть. Поучись хотя бы 5 минут!" },
-            { t: "🧠 Время прокачки!", b: "Мозг требует знаний. Твой любимый предмет ждет тебя." },
-            { t: "👑 Стань легендой!", b: "Конкуренты в Топе не спят. Пора поднять уровень!" },
-            { t: "📚 План на сегодня?", b: "Не забудь выполнить ежедневные квесты и забрать монеты." }
-        ],
+    
+    const Notify = {
+        isSupported: 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window,
 
         async toggle(isChecked) {
             if (!this.isSupported) {
-                alert("Ваш браузер не поддерживает уведомления.");
+                alert("Ваш браузер не поддерживает Push-уведомления.");
                 document.getElementById('notify-toggle').checked = false;
                 return;
             }
@@ -6921,16 +7666,13 @@ setTimeout(() => {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
                     if (!DB.settings) DB.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
+                    DB.settings.notifications = true;
+                    App.toast("✅ Напоминания включены");
                     
-                    DB.settings.notifications = true;
-                    App.toast("✅ Напоминания включены");
-                    // ... остальной код
-                    DB.settings.notifications = true;
-                    App.toast("✅ Напоминания включены");
-                    this.send("MathBooster PRO", "Уведомления успешно настроены! 🚀");
-                    this.startDailyCheck();
+                    // Самое главное: получаем уникальный паспорт телефона
+                    this.subscribeFCM(); 
                 } else {
-                    alert("Разрешите уведомления в настройках браузера/телефона.");
+                    alert("Разрешите уведомления в настройках телефона/браузера.");
                     document.getElementById('notify-toggle').checked = false;
                     DB.settings.notifications = false;
                 }
@@ -6941,47 +7683,33 @@ setTimeout(() => {
             Data.save();
         },
 
-        send(title, body) {
-            if (!DB.settings.notifications || Notification.permission !== 'granted') return;
+        async subscribeFCM() {
             try {
-                const options = { body: body, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: [200, 100, 200] };
-                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
-                } else {
-                    new Notification(title, options);
+                // ⚠️ ВСТАВЬ СЮДА СВОЙ КЛЮЧ ИЗ ШАГА 1 ⚠️
+                const currentToken = await window.DB_Online.getToken(window.DB_Online.messaging, {
+                    vapidKey: "BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw"
+                });
+
+                if (currentToken) {
+                    console.log("📱 Токен устройства:", currentToken);
+                    DB.user.fcmToken = currentToken; 
+                    Data.save(); // Сохраняем токен в карточку юзера в Firebase
+
+                    // Слушаем пуши, если пользователь прямо сейчас сидит в приложении
+                    window.DB_Online.onMessage(window.DB_Online.messaging, (payload) => {
+                        App.toast(`🔔 ${payload.notification.title}`);
+                        SoundSys.play('quest_done');
+                    });
                 }
-            } catch (e) { console.error("Notify Error:", e); }
+            } catch (error) {
+                console.error("Ошибка при получении FCM токена:", error);
+            }
         },
 
-        startDailyCheck() {
-            if (this.checkInterval) clearInterval(this.checkInterval);
-
-            this.checkInterval = setInterval(() => {
-                if (!DB.settings.notifications) return;
-
-                const now = new Date();
-                const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                
-                // Сверяем текущее время с выбранным в настройках
-                if (currentTime === DB.settings.notifyTime) {
-                    const today = getUZDate();
-                    
-                    // Проверяем: не учился сегодня И еще не отправляли сегодня пуш
-                    if (DB.user.lastStudyDate !== today && DB.user.lastNotifyDate !== today) {
-                        const msg = this.messages[Math.floor(Math.random() * this.messages.length)];
-                        this.send(msg.t, msg.b);
-                        
-                        // Запоминаем дату отправки в localStorage (а не в сессию), чтобы не спамить
-                        DB.user.lastNotifyDate = today;
-                        Data.save();
-                    }
-                }
-            }, 60000); // Раз в минуту
-        },
         updateTime(val) {
             DB.settings.notifyTime = val;
             Data.save();
-            App.toast(`🕒 Время изменено на ${val}`);
+            App.toast(`🕒 Время пуша изменено на ${val}`);
         }
     };
     // Делаем эти объекты доступными для кнопок в HTML
@@ -7496,6 +8224,112 @@ function cleanSubjects() {
             // Блок Ctrl+Shift+I (Консоль)
             if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
         }
+
+        // === УНИВЕРСАЛЬНЫЕ ЗВУКИ ДЛЯ ВСЕХ КНОПОК И КАРТОЧЕК ===
+document.addEventListener('DOMContentLoaded', () => {
+    // Добавляем звук ко ВСЕМ кнопкам
+    const addClickSound = () => {
+        document.addEventListener('click', (e) => {
+    const target = e.target.closest('button, .btn');
+    if (!target || target.disabled) return;
+
+    const text = target.innerText.toLowerCase();
+
+    // Звук монет
+    if (text.includes('💰') || text.includes('купить') || text.includes('забрать')) {
+        setTimeout(() => SoundSys.play('coin'), 50);
+    }
+    // Звук успеха
+    else if (text.includes('✅') || text.includes('готов') || text.includes('продолжить')) {
+        setTimeout(() => SoundSys.play('success'), 50);
+    }
+    // Звук ошибки
+    else if (text.includes('❌') || text.includes('отмена') || text.includes('удалить')) {
+        setTimeout(() => SoundSys.play('error'), 50);
+    }
+    // Звук старта
+    else if (text.includes('старт') || text.includes('🚀')) {
+        setTimeout(() => SoundSys.play('success'), 50);
+    }
+    // Обычный клик (для всех остальных)
+    // уже играет через addClickSound()
+}, true); // true = capturing phase (срабатывает раньше)
+        // Все кнопки
+        document.querySelectorAll('button, .btn, .nav-btn').forEach(btn => {
+            if (!btn.dataset.soundAttached) {
+                btn.addEventListener('click', (e) => {
+                    // Не играем звук, если кнопка заблокирована
+                    if (!btn.disabled) {
+                        SoundSys.play('click');
+                        
+                        // Вибрация на мобильных
+                        if (navigator.vibrate) {
+                            navigator.vibrate(10);
+                        }
+                    }
+                });
+                btn.dataset.soundAttached = 'true';
+            }
+        });
+
+        // Все кликабельные карточки
+        document.querySelectorAll('.card[onclick], .shop-item, .subject-item, .subject-item-fixed, .user-list-item, .ach-row, .mode-btn, .daily-day, .preset-btn').forEach(item => {
+            if (!item.dataset.soundAttached) {
+                item.addEventListener('click', () => {
+                    SoundSys.play('click');
+                    if (navigator.vibrate) navigator.vibrate(10);
+                });
+                item.dataset.soundAttached = 'true';
+            }
+        });
+
+        // Все инпуты (при фокусе)
+        document.querySelectorAll('input, textarea, select').forEach(input => {
+            if (!input.dataset.soundAttached) {
+                input.addEventListener('focus', () => {
+                    SoundSys.play('click');
+                });
+                input.dataset.soundAttached = 'true';
+            }
+        });
+    };
+
+    // Запускаем сразу
+    addClickSound();
+
+    // Перезапускаем каждые 2 секунды (для динамически созданных элементов)
+    setInterval(addClickSound, 2000);
+});
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('button');
+    if (target && target.innerText.includes('ЗАБРАТЬ')) {
+        setTimeout(() => SoundSys.play('coin'), 100);
+    }
+});
+
+// Звук при покупке темы
+const originalBuyTheme = App.buyTheme;
+App.buyTheme = function(id) {
+    const result = originalBuyTheme.call(this, id);
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+    return result;
+};
+
+// Звук при покупке аватара
+const originalBuyAvatar = App.buyAvatar;
+App.buyAvatar = function(id) {
+    const result = originalBuyAvatar.call(this, id);
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+    return result;
+};
+
+// Звук при смене предмета
+const originalSelectSubject = App.selectSubject;
+App.selectSubject = function(key, event) {
+    const result = originalSelectSubject.call(this, key, event);
+    if (navigator.vibrate) navigator.vibrate(15);
+    return result;
+};
     </script>
     <!-- TRANSFER CODE MODAL (Окно переноса) -->
     <div id="transfer-modal" class="modal" style="z-index: 20000;">
@@ -7537,7 +8371,72 @@ function cleanSubjects() {
             <button class="btn btn-primary" style="background: #FFD700; color: #333; border: none;" onclick="document.getElementById('weekly-modal').classList.remove('show')">Погнали в новую неделю! ⚡</button>
         </div>
     </div>
-    
+    <!-- TIMER RULES MODAL (Объяснение экономики) -->
+<div id="timer-rules-modal" class="modal" style="z-index: 25000;">
+    <div class="modal-content" style="text-align: left; max-width: 340px;">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <div style="font-size: 40px; margin-bottom: 5px;">⏱️</div>
+            <h3 style="margin: 0; color: var(--primary);">Как начисляются монеты?</h3>
+        </div>
+        
+        <p style="font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 15px;">
+            Монеты начисляются <b>каждые 10 минут</b> непрерывной работы. Чем дольше ты сидишь без пауз, тем больше награда!
+        </p>
+
+        <!-- Таблица наград -->
+        <div style="background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 3px solid var(--primary);">
+            <div style="font-weight: bold; margin-bottom: 10px; color: var(--primary); font-size: 13px;">
+                💰 Награды (Обычный режим):
+            </div>
+            <div style="font-size: 12px; line-height: 2;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>10 минут:</span> <b style="color: var(--primary);">+5 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>20 минут:</span> <b style="color: var(--primary);">+6 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>30 минут:</span> <b style="color: var(--primary);">+7 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>40 минут:</span> <b style="color: var(--primary);">+8 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>50 минут:</span> <b style="color: var(--primary);">+9 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>60 минут:</span> <b style="color: var(--primary);">+10 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-light); font-style: italic; margin-top: 5px;">
+                    <span>... и так далее</span> <b>до +20 💰 макс</b>
+                </div>
+            </div>
+        </div>
+
+        <!-- Хардкор бонус -->
+        <div style="background: linear-gradient(135deg, rgba(255, 77, 43, 0.1), rgba(255, 77, 43, 0.05)); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(255, 77, 43, 0.3);">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #FF4B2B; font-size: 12px;">
+                🔥 Режим ХАРДКОР: награда ×1.5
+            </div>
+            <div style="font-size: 11px; color: var(--text); line-height: 1.4;">
+                В хардкоре нельзя ставить на паузу, зато награды в полтора раза больше! (7-30 💰)
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div style="background: rgba(108, 99, 255, 0.05); padding: 12px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary);">
+            <div style="font-size: 11px; color: var(--text); line-height: 1.6;">
+                <b>⚠️ Важно:</b><br>
+                • <b>Проверка реальности:</b> каждый час появится пример (60 сек на решение)<br>
+                • <b>Анти-АФК:</b> если не касаться экрана 35+ минут — таймер остановится<br>
+                • <b>Минимум:</b> 1 минута для сохранения сессии
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="document.getElementById('timer-rules-modal').classList.remove('show')" style="width: 100%;">
+            Всё понятно! 🚀
+        </button>
+    </div>
+</div>
     </body>
     </html>
-
