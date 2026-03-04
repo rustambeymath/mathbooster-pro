@@ -99,6 +99,9 @@
         </script>
         
     <style>
+        .profile-img div, .item-icon, .user-avatar {
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
+        }
             @supports (padding: max(0px)) {
         body.zen-active {
             padding-top: env(safe-area-inset-top);
@@ -204,8 +207,6 @@
             }
             /* 2. 🔥 НОВЫЕ ТЕМЫ  */
             
-            /* 📝 PAPER (Бумага) */
-            body.theme-paper { --primary: #333333; --bg: #F2F2EB; --surface: #FFFFFF; --text: #111111; --text-light: #999999; --shadow: 0 5px 0 rgba(0,0,0,0.05); }
 
             /* 🌸 SAKURA (Сакура) */
             body.theme-sakura { --primary: #FF80AB; --bg: #FFF0F5; --surface: #FFFFFF; --text: #880E4F; --text-light: #F06292; --shadow: 0 10px 30px rgba(255, 128, 171, 0.2); }
@@ -496,7 +497,6 @@
             body.dark-mode.theme-neon { --primary: #FF69B4; }
             
             /* Новые темы в темном режиме */
-            body.dark-mode.theme-paper { --primary: #FFFFFF; --bg: #121212; --surface: #1E1E1E; --text: #EEEEEE; }
             body.dark-mode.theme-sakura { --primary: #FF80AB; --bg: #1A1A2E; --surface: #16213E; }
             body.dark-mode.theme-lemon { 
                 --bg: #0D1B2A;        /* Темно-синий */
@@ -967,8 +967,109 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
 }         
             .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
             .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-            .shop-item { padding: 15px; border-radius: 15px; background: var(--bg); cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; position:relative; overflow:hidden;}
-            .shop-item.active { border-color: var(--primary); background: rgba(0,0,0,0.03); box-shadow: var(--shadow); }
+/* 🛒 УЛУЧШЕННЫЙ МАГАЗИН */
+.shop-item {
+    padding: 20px 10px;
+    border-radius: 24px;
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    border: 2px solid var(--bg);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Эффект при наведении */
+.shop-item:hover {
+    transform: translateY(-6px);
+    border-color: var(--primary);
+    box-shadow: 0 12px 24px rgba(108, 99, 255, 0.15);
+}
+
+/* Блик (пробегает при наведении) */
+.shop-item::after {
+    content: "";
+    position: absolute;
+    top: -50%; left: -150%;
+    width: 100%; height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.4), transparent);
+    transform: rotate(45deg);
+    transition: 0.6s;
+}
+.shop-item:hover::after { left: 150%; }
+
+/* Иконка товара */
+.item-icon {
+    font-size: 38px;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+.shop-item:hover .item-icon {
+    transform: scale(1.2) rotate(5deg);
+}
+
+/* Ценник */
+/* 💰 УЛУЧШЕННЫЙ КОНТРАСТНЫЙ ЦЕННИК */
+/* 💰 УНИВЕРСАЛЬНЫЙ ЦЕННИК */
+.shop-price-tag {
+    display: block;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 8px 4px;
+    background: rgba(0, 0, 0, 0.06); 
+    border-radius: 14px;
+    color: var(--text);
+    width: 100%;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: auto;
+}
+
+/* 🌙 ОБЩИЙ ТЕМНЫЙ РЕЖИМ */
+body.dark-mode .shop-price-tag {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 🏁 СПЕЦ-ФИКС ДЛЯ BLACK & WHITE (Ночной вариант) */
+body.theme-bw.dark-mode .shop-price-tag {
+    background: #000000 !important;
+    color: #FFFFFF !important;
+    border: 2px solid #FFFFFF !important; /* Белая рамка на черном */
+}
+
+/* 📝 СПЕЦ-ФИКС ДЛЯ ТЕМЫ PAPER (Ночной вариант) */
+
+
+/* 🔥 КОГДА ДЕНЕГ ХВАТАЕТ (Affordable) */
+.shop-price-tag.affordable {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+}
+
+/* Фикс текста для светлой Платины и Бумаги, если кнопка активна */
+body.theme-platinum:not(.dark-mode) .shop-price-tag.affordable,
+
+/* Эффект при наведении на карточку */
+.shop-item:hover .shop-price-tag {
+    transform: scale(1.05);
+}
+
+/* Стиль для купленных вещей */
+.shop-item.owned-item {
+    background: rgba(0, 210, 106, 0.03);
+}            .shop-item.active { border-color: var(--primary); background: rgba(0,0,0,0.03); box-shadow: var(--shadow); }
             .shop-price-tag { font-size:12px; font-weight:bold; margin-top:5px; color:var(--text-light); }
             .shop-price-tag.affordable { color: var(--primary); }
 
@@ -3499,7 +3600,6 @@ body.dark-mode .subject-item-fixed {
         { id: 'dark', name: 'Темная', icon: '🌙', price: 0 }, 
         
         // Новые Дневные (Легкие)
-        { id: 'paper', name: 'Бумага', icon: '📝', price: 300 },
         { id: 'sakura', name: 'Сакура', icon: '🌸', price: 400 },
         { id: 'lemon', name: 'Лимон', icon: '🍋', price: 400 },
 
@@ -4296,14 +4396,14 @@ body.dark-mode .subject-item-fixed {
                             <!-- 🌟 УВЕЛИЧЕН GAP ДО 15px 🌟 -->
                             <div style="display:flex; align-items:center; gap:15px; flex: 1; min-width: 0;">
                                 
-                                <div style="font-weight:bold; width:25px; text-align:center; flex-shrink:0; color:var(--text-light);">#${rank}</div>
+                                <div style="font-weight:bold; min-width:45px; white-space:nowrap; flex-shrink:0; color:var(--text-light); text-align:left;">#${rank}</div>
                                 
                                 <!-- Аватарка -->
                                 <div style="position:relative; width:45px; height:45px; flex-shrink: 0;">
-                                    <div class="${frameClass}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative;">
-                                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) !important; font-size:22px !important; width:100%; text-align:center; line-height:1; overflow:hidden; white-space:nowrap;">
+                                    <div class="${frameClass}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <span style="font-size:24px; line-height: 1; display: block; transform: translateY(-2px);">
                                             ${u.avatar || '😎'}
-                                        </div>
+                                        </span>
                                     </div>
                                     ${isOnline ? '<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:2;"></div>' : ''}
                                 </div>
@@ -7270,169 +7370,164 @@ copyRescueCode() {
         },
         // МАГАЗИН (Отрисовка)
         renderShop() {
-            // Темы
-            const themeList = document.getElementById('theme-list');
-            if (themeList) {
-                themeList.innerHTML = THEMES.map(t => {
-                    const owned = DB.user.ownedThemes.includes(t.id);
-                    const active = DB.user.theme === t.id;
-                    return `
-                        <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyTheme('${t.id}')">
-                            <div style="font-size:24px; margin-bottom:5px;">${t.icon}</div>
-                            <div style="font-weight:bold; font-size:12px;">${t.name}</div>
-                            ${owned ? '' : `
-                        <small class="shop-price-tag">${t.price} 💰</small>`}
-                        </div>`;
-                }).join('');
-            }
-            // Аватары
-            const avatarList = document.getElementById('avatar-shop-list');
-            if (avatarList) {
-                // 🔍 ФИЛЬТРАЦИЯ ПО ПОЛУ
-                // Показываем аватар, если у него нет метки пола (нейтральный) 
-                // ИЛИ если его пол совпадает с полом пользователя
-                const userGender = DB.user.gender || 'male'; // по умолчанию male
-                const filteredAvatars = SHOP_AVATARS.filter(a => !a.gender || a.gender === userGender);
+    const userCoins = DB.user.coins || 0;
 
-                avatarList.innerHTML = filteredAvatars.map(a => {
-                    const owned = DB.user.ownedAvatars.includes(a.id);
-                    const active = DB.user.avatar === a.icon;
-                    const priceClass = (DB.user.coins >= a.price) ? 'affordable' : '';
-                    return `
-                        <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyAvatar('${a.id}')">
-                            <div style="font-size: 32px; margin-bottom: 5px;">${a.icon}</div>
-                            <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px; line-height: 1.2;">${a.name}</div>
-                            ${owned ? '<small style="color:var(--success); font-weight:bold;">✔ Есть</small>' : `<small class="shop-price-tag ${priceClass}">${a.price} 💰</small>`}
-                        </div>`;
-                }).join('');
-            }
-            // Статусы
-            const titleList = document.getElementById('title-shop-list');
-            if (titleList) {
-                // Защита от отсутствия массива
-                const userTitles = DB.user.ownedTitles || [];
-                
-                titleList.innerHTML = SHOP_TITLES.map(t => {
-                    const owned = userTitles.includes(t.id);
-                    const active = DB.user.currentTitle === t.name;
-                    const priceClass = (DB.user.coins >= t.price) ? 'affordable' : '';
-
-                    // 1. Если статус активен (надет)
-                    if (active) {
-                        return `<div class="shop-item active" onclick="App.equipTitle(null)" style="border-color:var(--success);">
-                            <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
-                            <small style="color:var(--success);">Выбрано (Снять)</small>
-                        </div>`;
+    // 1. ТЕМЫ
+    const themeList = document.getElementById('theme-list');
+    if (themeList) {
+        themeList.innerHTML = THEMES.map(t => {
+            const owned = DB.user.ownedThemes.includes(t.id);
+            const active = DB.user.theme === t.id;
+            const canAfford = userCoins >= t.price;
+            return `
+                <div class="shop-item ${active ? 'active' : ''} ${owned ? 'owned-item' : ''}" onclick="App.buyTheme('${t.id}')">
+                    <div class="item-icon">${t.icon}</div>
+                    <div style="font-weight:800; font-size:12px;">${t.name}</div>
+                    ${owned ? 
+                        `<div class="shop-price-tag" style="color:var(--success);">${active ? '● Активно' : '✓ Куплено'}</div>` : 
+                        `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${t.price} 💰</div>`
                     }
-                    
-                    // 2. Если статус уже куплен/получен (можно надеть)
-                    if (owned) {
-                        return `<div class="shop-item" onclick="App.equipTitle('${t.name}')">
-                            <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
-                            <small style="color:var(--text-light);">Надеть</small>
-                        </div>`;
+                </div>`;
+        }).join('');
+    }
+
+    // 2. АВАТАРЫ
+    const avatarList = document.getElementById('avatar-shop-list');
+    if (avatarList) {
+        const userGender = DB.user.gender || 'male';
+        const filteredAvatars = SHOP_AVATARS.filter(a => !a.gender || a.gender === userGender);
+        avatarList.innerHTML = filteredAvatars.map(a => {
+            const owned = DB.user.ownedAvatars.includes(a.id);
+            const active = DB.user.avatar === a.icon;
+            const canAfford = userCoins >= a.price;
+            return `
+                <div class="shop-item ${active ? 'active' : ''} ${owned ? 'owned-item' : ''}" onclick="App.buyAvatar('${a.id}')">
+                    <div class="item-icon">${a.icon}</div>
+                    <div style="font-weight:800; font-size:12px;">${a.name}</div>
+                    ${owned ? 
+                        `<div class="shop-price-tag" style="color:var(--success);">${active ? '● Выбран' : '✓ Есть'}</div>` : 
+                        `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${a.price} 💰</div>`
                     }
+                </div>`;
+        }).join('');
+    }
 
-                    // 3. Если статус ЭКСКЛЮЗИВНЫЙ (Цена -1) - Покупка запрещена
-                    if (t.price === -1) {
-                        return `<div class="shop-item" style="opacity:0.7; cursor:not-allowed; border: 1px dashed var(--accent);">
-                            <div style="font-weight:bold; font-size:14px; margin-bottom:5px; color:var(--accent);">${t.name}</div>
-                            <small style="color:var(--accent);">Только за донат</small>
-                        </div>`;
+    // 3. СТАТУСЫ (ТИТУЛЫ)
+    const titleList = document.getElementById('title-shop-list');
+    if (titleList) {
+        const userTitles = DB.user.ownedTitles || [];
+        titleList.innerHTML = SHOP_TITLES.map(t => {
+            const owned = userTitles.includes(t.id);
+            const active = DB.user.currentTitle === t.name;
+            const canAfford = userCoins >= t.price;
+            
+            // Пример для Титулов внутри renderShop
+            let priceDisplay = '';
+            if (t.price === -1) {
+                priceDisplay = `<div class="shop-price-tag" style="background:rgba(255,118,117,0.1); color:var(--accent);">💎 Донат</div>`;
+            } else if (owned) {
+                priceDisplay = `<div class="shop-price-tag" style="background:rgba(0,210,106,0.1); color:var(--success);">${active ? '● Надет' : 'Выбрать'}</div>`;
+            } else {
+                priceDisplay = `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${t.price} 💰</div>`;
+            }
+            return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="${t.price === -1 ? '' : (owned ? `App.equipTitle('${t.name}')` : `App.buyTitle('${t.id}')`)}">
+                    <div style="font-weight:900; font-size:14px; margin: 10px 0;">${t.name}</div>
+                    ${priceDisplay}
+                </div>`;
+        }).join('');
+    }
+
+    // 4. РАДИО
+    const radioList = document.getElementById('radio-shop-list');
+    if (radioList) {
+        const isRadioPlaying = MusicPlayer.playing;
+        radioList.innerHTML = SHOP_RADIOS.map(r => {
+            const owned = (DB.user.ownedRadios || []).includes(r.id);
+            const active = DB.user.currentRadio === r.id;
+            const isBlocked = isRadioPlaying && !active;
+            const canAfford = userCoins >= r.price;
+            return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyRadio('${r.id}')" style="${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                    <div class="item-icon">${r.icon}</div>
+                    <div style="font-weight:800; font-size:12px;">${r.name}</div>
+                    ${!owned ? 
+                        `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${r.price} 💰</div>` : 
+                        `<div class="shop-price-tag" style="color:var(--success);">${active ? '● Выбрано' : 'Включить'}</div>`
                     }
+                </div>`;
+        }).join('');
+    }
 
-                    // 4. Обычная покупка за монеты
-                    return `<div class="shop-item" onclick="App.buyTitle('${t.id}')">
-                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t.name}</div>
-                        <small class="shop-price-tag ${priceClass}">${t.price} 💰</small>
-                    </div>`;
-                }).join('');
-            }
-//Радио
-const radioList = document.getElementById('radio-shop-list');
-if (radioList) {
-    const isRadioPlaying = MusicPlayer.playing; // ← Используем MusicPlayer
-    
-    radioList.innerHTML = SHOP_RADIOS.map(r => {
-        const owned = (DB.user.ownedRadios || []).includes(r.id);
-        const active = DB.user.currentRadio === r.id;
-        const isBlocked = isRadioPlaying && !active;
-        
-        return `
-            <div class="shop-item ${active ? 'active' : ''}" 
-                 onclick="App.buyRadio('${r.id}')"
-                 style="${isBlocked ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
-                <div style="font-size: 32px;">${r.icon}</div>
-                <div style="font-weight:bold; font-size:12px;">${r.name}</div>
-                ${!owned ? `<small class="shop-price-tag">${r.price} 💰</small>` : 
-                  active ? '<small style="color:var(--success); font-weight:bold;">✓ Выбрано</small>' : 
-                  isBlocked ? '<small style="color:var(--text-light);">🔒 Останови радио</small>' :
-                  '<small style="color:var(--text-light);">Выбрать</small>'}
-            </div>`;
-    }).join('');
-}
-                    
-            // Рамки
-    // Рамки (ВНУТРИ renderShop)
-            const frameList = document.getElementById('frame-shop-list');
-            if (frameList) {
-                const userFrames = DB.user.ownedFrames || [];
-                frameList.innerHTML = SHOP_FRAMES.map(f => {
-                    const owned = userFrames.includes(f.id);
-                    const active = DB.user.currentFrame === f.css;
-                    const priceClass = (DB.user.coins >= f.price) ? 'affordable' : '';
-                    return `
-                        <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyFrame('${f.id}')" style="overflow: visible; padding-top: 25px;">
-                            <div style="height:40px; width:40px; margin:0 auto 10px auto; border-radius:50%; background:#eee; position:relative;" class="${f.css}"></div>
-                            <div style="font-weight:bold; font-size:12px;">${f.name}</div>
-                            ${owned ? '' : `<small class="shop-price-tag ${priceClass}">${f.price} 💰</small>`}
-                        </div>`;
-                }).join('');
-            }
-            // Звуки
-            const soundList = document.getElementById('sound-shop-list');
-            if (soundList) {
-                const userSounds = DB.user.ownedSounds || ['standard'];
-                soundList.innerHTML = SHOP_SOUNDS.map(s => {
-                    const owned = userSounds.includes(s.id);
-                    const active = DB.user.soundPack === s.id;
-                    const priceClass = (DB.user.coins >= s.price) ? 'affordable' : '';
-                    return `<div class="shop-item ${active ? 'active' : ''}" onclick="App.buySound('${s.id}')"><div style="font-size:24px;">🔊</div><div style="font-weight:bold; font-size:12px;">${s.name}</div>${owned ? '' : `<small class="shop-price-tag ${priceClass}">${s.price} 💰</small>`}</div>`;
-                }).join('');
-            }
-            // Отрисовка предметов (Щитов)
-            const itemList = document.getElementById('item-shop-list');
-            if (itemList) {
-                itemList.innerHTML = SHOP_ITEMS.map(item => {
-                    const count = (DB.user.inventory && DB.user.inventory[item.id]) || 0;
-                    let actionText = `${item.price} 💰`;
-                    let isAffeat = (DB.user.coins >= item.price);
-
-                    // Специальная логика для отображения времени бустера
-                    if (item.id === 'booster') {
-                        const now = Date.now();
-                        const expiry = DB.user.boosterExpiry || 0;
-                        if (now < expiry) {
-                            const diff = expiry - now;
-                            const h = Math.floor(diff / (1000 * 60 * 60));
-                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                            actionText = `⚡ ${h}ч ${m}м`;
-                            isAffeat = false; // Отключаем подсветку цены
-                        }
+    // 5. РАМКИ
+    const frameList = document.getElementById('frame-shop-list');
+    if (frameList) {
+        const userFrames = DB.user.ownedFrames || [];
+        frameList.innerHTML = SHOP_FRAMES.map(f => {
+            const owned = userFrames.includes(f.id);
+            const active = DB.user.currentFrame === f.css;
+            const canAfford = userCoins >= f.price;
+            return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buyFrame('${f.id}')" style="padding-top: 30px;">
+                    <div style="height:45px; width:45px; border-radius:50%; background:var(--bg); position:relative; margin-bottom:5px;" class="${f.css}"></div>
+                    <div style="font-weight:800; font-size:12px;">${f.name}</div>
+                    ${owned ? 
+                        `<div class="shop-price-tag" style="color:var(--success);">${active ? '● Надет' : 'Надеть'}</div>` : 
+                        `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${f.price} 💰</div>`
                     }
+                </div>`;
+        }).join('');
+    }
 
-                    return `
-                        <div class="shop-item" onclick="App.buyItem('${item.id}', ${item.price})">
-                            <div style="font-size: 32px;">${item.icon}</div>
-                            <div style="font-weight:bold; font-size:12px;">${item.name}</div>
-                            <div style="font-size:9px; color:var(--text-light); line-height:1.1; margin: 5px 0;">${item.desc}</div>
-                            <div class="shop-price-tag ${isAffeat ? 'affordable' : ''}" style="font-size:11px;">${actionText}</div>
-                            ${item.id === 'shield' && count > 0 ? `<div style="background:var(--primary); color:white; border-radius:10px; font-size:10px; margin-top:5px;">Запас: ${count}</div>` : ''}
-                        </div>`;
-                }).join('');
+    // 6. ЗВУКИ
+    const soundList = document.getElementById('sound-shop-list');
+    if (soundList) {
+        const userSounds = DB.user.ownedSounds || ['standard'];
+        soundList.innerHTML = SHOP_SOUNDS.map(s => {
+            const owned = userSounds.includes(s.id);
+            const active = DB.user.soundPack === s.id;
+            const canAfford = userCoins >= s.price;
+            return `
+                <div class="shop-item ${active ? 'active' : ''}" onclick="App.buySound('${s.id}')">
+                    <div class="item-icon">🔊</div>
+                    <div style="font-weight:800; font-size:12px;">${s.name}</div>
+                    ${owned ? 
+                        `<div class="shop-price-tag" style="color:var(--success);">${active ? '● Активен' : 'Выбрать'}</div>` : 
+                        `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${s.price} 💰</div>`
+                    }
+                </div>`;
+        }).join('');
+    }
+
+    // 7. УСИЛИТЕЛИ (ПРЕДМЕТЫ)
+    const itemList = document.getElementById('item-shop-list');
+    if (itemList) {
+        itemList.innerHTML = SHOP_ITEMS.map(item => {
+            const count = (DB.user.inventory && DB.user.inventory[item.id]) || 0;
+            const canAfford = userCoins >= item.price;
+            let actionText = `<div class="shop-price-tag ${canAfford ? 'affordable' : ''}">${item.price} 💰</div>`;
+
+            if (item.id === 'booster') {
+                const expiry = DB.user.boosterExpiry || 0;
+                if (Date.now() < expiry) {
+                    const diff = expiry - Date.now();
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    actionText = `<div class="shop-price-tag" style="background:#00E0D0; color:black;">⚡ ${h}ч ${m}м</div>`;
+                }
             }
-        },
 
+            return `
+                <div class="shop-item" onclick="App.buyItem('${item.id}', ${item.price})">
+                    <div class="item-icon">${item.icon}</div>
+                    <div style="font-weight:800; font-size:12px;">${item.name}</div>
+                    <div style="font-size:9px; color:var(--text-light); min-height:22px;">${item.desc}</div>
+                    ${actionText}
+                    ${item.id === 'shield' && count > 0 ? `<div style="font-size:10px; font-weight:bold; color:var(--primary);">Запас: ${count}</div>` : ''}
+                </div>`;
+        }).join('');
+    }
+},
         // ФУНКЦИИ ПОКУПОК
         buyTheme(id) {
             const t = THEMES.find(x=>x.id===id);
