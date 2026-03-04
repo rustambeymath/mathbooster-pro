@@ -4607,88 +4607,65 @@ const Timer = {
     },
 
         async start() {
-        // 🛡️ ПРОВЕРКА ИНТЕРНЕТА ПЕРЕД СТАРТОМ
-        if (!navigator.onLine) {
-            SoundSys.play('error');
-            return App.toast("❌ Нужен интернет для работы таймера (защита от читов)");
-        }
+        if (!navigator.onLine) return App.toast("❌ Нужен интернет!");
+        if (this.active) return;
 
-        if (this.active) {
-            this.resume();
-            return;
-        }
-
-        App.toast("⏳ Синхронизация времени...");
-        
-        // 🛡️ ПРОВЕРКА ИНТЕРНЕТА ВО ВРЕМЯ СИНХРОНИЗАЦИИ
-        try {
-            await TimeGuard.sync();
-        } catch (e) {
-            SoundSys.play('error');
-            return App.toast("❌ Не удалось синхронизировать время. Проверь интернет.");
-        }
+        await TimeGuard.sync(); // Получаем честное время
 
         this.active = true;
         this.isRunning = true;
-        this.isPaused = false;
-        this.startTime = this.getTrueTime();
-        this.pausedTime = 0;
-        this.totalPausedDuration = 0;
-        this.realSec = 0;
-        this.visualSec = 0;
-        this.lastCheckTime = 0;
-        this.lastRewardTime = 0;
+        this.startTime = TimeGuard.getTrueTime();
+        this.sessionCoins = 0;
+        this.lastPaidBlock = 0;
 
-        const btn = document.getElementById('btn-start');
-        if (btn) {
-            btn.innerText = this.isStrict ? '🔥 ХАРДКОР' : '⏸ ПАУЗА';
-            btn.onclick = () => this.pause();
-            btn.disabled = this.isStrict;
-            btn.style.opacity = this.isStrict ? '0.5' : '1';
+        // 🛡️ ЗАПИСЫВАЕМ СТАРТ В ОБЛАКО (ЭТО НЕЛЬЗЯ ПОДДЕЛАТЬ)
+        if (window.DB_Online && Auth.currentUser) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            await window.DB_Online.updateDoc(docRef, {
+                "user.activeSessionStart": Number(this.startTime),
+                "user.lastPing": Number(this.startTime)
+            });
         }
 
         document.getElementById('timer').classList.add('timer-active-anim');
-        startAfkCheck();
         this.tick();
-        SoundSys.play('click');
-        App.toast(this.isStrict ? "🔥 Режим ХАРДКОР!" : "⏱️ Таймер запущен");
-
-        if (typeof ym !== 'undefined') ym(105919372, 'reachGoal', 'timer_start');
+        App.toast("🚀 Сессия подтверждена сервером");
     },
 
-        tick() {
+    tick() {
         if (this.interval) clearInterval(this.interval);
         
-        this.interval = setInterval(() => {
+        this.interval = setInterval(async () => {
             if (!this.isRunning || this.isPaused) return;
 
-            // 🛡️ ПРОВЕРКА ИНТЕРНЕТА КАЖДУЮ СЕКУНДУ
-            if (!navigator.onLine) {
-                console.error("🚨 Интернет пропал во время сессии!");
-                this.stop(true); // Останавливаем и сохраняем
+            // Если инет пропал — стоп
+            if (!navigator.onLine) { this.stop(true); return; }
+
+            const now = TimeGuard.getTrueTime();
+            const calculatedSec = Math.floor((now - this.startTime) / 1000);
+
+            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ (Если юзер перевел время прямо сейчас)
+            if (calculatedSec - this.visualSec > 3) {
+                await TimeGuard.sync(); // Перепроверяем офсет
                 return;
             }
 
-            const now = this.getTrueTime();
-            this.realSec = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
-            this.visualSec = this.realSec;
-
+            this.visualSec = calculatedSec;
+            this.realSec = calculatedSec;
             this.updateDisplay();
 
-            if (this.realSec > 0 && this.realSec - this.lastCheckTime >= this.CHECK_AFTER_SECONDS) {
-                this.lastCheckTime = this.realSec;
-                this.showMathCheck();
-                return;
+            // Пинг сервера каждые 30 секунд (Heartbeat)
+            if (this.realSec % 30 === 0) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(TimeGuard.getTrueTime()) });
             }
 
-            const rewardsPassed = Math.floor(this.realSec / this.REWARD_INTERVAL);
-            const lastRewardsPassed = Math.floor(this.lastRewardTime / this.REWARD_INTERVAL);
-            
-            if (rewardsPassed > lastRewardsPassed) {
-                this.giveReward(rewardsPassed);
-                this.lastRewardTime = this.realSec;
+            // Награда каждые 10 минут
+            let currentBlock = Math.floor(this.realSec / 600);
+            if (currentBlock > this.lastPaidBlock) {
+                this.giveReward(currentBlock);
+                this.lastPaidBlock = currentBlock;
             }
-
         }, 1000);
     },
 
@@ -4831,35 +4808,49 @@ const Timer = {
     async stop(saveSession = true) {
         if (!this.active) return;
 
+        clearInterval(this.interval);
         this.active = false;
         this.isRunning = false;
-        this.isPaused = false;
 
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
-        }
+        // 1. Получаем данные с сервера
+        const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+        const snap = await window.DB_Online.getDoc(docRef);
+        const data = snap.data();
+        
+        const serverStart = Number(data.user.activeSessionStart || 0);
+        const serverLastPing = Number(data.user.lastPing || serverStart);
+        
+        await TimeGuard.sync();
+        const stopTime = TimeGuard.getTrueTime();
 
-        stopAfkCheck();
-        document.getElementById('timer').classList.remove('timer-active-anim');
+        // 🛡️ РАСЧЕТ ЧЕСТНОГО ВРЕМЕНИ
+        // Берем либо время СТОП, либо последний пинг + 40 сек (если юзер выключил инет и схитрил)
+        const endPoint = Math.min(stopTime, serverLastPing + 40000);
+        const verifiedSec = Math.floor((endPoint - serverStart) / 1000);
 
-        const btn = document.getElementById('btn-start');
-        if (btn) {
-            btn.innerText = '🚀 СТАРТ';
-            btn.onclick = () => Timer.preStart();
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
-
-        if (saveSession && this.realSec >= 60) {
+        if (saveSession && verifiedSec >= 60) {
+            this.realSec = verifiedSec; // Подменяем время на честное перед сохранением
             await this.saveSession();
-        } else if (this.realSec < 60) {
-            App.toast("⚠️ Минимум 1 минута для сохранения");
+        } else {
+            App.toast("⚠️ Сессия аннулирована (слишком короткая или сбой времени)");
         }
 
+        // Очистка в облаке
+        await window.DB_Online.updateDoc(docRef, {
+            "user.activeSessionStart": null,
+            "user.lastPing": null
+        });
+
+        this.resetTimerUI();
+    },
+
+    resetTimerUI() {
         this.realSec = 0;
         this.visualSec = 0;
         this.updateDisplay();
+        document.getElementById('timer').classList.remove('timer-active-anim');
+        document.getElementById('btn-start').innerText = '🚀 СТАРТ';
+        document.getElementById('btn-start').onclick = () => Timer.preStart();
         SoundSys.play('click');
     },
 
@@ -5904,39 +5895,44 @@ const QuestSys = {
 
     
 
-const TimeGuard = {
-    serverOffset: 0,
-    isSyncing: false,
+    const TimeGuard = {
+        serverOffset: 0,
+        isSyncing: false,
 
-    async sync() {
-        this.isSyncing = true;
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000); // Ждем максимум 4 сек
-            
-            const response = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { 
-                cache: "no-store", 
-                signal: controller.signal 
-            });
-            const data = await response.json();
-            clearTimeout(timeoutId);
-            
-            const serverTime = new Date(data.dateTime || data.currentLocalTime).getTime();
-            // Вычисляем разницу: Настоящее время минус время телефона
-            this.serverOffset = serverTime - Date.now();
-            
-            console.log("✅ Время синхронизировано. Смещение: " + this.serverOffset + "ms");
-        } catch (e) {
-            console.warn("⚠️ Сервер времени недоступен, используем время телефона.");
+        async sync() {
+            this.isSyncing = true;
+            const servers = [
+                'https://timeapi.io/api/Time/current/zone?timeZone=UTC',
+                'https://worldtimeapi.org/api/timezone/Etc/UTC'
+            ];
+
+            for (let url of servers) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+                    const data = await response.json();
+                    clearTimeout(timeoutId);
+                    
+                    const serverTime = new Date(data.dateTime || data.utc_datetime).getTime();
+                    // Вычисляем разницу: Настоящее время минус время телефона
+                    this.serverOffset = serverTime - Date.now();
+                    
+                    console.log("✅ Синхронизация: Офсет " + this.serverOffset + "ms");
+                    this.isSyncing = false;
+                    return; 
+                } catch (e) {
+                    console.warn("⚠️ Сервер времени не ответил, пробуем следующий...");
+                }
+            }
             this.serverOffset = 0;
-        }
-        this.isSyncing = false;
-    },
+            this.isSyncing = false;
+        },
 
-    getTrueTime() {
-        return Date.now() + this.serverOffset;
-    }
-};
+        getTrueTime() {
+            return Date.now() + this.serverOffset;
+        }
+    };
 
     const SecretSys = {
         logoTaps: 0,
