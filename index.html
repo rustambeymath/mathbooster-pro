@@ -949,20 +949,22 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
             .btn-outline { background: transparent; border: 2px solid var(--text-light); color: var(--text-light); }
             .input-field { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--bg); background: var(--bg); color: var(--text); font-size: 16px; margin-bottom: 15px; outline: none; -webkit-appearance: none; }
 .timer-display {
-    font-size: 72px;
+    /* Авто-размер: минимум 32px, оптимально 15% ширины экрана, максимум 72px */
+    font-size: clamp(32px, 15vw, 72px); 
     font-weight: 800;
     color: var(--text);
     text-align: center;
-    margin: 15px 0;
+    margin: 10px 0;
     
-    /* ВАЖНО: эти 3 строки убирают прыжки */
-    display: inline-block;
-    min-width: 280px; 
-    font-variant-numeric: tabular-nums; /* Цифры не будут "плясать" при смене */
+    display: block;
+    width: 100%;
+    white-space: nowrap; /* Запрет переноса цифр на новую строку */
+    overflow: hidden;    /* Защита от вылета за края */
+    font-variant-numeric: tabular-nums; /* Одинаковая ширина для всех цифр */
     
-    transition: color 0.3s ease;
-    will-change: transform, opacity; /* Подсказка браузеру для плавности */
-}            
+    transition: all 0.3s ease;
+    will-change: transform, opacity;
+}         
             .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
             .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
             .shop-item { padding: 15px; border-radius: 15px; background: var(--bg); cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; position:relative; overflow:hidden;}
@@ -6611,91 +6613,71 @@ setTimeout(() => {
 
     // 2. Функция покупки/выбора
     buyRadio(id) {
-    const radio = SHOP_RADIOS.find(r => r.id === id);
-    if (!radio) return;
-
-    const owned = (DB.user.ownedRadios || []).includes(id);
-    const isCurrentStation = DB.user.currentRadio === id;
-
-    // 🔒 БЛОКИРОВКА: Если радио играет И это НЕ текущая станция - запрещаем
-    if (MusicPlayer.playing && !isCurrentStation) {
-        SoundSys.play('error');
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        return App.toast("⚠️ Останови радио, чтобы сменить станцию!");
-    }
-
-    // Покупка новой станции
-    if (!owned) {
-        if (DB.user.coins < radio.price) {
-            SoundSys.play('error');
-            return App.toast(`❌ Нужно ${radio.price} 💰`);
-        }
-
-        DB.user.coins -= radio.price;
+        const r = SHOP_RADIOS.find(x => x.id === id);
         if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
-        DB.user.ownedRadios.push(id);
-        DB.user.currentRadio = id;
-        SoundSys.play('success');
-        App.toast(`${radio.icon} ${radio.name} куплено и выбрано!`);
-    } 
-    // Если уже куплено - просто выбираем
-    else {
-        DB.user.currentRadio = id;
-        SoundSys.play('click');
-        App.toast(`📻 Выбрана станция: ${radio.name}`);
-    }
 
-    Data.save();
-    this.renderShop();
-    this.updateUI();
-},
+        if (DB.user.ownedRadios.includes(id)) {
+            DB.user.currentRadio = id;
+            App.toast(`Выбрано: ${r.name}`);
+            
+            // Если музыка играет — меняем поток
+            if (MusicPlayer.playing) {
+                MusicPlayer.audio.pause();
+                MusicPlayer.audio.src = r.url;
+                MusicPlayer.audio.load();
+                MusicPlayer.audio.play();
+            }
+        } else if (DB.user.coins >= r.price) {
+            if (confirm(`Купить ${r.name} за ${r.price} 💰?`)) {
+                DB.user.coins -= r.price;
+                DB.user.ownedRadios.push(id);
+                DB.user.currentRadio = id;
+                SoundSys.play('win');
+                FX.confetti();
+            }
+        } else {
+            return App.toast("Недостаточно монет");
+        }
+        
+        Data.save();
+        this.renderShop(); // Обновить магазин
+        this.updateRadioWidget(); // 🔥 ОБЯЗАТЕЛЬНО: Обновить виджет на Дашборде
+    },
 
     // 3. Виджет на главном экране (ОБНОВЛЕННЫЙ)
     updateRadioWidget() {
         const container = document.getElementById('radio-widget-container');
         if (!container) return;
 
-        const ownedRadios = DB.user.ownedRadios ||[];
-
-        // Если ничего не куплено — показываем заглушку с умным скроллом
+        const ownedRadios = DB.user.ownedRadios || [];
         if (ownedRadios.length === 0) {
-            container.innerHTML = `
-                <div class="card">
-                    <h3>📻 Радио</h3>
-                    <p style="font-size:12px; color:var(--text-light); margin-bottom:10px;">Музыка для фокуса заблокирована.</p>
-                    <button class="btn btn-primary" onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);" style="font-size:12px;">
-                        В магазин 🛒
-                    </button>
-                </div>`;
+            container.innerHTML = `<div class="card"><h3>📻 Радио</h3><p style="font-size:12px; color:var(--text-light);">Радио заблокировано.</p></div>`;
             return;
         }
 
-        // Если куплено — показываем компактный плеер как раньше
+        // Находим текущую станцию
         const currentId = DB.user.currentRadio || ownedRadios[0];
         const current = SHOP_RADIOS.find(x => x.id === currentId);
-        
+
+        // Перерисовываем карточку полностью
         container.innerHTML = `
             <div class="card">
                 <h3>📻 Радио</h3>
-                
-                <div class="music-widget" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg); padding: 10px 15px; border-radius: 15px; margin-bottom: 10px;">
-                    <div class="music-info" style="display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 13px;">
+                <div class="music-widget">
+                    <div class="music-info">
                         <span style="font-size: 20px;">${current.icon}</span>
-                        <span>${current.name}</span>
+                        <span style="font-weight:bold;">${current.name}</span>
                     </div>
-                    <div class="visualizer" id="music-vis" style="opacity: ${MusicPlayer.playing ? '1' : '0'}; display: flex; gap: 2px; align-items: flex-end; height: 15px;">
+                    <div class="visualizer" id="music-vis" style="opacity: ${MusicPlayer.playing ? '1' : '0'};">
                         <div class="bar" style="animation-duration: 0.5s"></div>
                         <div class="bar" style="animation-duration: 0.7s"></div>
                         <div class="bar" style="animation-duration: 0.4s"></div>
                     </div>
-                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px; margin: 0;" onclick="MusicPlayer.toggle()">
+                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px;" onclick="MusicPlayer.toggle()">
                         ${MusicPlayer.playing ? '⏸' : '▶'}
                     </button>
                 </div>
-                
-                <button class="btn btn-outline" style="font-size:11px; width:100%; padding: 8px;" onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);">
-                    Сменить станцию 🛒
-                </button>
+                <p style="font-size:10px; color:var(--text-light); margin-top:8px; text-align:center;">Сменить станцию можно в Магазине 🛒</p>
             </div>`;
     },
         
