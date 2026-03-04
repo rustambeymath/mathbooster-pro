@@ -1938,6 +1938,99 @@ body.dark-mode .subject-item-fixed {
                 font-size: 48px;
                 opacity: 0.3;
             }
+
+
+            /* Карточки выбора режимов */
+            .mode-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .trainer-mode-card {
+                background: var(--surface);
+                border: 2px solid var(--bg);
+                border-radius: 20px;
+                padding: 15px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .trainer-mode-card.active {
+                border-color: var(--primary);
+                background: rgba(108, 99, 255, 0.05);
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(108, 99, 255, 0.15);
+            }
+
+            .trainer-mode-card .icon-circle {
+                width: 50px;
+                height: 50px;
+                background: var(--bg);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 10px;
+                font-size: 24px;
+                transition: 0.3s;
+            }
+
+            .trainer-mode-card.active .icon-circle {
+                background: var(--primary);
+                color: white;
+            }
+
+            /* Поле с примером */
+            .problem-container {
+                background: var(--bg);
+                border-radius: 25px;
+                padding: 40px 20px;
+                margin: 20px 0;
+                position: relative;
+                border: 2px solid transparent;
+                transition: 0.3s;
+            }
+
+            .trainer-problem {
+                font-size: 48px !important;
+                font-weight: 900 !important;
+                letter-spacing: -1px;
+                margin: 0 !important;
+                text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            }
+
+            /* Анимация появления нового примера */
+            @keyframes popIn {
+                from { transform: scale(0.8); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+
+            .animate-problem {
+                animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+
+            /* Полоска прогресса времени в игре */
+            .timer-bar-container {
+                width: 100%;
+                height: 8px;
+                background: rgba(0,0,0,0.05);
+                border-radius: 4px;
+                margin-bottom: 20px;
+                overflow: hidden;
+            }
+
+            #timer-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, var(--primary), var(--accent));
+                width: 100%;
+                transition: width 1s linear;
+            }
+
         </style>
         
     </head>
@@ -2286,100 +2379,110 @@ body.dark-mode .subject-item-fixed {
             </button>
         </section>
 
-        <!-- 2. TRAINER (Меню с выбором + Завершить) -->
     <!-- 2. TRAINER (Мульти-режим) -->
         <section id="trainer" class="section">
+    <!-- 1. МЕНЮ ВЫБОРА -->
+    <div class="card" id="trainer-menu" style="text-align: center; padding: 25px 15px;">
+        <div style="font-size: 50px; margin-bottom: 10px;">🧠</div>
+        <h2 style="margin-bottom: 20px;">Тренажер Мозга</h2>
+        
+        <div class="mode-grid">
+            <div class="trainer-mode-card active" onclick="Trainer.selectMode('standard', this)">
+                <div class="icon-circle">🔢</div>
+                <div style="font-weight: 800; font-size: 13px;">Классика</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('sign', this)">
+                <div class="icon-circle">🧩</div>
+                <div style="font-weight: 800; font-size: 13px;">Найди знак</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('square', this)">
+                <div class="icon-circle">📐</div>
+                <div style="font-weight: 800; font-size: 13px;">Степени</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('fractions', this)">
+                <div class="icon-circle">🍰</div>
+                <div style="font-weight: 800; font-size: 13px;">Дроби</div>
+            </div>
+        </div>
+
+        <button class="btn" onclick="BattleSys.openMenu()" style="background: linear-gradient(45deg, #FF416C, #FF4B2B); color: white; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3); border: none; width: 100%;">
+            ⚔️ PVP ДУЭЛЬ (15 💰)
+        </button>
+
+        <div style="margin-bottom: 10px; font-size: 11px; font-weight: bold; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px;">Сложность</div>
+        <div class="diff-switch" style="margin-bottom: 25px;">
+            <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
+            <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
+            <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
+        </div>
+
+        <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="font-size: 10px; color: var(--text-light); text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Ваш рекорд</div>
+            <div style="font-size: 28px; font-weight: 900; color: var(--primary);" id="trainer-high-score">0</div>
+            <div style="font-size: 11px; opacity: 0.7;" id="record-mode-label">Классика</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 20px; width: 100%; padding: 18px; font-size: 18px; border-radius: 20px;">🚀 НАЧАТЬ ИГРУ</button>
+    </div>
+
+    <!-- 2. ИГРОВОЙ ЭКРАН -->
+    <div class="card" id="trainer-game" style="display: none; text-align: center; padding: 20px 15px;">
+        <div class="trainer-stats" style="margin-bottom: 10px;">
+            <div style="color: var(--primary);">✅ <span id="game-score" style="font-weight: 900;">0</span></div>
+            <div style="color: var(--accent);">⏳ <span id="game-time" style="font-weight: 900;">60</span>s</div>
+        </div>
+
+        <div class="timer-bar-container" style="width: 100%; height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; margin-bottom: 20px; overflow: hidden;">
+            <div id="timer-bar-fill" style="height: 100%; background: var(--primary); width: 100%; transition: width 1s linear;"></div>
+        </div>
+
+        <div class="problem-container" id="problem-box" style="background: var(--bg); border-radius: 25px; padding: 40px 20px; margin: 20px 0;">
+            <div class="trainer-problem" id="game-problem" style="font-size: 42px; font-weight: 900;">2 x 2</div>
+        </div>
+
+        <div id="input-area">
+            <input type="text" id="game-input" class="input-field" placeholder="Ответ..." 
+                   style="text-align: center; font-size: 28px; font-weight: 900; height: 70px; border-radius: 20px; margin-bottom: 15px;">
             
-            <!-- МЕНЮ -->
-            <div class="card" id="trainer-menu" style="text-align: center; padding: 30px 20px;">
-                <div style="font-size: 60px; margin-bottom: 10px;">🧠</div>
-                <h2 style="margin-bottom: 5px;">Тренажер</h2>
-                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">Выбери режим:</p>
-                
-                <!-- Выбор режима -->
-                <div style="display: grid; gap: 10px; margin-bottom: 25px;">
-                    <button class="btn mode-btn active" onclick="Trainer.selectMode('standard', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
-                        <span style="font-size: 20px;">🔢</span> <b>Классика</b>
-                    </button>
-                    
-                    <button class="btn mode-btn" onclick="Trainer.selectMode('sign', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
-                        <span style="font-size: 20px;">🧩</span> <b>Найди знак</b>
-                    </button>
-                    
-                    <button class="btn mode-btn" onclick="Trainer.selectMode('square', this)" style="background: var(--bg); border: 2px solid var(--bg); color: var(--text); text-align: left; padding: 15px; transition: 0.2s;">
-                        <span style="font-size: 20px;">🟥</span> <b>Квадраты</b>
-                    </button>
-                </div>
-
-                <!-- КНОПКА ДУЭЛИ  -->
-                <button class="btn" onclick="BattleSys.openMenu()" style="background: linear-gradient(45deg, #FF416C, #FF4B2B); color: white; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4); border: none;">
-                    ⚔️ PVP ДУЭЛЬ 
-                </button>
-                <!-------------------->
-                
-
-                <!-- Сложность -->
-                <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-light);">СЛОЖНОСТЬ</div>
-                <div class="diff-switch">
-                    <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
-                    <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
-                    <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
-                </div>
-
-                <!-- Рекорд -->
-                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--bg);">
-                    <div style="font-size: 11px; color: var(--text-light); margin-bottom: 5px;">
-                        Рекорд (<span id="record-mode-label">Классика</span>)
-                    </div>
-                    <div style="font-size: 32px; font-weight: 800; color: var(--primary);" id="trainer-high-score">0</div>
-                </div>
-
-                <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 20px; width: 100%; padding: 15px; font-size: 18px;">🚀 СТАРТ</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="height: 60px; font-size: 20px;">±</button>
+                <button class="btn btn-outline" onclick="Trainer.addSlash()" style="height: 60px; font-size: 20px;">/</button>
+                <button class="btn btn-primary" onclick="Trainer.check()" style="height: 60px; font-size: 24px;">✓</button>
             </div>
+        </div>
 
-            <!-- ИГРА -->
-            <div class="card" id="trainer-game" style="display: none; text-align: center;">
-                <div class="trainer-stats">
-                    <div>⏳ <span id="game-time">60</span>s</div>
-                    <div>✅ <span id="game-score">0</span></div>
-                </div>
+        <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">+</button>
+            <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">−</button>
+            <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">×</button>
+            <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">÷</button>
+        </div>
 
-                <div class="trainer-problem" id="game-problem" style="word-break:break-all;">2 x 2</div>
+        <button class="btn btn-outline" style="margin-top: 30px; border: none; color: var(--text-light);" onclick="Trainer.end()">🏁 Сдаться</button>
+    </div>
 
-                <!-- ВВОД ЧИСЕЛ (Для Классики и Квадратов) -->
-                <div id="input-area">
-                    <div style="display: flex; gap: 10px; justify-content: center; align-items: center; max-width: 320px; margin: 20px auto;">
-                        <input type="tel" id="game-input" class="input-field trainer-input" placeholder="?" style="margin-bottom: 0;">
-                        <button class="btn btn-outline" onclick="Trainer.toggleMinus()" style="width: 60px; height: 60px; padding: 0; font-size: 20px;" title="Минус">+/-</button>
-                    </div>
-                    <button class="btn btn-primary" onclick="Trainer.check()" style="margin-top: 15px; width: 100%;">Ответить ➜</button>
-                </div>
+    <!-- 3. ЭКРАН РЕЗУЛЬТАТОВ (ВОТ ЭТОТ БЛОК БЫЛ УДАЛЕН) -->
+    <div class="card" id="trainer-result" style="display: none; text-align: center; padding: 30px 20px;">
+        <div style="font-size: 60px; margin-bottom: 10px;">🏆</div>
+        <h2 id="result-title">Время вышло!</h2>
+        
+        <div style="margin: 25px 0;">
+            <div style="font-size: 12px; color: var(--text-light); text-transform: uppercase; font-weight: bold;">Ваш счет</div>
+            <div style="font-size: 56px; font-weight: 900; color: var(--primary);" id="result-score">0</div>
+        </div>
 
-                <!-- КНОПКИ ЗНАКОВ (Для Найди знак) -->
-                <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 300px; margin: 20px auto;">
-                    <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">+</button>
-                    <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">−</button>
-                    <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">×</button>
-                    <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 32px; border: 2px solid var(--primary); background: var(--bg); color: var(--text); font-weight: bold; aspect-ratio: 1/1;">÷</button>
-                </div>
-
-                <button class="btn btn-outline" style="margin-top: 20px;" onclick="Trainer.end()">🏁 Завершить</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+                <div style="font-size: 18px; font-weight: bold; color: #6C63FF;" id="result-xp">+0 XP</div>
             </div>
-
-            <!-- РЕЗУЛЬТАТ -->
-            <div class="card" id="trainer-result" style="display: none; text-align: center;">
-                <h2>Время вышло! 🏁</h2>
-                <div style="margin: 30px 0;">
-                    <div style="font-size: 14px; color: var(--text-light);">Ваш счет</div>
-                    <div style="font-size: 48px; font-weight: bold; color: var(--primary);" id="result-score">0</div>
-                </div>
-                <div class="grid" style="margin-bottom: 20px;">
-                    <div class="stat-pill"><div class="stat-val" id="result-xp">+0 XP</div></div>
-                    <div class="stat-pill"><div class="stat-val" id="result-coins">+0 💰</div></div>
-                </div>
-                <button class="btn btn-primary" onclick="Trainer.init()">В меню</button>
+            <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+                <div style="font-size: 18px; font-weight: bold; color: #FFD700;" id="result-coins">+0 💰</div>
             </div>
-        </section>
+        </div>
+
+        <button class="btn btn-primary" onclick="Trainer.init()" style="width: 100%; padding: 15px; border-radius: 15px;">В меню</button>
+    </div>
+</section>
 
 
         <!-- 3. STATS -->
@@ -3119,109 +3222,161 @@ body.dark-mode .subject-item-fixed {
     };
 
     const SoundSys = {
-        ctx: null, enabled: true,
-        init() { try { const AudioContext = window.AudioContext || window.webkitAudioContext; this.ctx = new AudioContext(); } catch(e) {} },
+    ctx: null, 
+    enabled: true,
+    lastPlayTime: {}, // ← ДОБАВИТЬ
+    
+    init() { 
+        try { 
+            const AudioContext = window.AudioContext || window.webkitAudioContext; 
+            this.ctx = new AudioContext(); 
+        } catch(e) {} 
+    },
+    
+    toggleSFX(val) { 
+        this.enabled = val; 
+        DB.settings.sfx = val; 
+        Data.save(); 
+        if(val) this.play('click'); 
+    },
+    
+    play(type) {
+        if(!this.enabled || !this.ctx) return; 
+        if(this.ctx.state === 'suspended') this.ctx.resume();
         
-        toggleSFX(val) { this.enabled = val; DB.settings.sfx = val; Data.save(); if(val) this.play('click'); },
-        
-        play(type) {
-            if(!this.enabled || !this.ctx) return; 
-            if(this.ctx.state === 'suspended') this.ctx.resume();
-            
-            const t = this.ctx.currentTime; 
-            const osc = this.ctx.createOscillator(); 
-            const gain = this.ctx.createGain();
-            
-            osc.connect(gain); 
-            gain.connect(this.ctx.destination);
-
-            const pack = (DB && DB.user && DB.user.soundPack) ? DB.user.soundPack : 'standard';
-
-            if (type === 'quest_done') {
-                // Мелодия успеха: До-Ми-Соль-До (восходящая)
-                [523, 659, 783, 1046].forEach((f, i) => {
-                    this.beep(f, t + i * 0.1, 0.1);
-                });
-                return;
-            }
-
-            if (type === 'level_up') {
-                // Фанфары: три коротких и один длинный высокий звук
-                [523, 523, 523, 1046].forEach((f, i) => {
-                    this.beep(f, t + i * 0.15, i === 3 ? 0.5 : 0.1);
-                });
-                return;
-            }
-            // --- 🕹️ 8-BIT (РЕТРО) ---
-            if (pack === 'retro') {
-                osc.type = 'square'; 
-                gain.gain.setValueAtTime(0.05, t);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-
-                if (type === 'click') { osc.frequency.setValueAtTime(440, t); osc.start(t); osc.stop(t+0.1); }
-                else if (type === 'coin')  { osc.frequency.setValueAtTime(900, t); osc.frequency.linearRampToValueAtTime(1800, t+0.1); osc.start(t); osc.stop(t+0.1); }
-                else if (type === 'success') { osc.frequency.setValueAtTime(500, t); osc.frequency.setValueAtTime(1000, t+0.1); osc.start(t); osc.stop(t+0.2); }
-                else if (type === 'error') { osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(50, t+0.2); osc.start(t); osc.stop(t+0.2); }
-                else if (type === 'win')   { osc.frequency.setValueAtTime(500, t); osc.frequency.linearRampToValueAtTime(1500, t+0.3); osc.start(t); osc.stop(t+0.3); }
-            }
-            
-            // --- 🧼 BUBBLE (БУЛЬК) ---
-            else if (pack === 'bubble') {
-                osc.type = 'sine';
-                gain.gain.setValueAtTime(0.2, t);
-                gain.gain.linearRampToValueAtTime(0, t + 0.15);
-
-                if (type === 'click') { osc.frequency.setValueAtTime(300, t); osc.frequency.linearRampToValueAtTime(600, t+0.1); osc.start(t); osc.stop(t+0.1); }
-                else if (type === 'coin')  { osc.frequency.setValueAtTime(600, t); osc.frequency.linearRampToValueAtTime(1200, t+0.15); osc.start(t); osc.stop(t+0.15); }
-                else { osc.frequency.setValueAtTime(400, t); osc.start(t); osc.stop(t+0.1); }
-            }
-
-            // --- 🚀 SCI-FI (КОСМОС) ---
-            else if (pack === 'sci-fi') {
-                osc.type = 'sawtooth';
-                gain.gain.setValueAtTime(0.04, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-
-                if (type === 'click') { osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(100, t+0.1); osc.start(t); osc.stop(t+0.1); }
-                else { osc.frequency.setValueAtTime(200, t); osc.frequency.linearRampToValueAtTime(800, t+0.3); osc.start(t); osc.stop(t+0.3); }
-            }
-
-            else if (pack === 'mechanical') {
-                osc.type = 'triangle'; // Более "металлический" звук
-                gain.gain.setValueAtTime(0.1, t);
-                if (type === 'click') { 
-                    osc.frequency.setValueAtTime(150, t); 
-                    osc.start(t); osc.stop(t+0.05); 
-                } else { 
-                    osc.frequency.setValueAtTime(300, t); 
-                    osc.start(t); osc.stop(t+0.1); 
-                }
-            }
-            // --- 💜 STANDARD (КЛАССИКА) ---
-            else {
-                if(type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(1200, t+0.1); gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0.001, t+0.1); osc.start(t); osc.stop(t+0.1); }
-                else if(type === 'coin') { osc.type = 'sine'; osc.frequency.setValueAtTime(1200, t); osc.frequency.exponentialRampToValueAtTime(1800, t+0.3); gain.gain.setValueAtTime(0.1, t); gain.gain.linearRampToValueAtTime(0, t+0.5); osc.start(t); osc.stop(t+0.5); }
-                else if(type === 'success') { this.beep(523.25, t, 0.1); this.beep(659.25, t+0.1, 0.1); this.beep(783.99, t+0.2, 0.2); }
-                else if(type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(100, t+0.3); gain.gain.setValueAtTime(0.1, t); gain.gain.linearRampToValueAtTime(0, t+0.3); osc.start(t); osc.stop(t+0.3); }
-                else if(type === 'win') { this.beep(523.25, t, 0.15); this.beep(523.25, t+0.15, 0.15); this.beep(523.25, t+0.30, 0.15); this.beep(659.25, t+0.45, 0.4); }
-            }
-        },
-        
-        // Вспомогательная функция для стандартных звуков
-        beep(freq, time, dur) { 
-            const osc = this.ctx.createOscillator(); 
-            const gain = this.ctx.createGain(); 
-            osc.connect(gain); 
-            gain.connect(this.ctx.destination); 
-            osc.type = 'triangle'; 
-            osc.frequency.setValueAtTime(freq, time); 
-            gain.gain.setValueAtTime(0.1, time); 
-            gain.gain.linearRampToValueAtTime(0, time+dur); 
-            osc.start(time); 
-            osc.stop(time+dur); 
+        // 🔒 ЗАЩИТА ОТ СПАМА (минимум 50мс между одинаковыми звуками)
+        const now = Date.now();
+        if (this.lastPlayTime[type] && now - this.lastPlayTime[type] < 50) {
+            return; // Игнорируем слишком частые вызовы
         }
-    };
+        this.lastPlayTime[type] = now;
+        
+        const t = this.ctx.currentTime; 
+        const osc = this.ctx.createOscillator(); 
+        const gain = this.ctx.createGain();
+        
+        osc.connect(gain); 
+        gain.connect(this.ctx.destination);
 
+        const pack = (DB && DB.user && DB.user.soundPack) ? DB.user.soundPack : 'standard';
+
+        if (type === 'quest_done') {
+            [523, 659, 783, 1046].forEach((f, i) => {
+                this.beep(f, t + i * 0.1, 0.1);
+            });
+            return;
+        }
+
+        if (type === 'level_up') {
+            [523, 523, 523, 1046].forEach((f, i) => {
+                this.beep(f, t + i * 0.15, i === 3 ? 0.5 : 0.1);
+            });
+            return;
+        }
+        
+        // --- 🕹️ 8-BIT (РЕТРО) ---
+        if (pack === 'retro') {
+            osc.type = 'square'; 
+            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+            if (type === 'click') { osc.frequency.setValueAtTime(440, t); osc.start(t); osc.stop(t+0.1); }
+            else if (type === 'coin')  { osc.frequency.setValueAtTime(900, t); osc.frequency.linearRampToValueAtTime(1800, t+0.1); osc.start(t); osc.stop(t+0.1); }
+            else if (type === 'success') { osc.frequency.setValueAtTime(500, t); osc.frequency.setValueAtTime(1000, t+0.1); osc.start(t); osc.stop(t+0.2); }
+            else if (type === 'error') { osc.frequency.setValueAtTime(150, t); osc.frequency.linearRampToValueAtTime(50, t+0.2); osc.start(t); osc.stop(t+0.2); }
+            else if (type === 'win')   { osc.frequency.setValueAtTime(500, t); osc.frequency.linearRampToValueAtTime(1500, t+0.3); osc.start(t); osc.stop(t+0.3); }
+        }
+        
+        // --- 🧼 BUBBLE (БУЛЬК) ---
+        else if (pack === 'bubble') {
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.15);
+
+            if (type === 'click') { osc.frequency.setValueAtTime(300, t); osc.frequency.linearRampToValueAtTime(600, t+0.1); osc.start(t); osc.stop(t+0.1); }
+            else if (type === 'coin')  { osc.frequency.setValueAtTime(600, t); osc.frequency.linearRampToValueAtTime(1200, t+0.15); osc.start(t); osc.stop(t+0.15); }
+            else { osc.frequency.setValueAtTime(400, t); osc.start(t); osc.stop(t+0.1); }
+        }
+
+        // --- 🚀 SCI-FI (КОСМОС) ---
+        else if (pack === 'sci-fi') {
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.04, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+            if (type === 'click') { osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(100, t+0.1); osc.start(t); osc.stop(t+0.1); }
+            else { osc.frequency.setValueAtTime(200, t); osc.frequency.linearRampToValueAtTime(800, t+0.3); osc.start(t); osc.stop(t+0.3); }
+        }
+
+        else if (pack === 'mechanical') {
+            osc.type = 'triangle';
+            gain.gain.setValueAtTime(0.1, t);
+            if (type === 'click') { 
+                osc.frequency.setValueAtTime(150, t); 
+                osc.start(t); osc.stop(t+0.05); 
+            } else { 
+                osc.frequency.setValueAtTime(300, t); 
+                osc.start(t); osc.stop(t+0.1); 
+            }
+        }
+        
+        // --- 💜 STANDARD (КЛАССИКА) ---
+        else {
+            if(type === 'click') { 
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(800, t); 
+                osc.frequency.exponentialRampToValueAtTime(1200, t+0.1); 
+                gain.gain.setValueAtTime(0.1, t); 
+                gain.gain.exponentialRampToValueAtTime(0.001, t+0.1); 
+                osc.start(t); 
+                osc.stop(t+0.1); 
+            }
+            else if(type === 'coin') { 
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(1200, t); 
+                osc.frequency.exponentialRampToValueAtTime(1800, t+0.3); 
+                gain.gain.setValueAtTime(0.1, t); 
+                gain.gain.linearRampToValueAtTime(0, t+0.5); 
+                osc.start(t); 
+                osc.stop(t+0.5); 
+            }
+            else if(type === 'success') { 
+                this.beep(523.25, t, 0.1); 
+                this.beep(659.25, t+0.1, 0.1); 
+                this.beep(783.99, t+0.2, 0.2); 
+            }
+            else if(type === 'error') { 
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(150, t); 
+                osc.frequency.linearRampToValueAtTime(100, t+0.3); 
+                gain.gain.setValueAtTime(0.1, t); 
+                gain.gain.linearRampToValueAtTime(0, t+0.3); 
+                osc.start(t); 
+                osc.stop(t+0.3); 
+            }
+            else if(type === 'win') { 
+                this.beep(523.25, t, 0.15); 
+                this.beep(523.25, t+0.15, 0.15); 
+                this.beep(523.25, t+0.30, 0.15); 
+                this.beep(659.25, t+0.45, 0.4); 
+            }
+        }
+    },
+    
+    // Вспомогательная функция для стандартных звуков
+    beep(freq, time, dur) { 
+        const osc = this.ctx.createOscillator(); 
+        const gain = this.ctx.createGain(); 
+        osc.connect(gain); 
+        gain.connect(this.ctx.destination); 
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(freq, time); 
+        gain.gain.setValueAtTime(0.1, time); 
+        gain.gain.linearRampToValueAtTime(0, time+dur); 
+        osc.start(time); 
+        osc.stop(time+dur); 
+    }
+};
     /* ==========================================
     1. DATA & CONFIG
     ========================================= */
@@ -3301,7 +3456,8 @@ body.dark-mode .subject-item-fixed {
             trainerRecords: {
                 standard: { easy: 0, medium: 0, hard: 0 },
                 sign:     { easy: 0, medium: 0, hard: 0 },
-                square:   { easy: 0, medium: 0, hard: 0 }
+                square:   { easy: 0, medium: 0, hard: 0 },
+                fractions: { easy: 0, medium: 0, hard: 0 } 
             },
             usedCodes: [],
             lifetimeXP: 0,
@@ -4609,7 +4765,8 @@ const Timer = {
     },
 
         async start() {
-        if (!navigator.onLine) return App.toast("❌ Нужен интернет!");
+        if (!navigator.onLine) 
+            return App.toast("❌ Нужен интернет!");
         if (this.active) return;
 
         await TimeGuard.sync(); // Получаем честное время
@@ -5109,7 +5266,21 @@ const QuestSys = {
             }
         }
     };
-    const MathGame = { ans:0, show(isCheck=false) { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; document.getElementById('math-problem').innerText = `${a} x ${b} = ?`; document.getElementById('math-answer').value = ''; document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; document.getElementById('math-modal').classList.add('show'); document.getElementById('math-answer').focus(); }, check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { document.getElementById('math-modal').classList.remove('show'); Timer.start(); } else { document.getElementById('math-answer').style.borderColor='red'; SoundSys.play('error'); } } };
+    const MathGame = { 
+        ans:0, show(isCheck=false) { 
+            const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; 
+            document.getElementById('math-problem').
+            innerText = `${a} x ${b} = ?`; 
+            document.getElementById('math-answer').value = ''; 
+            document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; 
+            document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; 
+            document.getElementById('math-modal').classList.add('show'); 
+            document.getElementById('math-answer').focus(); }, 
+                check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { 
+                    document.getElementById('math-modal').classList.remove('show'); 
+                    Timer.start(); } else { 
+                        document.getElementById('math-answer').style.borderColor='red'; 
+                        SoundSys.play('error'); } } };
 
     const BattleSys = {
         bet: 50,
@@ -5117,7 +5288,10 @@ const QuestSys = {
         listener: null,
         myRole: null, // 'p1' или 'p2'
         gameStarted: false, // Чтобы игра не запускалась дважды
-    genRandom() {
+        selectedMode: 'standard',
+        selectedDiff: 'easy',
+        
+        genRandom() {
             // Генерируем число от 100 до 999
             const rand = Math.floor(Math.random() * 900) + 100;
             document.getElementById('battle-code-input').value = rand;
@@ -5139,6 +5313,45 @@ const QuestSys = {
             if(btn) btn.classList.add('active');
         },
 
+        selectMode(mode, btn) {
+            this.selectedMode = mode;
+            document.querySelectorAll('.battle-mode-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.borderColor = 'transparent';
+            });
+            btn.classList.add('active');
+            btn.style.borderColor = 'var(--primary)';
+        },
+
+        selectDiff(diff, btn) {
+            this.selectedDiff = diff;
+            const colors = { easy: 'var(--success)', medium: '#F39C12', hard: '#E74C3C' };
+            document.querySelectorAll('.battle-diff-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.borderColor = 'transparent';
+            });
+            btn.classList.add('active');
+            btn.style.borderColor = colors[diff];
+        },
+
+        getModeLabel(mode) {
+            const labels = { 
+                'standard': '🔢 Классика', 
+                'sign': '🧩 Найди знак', 
+                'square': '📐 Степени', 
+                'fractions': '🍰 Дроби' 
+            };
+            return labels[mode] || mode;
+        },
+
+        getDiffLabel(diff) {
+            const labels = { 
+                'easy': '🟢 Легко', 
+                'medium': '🟡 Средне', 
+                'hard': '🔴 Сложно' 
+            };
+            return labels[diff] || diff;
+        },
         // ГЛАВНАЯ ФУНКЦИЯ ВХОДА
         async connect() {
             const rawCode = document.getElementById('battle-code-input').value.trim();
@@ -5146,7 +5359,7 @@ const QuestSys = {
             const code = rawCode.replace(/\s/g, ''); 
             this.currentCode = code;
 
-            // 1. Ограничение 4 часа (14,400,000 мс)
+            // 1. Ограничение 4 часа
             const lastBattle = DB.user.lastBattleTime || 0;
             const now = Date.now();
             const waitTime = 4 * 60 * 60 * 1000; 
@@ -5162,6 +5375,11 @@ const QuestSys = {
             this.bet = 15; 
             if (DB.user.coins < this.bet) return App.toast("Нужно минимум 15 монет!");
 
+            // 🔒 СПИСЫВАЕМ МОНЕТЫ СРАЗУ (ДО подключения)
+            DB.user.coins -= 15;
+            Data.save();
+            App.updateUI();
+
             App.toast("⏳ Подключение...");
 
             try {
@@ -5176,24 +5394,34 @@ const QuestSys = {
                 // СЦЕНАРИЙ 2: КОМНАТА ЕСТЬ -> Я ГОСТЬ (P2)
                 else {
                     const data = snap.data();
-                    if (data.p2) return alert("⛔️ Комната уже полная!");
+                    if (data.p2) {
+                        // ❌ КОМНАТА ПОЛНАЯ - ВОЗВРАЩАЕМ ДЕНЬГИ
+                        DB.user.coins += 15;
+                        Data.save();
+                        App.updateUI();
+                        return alert("⛔️ Комната уже полная!");
+                    }
                     
                     this.myRole = 'p2';
                     await this.joinRoom(docRef, data);
                 }
 
-                // ПОСЛЕ ВХОДА ИЛИ СОЗДАНИЯ -> ВКЛЮЧАЕМ РЕЖИМ ОЖИДАНИЯ
                 this.showLobby();
                 this.startListening(docRef);
 
             } catch (e) {
                 console.error(e);
+                // ❌ ОШИБКА - ВОЗВРАЩАЕМ ДЕНЬГИ
+                DB.user.coins += 15;
+                Data.save();
+                App.updateUI();
                 App.toast("Ошибка сети");
             }
         },
 
         async createRoom(docRef) {
-            // МОНЕТЫ ТУТ НЕ СНИМАЕМ! Снимем когда начнется бой.
+            const expiresAt = Date.now() + (5 * 60 * 1000); // 5 минут на ожидание
+            
             await window.DB_Online.setDoc(docRef, {
                 p1: DB.user.name,
                 p1_id: Auth.currentUser.id,
@@ -5201,11 +5429,12 @@ const QuestSys = {
                 p2: null,
                 p2_id: null,
                 p2_score: -1,
-                bet: 15, // Фиксированная ставка
-                mode: Trainer.mode,
-                diff: Trainer.difficulty,
+                bet: 15,
+                mode: this.selectedMode,
+                diff: this.selectedDiff,
                 status: 'waiting',
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                expiresAt: expiresAt // ← ДОБАВЬТЕ
             });
         },
 
@@ -5231,8 +5460,12 @@ const QuestSys = {
             if (this.myRole === 'p1') {
                 document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
                 document.getElementById('p2-name').innerText = "Ожидание...";
+                
+                // ← ДОБАВЬТЕ ЭТИ СТРОКИ (для создателя)
+                document.getElementById('lobby-mode-display').innerText = this.getModeLabel(this.selectedMode);
+                document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(this.selectedDiff);
             } else {
-                document.getElementById('p1-name').innerText = "Соперник"; // Имя подгрузится через секунду
+                document.getElementById('p1-name').innerText = "Соперник";
                 document.getElementById('p2-name').innerText = DB.user.name + " (Вы)";
             }
         },
@@ -5243,17 +5476,36 @@ const QuestSys = {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
 
+                // 🔒 ПРОВЕРКА ИСТЕЧЕНИЯ ВРЕМЕНИ
+                if (data.expiresAt && Date.now() > data.expiresAt && data.status === 'waiting') {
+                    if (this.listener) this.listener();
+                    
+                    // Возвращаем монеты
+                    DB.user.coins += 15;
+                    Data.save();
+                    App.updateUI();
+                    
+                    alert("⏰ Время ожидания истекло. Монеты возвращены.");
+                    location.reload();
+                    return;
+                }
+
                 // Обновляем имена на экране
                 if (data.p1) document.getElementById('p1-name').innerText = data.p1 + (this.myRole === 'p1' ? " (Вы)" : "");
                 if (data.p2) document.getElementById('p2-name').innerText = data.p2 + (this.myRole === 'p2' ? " (Вы)" : "");
 
+                // ← ДОБАВЬТЕ ЭТИ СТРОКИ (для гостя показываем настройки хоста)
+                if (this.myRole === 'p2' && data.mode && data.diff) {
+                    document.getElementById('lobby-mode-display').innerText = this.getModeLabel(data.mode);
+                    document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(data.diff);
+                }
+
                 // 🔥 ЗАПУСК ИГРЫ (Если статус ready и мы еще не начали)
                 if (data.status === 'ready' && !this.gameStarted) {
-                    this.gameStarted = true; // Блокируем повторный запуск
+                    this.gameStarted = true;
                     
-                    // Ждем 1 секунду для красоты и запускаем
                     setTimeout(() => {
-                        if (this.listener) this.listener(); // Отключаем слушатель
+                        if (this.listener) this.listener();
                         document.getElementById('battle-modal').classList.remove('show');
                         Trainer.startPVP(this.myRole, this.currentCode, data.bet, data.mode, data.diff);
                     }, 1000);
@@ -5261,10 +5513,30 @@ const QuestSys = {
             });
         },
 
-        leaveLobby() {
-            if (this.listener) this.listener();
-            location.reload(); // Самый простой способ сбросить всё
+
+        async leaveLobby() {
+    if (this.listener) this.listener();
+    
+    // 🔒 ВОЗВРАЩАЕМ МОНЕТЫ ПРИ ВЫХОДЕ ИЗ ЛОББИ (если битва не началась)
+    if (!this.gameStarted) {
+        DB.user.coins += 15;
+        Data.save();
+        App.updateUI();
+        App.toast("💰 Монеты возвращены");
+        
+        // Если вы создатель - удаляем комнату
+        if (this.myRole === 'p1' && this.currentCode) {
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode);
+                await window.DB_Online.deleteDoc(docRef);
+            } catch (e) {
+                console.error("Не удалось удалить комнату:", e);
+            }
         }
+    }
+    
+    location.reload();
+},
     };
 
     const Trainer = { 
@@ -5288,9 +5560,10 @@ const QuestSys = {
         // 1. Выбор режима
         selectMode(mode, btn) {
             this.mode = mode;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.trainer-mode-card').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             this.updateMenuRecordDisplay();
+            SoundSys.play('click');
         },
 
         // 2. Выбор сложности
@@ -5302,7 +5575,7 @@ const QuestSys = {
         },
 
         updateMenuRecordDisplay() {
-            const labels = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Квадраты' };
+            const labels = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Степени', 'fractions': 'Дроби' };
             // Защита от сбоев
             if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
                 const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
@@ -5322,6 +5595,27 @@ const QuestSys = {
             input.focus();
         },
 
+        addSlash() {
+            const input = document.getElementById('game-input');
+            let val = input.value;
+            
+            // Если уже есть "/" - не добавляем второй
+            if (val.includes('/')) {
+                input.focus();
+                return;
+            }
+            
+            // Если поле пустое или только минус - не добавляем
+            if (val === '' || val === '-') {
+                input.focus();
+                return;
+            }
+            
+            // Добавляем "/" в конец
+            input.value = val + '/';
+            input.focus();
+        },
+
         init() { 
             this.unlockControls(); // <--- ЛЕКАРСТВО
             document.getElementById('trainer-menu').style.display = 'block'; 
@@ -5331,17 +5625,21 @@ const QuestSys = {
         },
 
         start() {
-            this.unlockControls(); // <--- ЛЕКАРСТВО
-            
-            // ... (ваш старый код инициализации score, time и т.д.)
+            this.unlockControls();
             this.score = 0; 
             this.time = 60; 
+            
             document.getElementById('trainer-menu').style.display = 'none'; 
             document.getElementById('trainer-game').style.display = 'block';
+            document.getElementById('trainer-result').style.display = 'none'; 
+            
             document.getElementById('game-score').innerText = 0; 
             document.getElementById('game-time').innerText = 60;
             
-            // ... (настройка интерфейса под режим) ...
+            // Сброс полоски времени
+            const bar = document.getElementById('timer-bar-fill');
+            if (bar) bar.style.width = '100%';
+
             const inputArea = document.getElementById('input-area');
             const signArea = document.getElementById('sign-area');
 
@@ -5349,21 +5647,23 @@ const QuestSys = {
                 inputArea.style.display = 'none';
                 signArea.style.display = 'grid';
             } else {
-                inputArea.style.display = 'block';
+                inputArea.style.display = 'flex';
                 signArea.style.display = 'none';
                 const input = document.getElementById('game-input'); 
                 input.value = ''; input.focus();
-                input.onclick = () => input.focus();
-                input.onkeypress = (e) => { if(e.key === 'Enter') this.check(); };
             }
 
-            SoundSys.play('click'); 
             this.nextProblem(); 
             
             if(this.interval) clearInterval(this.interval);
             this.interval = setInterval(() => { 
                 this.time--; 
                 document.getElementById('game-time').innerText = this.time; 
+                
+                // Обновление полоски
+                const bar = document.getElementById('timer-bar-fill');
+                if (bar) bar.style.width = (this.time / 60 * 100) + '%';
+
                 if(this.time <= 0) this.end(); 
             }, 1000);
         },
@@ -5372,7 +5672,6 @@ const QuestSys = {
             if (this.isLocked) return;
             this.isLocked = true;
 
-            SoundSys.play('error'); 
             el.classList.add('error-shake');
             
             // Блокируем визуально
@@ -5402,6 +5701,12 @@ const QuestSys = {
         
 
         nextProblem() {
+            const box = document.getElementById('problem-box');
+                if (box) {
+                    box.classList.remove('animate-problem');
+                    void box.offsetWidth; // Магия для перезапуска анимации
+                    box.classList.add('animate-problem');
+                }
             // --- 1. РЕЖИМ: НАЙДИ ЗНАК 🧩 ---
             if (this.mode === 'sign') {
                 const ops = ['+', '-', '*', '/'];
@@ -5427,24 +5732,266 @@ const QuestSys = {
                 document.getElementById('game-problem').innerText = `${a} ? ${b} = ${res}`;
             }
 
-            // --- 2. РЕЖИМ: КВАДРАТЫ 🟥 ---
+            // --- 2. РЕЖИМ: СТЕПЕНИ 📐 ---
             else if (this.mode === 'square') {
-                const isRoot = Math.random() > 0.5; 
-                let maxBase = this.difficulty === 'easy' ? 10 : (this.difficulty === 'medium' ? 20 : 30);
-                let base = Math.floor(Math.random() * (maxBase - 2)) + 2; 
-                let square = base * base;
-
+                let num, power;
+                
+                if (this.difficulty === 'easy') {
+                // ЛЕГКИЙ: только 2-я степень (от 0 до 20)
+                const isRoot = Math.random() < 0.5;
+                num = Math.floor(Math.random() * 21); // от 0 до 20
+                
                 if (isRoot) {
-                    document.getElementById('game-problem').innerText = `√${square}`;
-                    this.ans = base;
+                    // Квадратный корень: √49 = ?
+                    this.ans = num;
+                    document.getElementById('game-problem').innerText = `√${num * num}`;
                 } else {
-                    document.getElementById('game-problem').innerHTML = `${base}²`;
-                    this.ans = square;
+                    // Квадрат: 7² = ?
+                    this.ans = num * num;
+                    document.getElementById('game-problem').innerText = `${num}²`;
                 }
+            }
+                else if (this.difficulty === 'medium') {
+                    // СРЕДНИЙ: 3-я степень
+                    const isRoot = Math.random() < 0.5;
+                    num = Math.floor(Math.random() * 7) + 2; // от 2 до 8
+                    
+                    if (isRoot) {
+                        // Кубический корень: ³√125 = ?
+                        this.ans = num;
+                        document.getElementById('game-problem').innerText = `³√${num * num * num}`;
+                    } else {
+                        // Куб: 5³ = ?
+                        this.ans = num * num * num;
+                        document.getElementById('game-problem').innerText = `${num}³`;
+                    }
+                } 
+                else {
+                    // СЛОЖНЫЙ: степени 4, 5, 6
+                    const isRoot = Math.random() < 0.7;
+                    
+                    if (isRoot) {
+                        // Корень высокой степени
+                        power = Math.floor(Math.random() * 3) + 4; // 4, 5 или 6
+                        num = Math.floor(Math.random() * 3) + 2; // от 2 до 4
+                        this.ans = num;
+                        const value = Math.pow(num, power);
+                        
+                        // Надстрочные символы для степени корня
+                        const superscripts = { '4': '⁴', '5': '⁵', '6': '⁶' };
+                        document.getElementById('game-problem').innerText = `${superscripts[power]}√${value}`;
+                    } else {
+                        // Высокая степень
+                        power = Math.floor(Math.random() * 3) + 4; // 4, 5 или 6
+                        num = Math.floor(Math.random() * 4) + 2; // от 2 до 5
+                        this.ans = Math.pow(num, power);
+                        
+                        // Надстрочные символы для степени
+                        const superscripts = { '4': '⁴', '5': '⁵', '6': '⁶' };
+                        document.getElementById('game-problem').innerText = `${num}${superscripts[power]}`;
+                    }
+                }
+                
                 document.getElementById('game-input').value = '';
             }
 
-            // --- 3. РЕЖИМ: КЛАССИКА 🔢 ---
+// --- 3. РЕЖИМ: ДРОБИ 🍰 ---
+else if (this.mode === 'fractions') {
+    if (this.difficulty === 'easy') {
+        // ЛЕГКИЙ: простые дроби с одинаковыми знаменателями
+        const operations = ['+', '-', '*', '/'];
+        const op = operations[Math.floor(Math.random() * operations.length)];
+        
+        if (op === '+' || op === '-') {
+            // Сложение/вычитание с одинаковым знаменателем
+            const denom = [2, 3, 4, 5, 6][Math.floor(Math.random() * 5)];
+            let num1 = Math.floor(Math.random() * (denom - 1)) + 1;
+            let num2 = Math.floor(Math.random() * (denom - 1)) + 1;
+            
+            if (op === '+') {
+                const resNum = num1 + num2;
+                // Упрощаем результат
+                const gcd = this.getGCD(resNum, denom);
+                this.ans = (resNum / gcd) / (denom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom} + ${num2}/${denom} = ?`;
+            } else {
+                // Для вычитания делаем num1 > num2
+                if (num1 < num2) [num1, num2] = [num2, num1];
+                const resNum = num1 - num2;
+                const gcd = this.getGCD(resNum, denom);
+                this.ans = resNum === 0 ? 0 : (resNum / gcd) / (denom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom} - ${num2}/${denom} = ?`;
+            }
+        } else if (op === '*') {
+            // Умножение простых дробей
+            const num1 = [1, 2, 3][Math.floor(Math.random() * 3)];
+            const denom1 = [2, 3, 4][Math.floor(Math.random() * 3)];
+            const num2 = [1, 2][Math.floor(Math.random() * 2)];
+            const denom2 = [2, 3][Math.floor(Math.random() * 2)];
+            
+            const resNum = num1 * num2;
+            const resDenom = denom1 * denom2;
+            const gcd = this.getGCD(resNum, resDenom);
+            this.ans = (resNum / gcd) / (resDenom / gcd);
+            document.getElementById('game-problem').innerText = `${num1}/${denom1} × ${num2}/${denom2} = ?`;
+        } else {
+            // Деление простых дробей
+            const num1 = [1, 2, 3][Math.floor(Math.random() * 3)];
+            const denom1 = [2, 4][Math.floor(Math.random() * 2)];
+            const num2 = [1, 2][Math.floor(Math.random() * 2)];
+            const denom2 = [2, 3][Math.floor(Math.random() * 2)];
+            
+            const resNum = num1 * denom2;
+            const resDenom = denom1 * num2;
+            const gcd = this.getGCD(resNum, resDenom);
+            this.ans = (resNum / gcd) / (resDenom / gcd);
+            document.getElementById('game-problem').innerText = `${num1}/${denom1} ÷ ${num2}/${denom2} = ?`;
+        }
+    } 
+    else if (this.difficulty === 'medium') {
+        // СРЕДНИЙ: дроби с разными знаменателями
+        const operations = ['+', '-', '*', '/'];
+        const op = operations[Math.floor(Math.random() * operations.length)];
+        
+        if (op === '+' || op === '-') {
+            // Сложение/вычитание с разными знаменателями
+            const denom1 = [2, 3, 4, 5, 6][Math.floor(Math.random() * 5)];
+            const denom2 = [2, 3, 4, 5, 6][Math.floor(Math.random() * 5)];
+            let num1 = Math.floor(Math.random() * denom1) + 1;
+            let num2 = Math.floor(Math.random() * denom2) + 1;
+            
+            // Приводим к общему знаменателю
+            const commonDenom = denom1 * denom2;
+            const newNum1 = num1 * denom2;
+            const newNum2 = num2 * denom1;
+            
+            if (op === '+') {
+                const resNum = newNum1 + newNum2;
+                const gcd = this.getGCD(resNum, commonDenom);
+                this.ans = (resNum / gcd) / (commonDenom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom1} + ${num2}/${denom2} = ?`;
+            } else {
+                let resNum = newNum1 - newNum2;
+                if (resNum < 0) {
+                    // Меняем местами, чтобы результат был положительным
+                    [num1, denom1, num2, denom2] = [num2, denom2, num1, denom1];
+                    resNum = -resNum;
+                }
+                const gcd = this.getGCD(resNum, commonDenom);
+                this.ans = resNum === 0 ? 0 : (resNum / gcd) / (commonDenom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom1} - ${num2}/${denom2} = ?`;
+            }
+        } else if (op === '*') {
+            // Умножение дробей
+            const num1 = Math.floor(Math.random() * 5) + 1;
+            const denom1 = Math.floor(Math.random() * 6) + 2;
+            const num2 = Math.floor(Math.random() * 4) + 1;
+            const denom2 = Math.floor(Math.random() * 5) + 2;
+            
+            const resNum = num1 * num2;
+            const resDenom = denom1 * denom2;
+            const gcd = this.getGCD(resNum, resDenom);
+            this.ans = (resNum / gcd) / (resDenom / gcd);
+            document.getElementById('game-problem').innerText = `${num1}/${denom1} × ${num2}/${denom2} = ?`;
+        } else {
+            // Деление дробей
+            const num1 = Math.floor(Math.random() * 4) + 1;
+            const denom1 = Math.floor(Math.random() * 5) + 2;
+            const num2 = Math.floor(Math.random() * 3) + 1;
+            const denom2 = Math.floor(Math.random() * 4) + 2;
+            
+            const resNum = num1 * denom2;
+            const resDenom = denom1 * num2;
+            const gcd = this.getGCD(resNum, resDenom);
+            this.ans = (resNum / gcd) / (resDenom / gcd);
+            document.getElementById('game-problem').innerText = `${num1}/${denom1} ÷ ${num2}/${denom2} = ?`;
+        }
+    } 
+    else {
+        // СЛОЖНЫЙ: обычные дроби + десятичные
+        const useDecimal = Math.random() < 0.5;
+        
+        if (useDecimal) {
+            // Десятичные дроби
+            const operations = ['+', '-', '*', '/'];
+            const op = operations[Math.floor(Math.random() * operations.length)];
+            
+            const num1 = (Math.floor(Math.random() * 50) + 1) / 10; // от 0.1 до 5.0
+            const num2 = (Math.floor(Math.random() * 50) + 1) / 10;
+            
+            if (op === '+') {
+                this.ans = Math.round((num1 + num2) * 100) / 100;
+                document.getElementById('game-problem').innerText = `${num1} + ${num2} = ?`;
+            } else if (op === '-') {
+                this.ans = Math.round((num1 - num2) * 100) / 100;
+                document.getElementById('game-problem').innerText = `${num1} - ${num2} = ?`;
+            } else if (op === '*') {
+                this.ans = Math.round((num1 * num2) * 100) / 100;
+                document.getElementById('game-problem').innerText = `${num1} × ${num2} = ?`;
+            } else {
+                this.ans = Math.round((num1 / num2) * 100) / 100;
+                document.getElementById('game-problem').innerText = `${num1} ÷ ${num2} = ?`;
+            }
+        } else {
+            // Сложные обычные дроби (как в среднем, но с большими числами)
+            const operations = ['+', '-', '*', '/'];
+            const op = operations[Math.floor(Math.random() * operations.length)];
+            
+            if (op === '+' || op === '-') {
+                const denom1 = [3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 6)];
+                const denom2 = [3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 6)];
+                let num1 = Math.floor(Math.random() * denom1) + 1;
+                let num2 = Math.floor(Math.random() * denom2) + 1;
+                
+                const commonDenom = denom1 * denom2;
+                const newNum1 = num1 * denom2;
+                const newNum2 = num2 * denom1;
+                
+                if (op === '+') {
+                    const resNum = newNum1 + newNum2;
+                    const gcd = this.getGCD(resNum, commonDenom);
+                    this.ans = (resNum / gcd) / (commonDenom / gcd);
+                    document.getElementById('game-problem').innerText = `${num1}/${denom1} + ${num2}/${denom2} = ?`;
+                } else {
+                    let resNum = newNum1 - newNum2;
+                    if (resNum < 0) {
+                        [num1, denom1, num2, denom2] = [num2, denom2, num1, denom1];
+                        resNum = -resNum;
+                    }
+                    const gcd = this.getGCD(resNum, commonDenom);
+                    this.ans = resNum === 0 ? 0 : (resNum / gcd) / (commonDenom / gcd);
+                    document.getElementById('game-problem').innerText = `${num1}/${denom1} - ${num2}/${denom2} = ?`;
+                }
+            } else if (op === '*') {
+                const num1 = Math.floor(Math.random() * 7) + 1;
+                const denom1 = Math.floor(Math.random() * 8) + 2;
+                const num2 = Math.floor(Math.random() * 6) + 1;
+                const denom2 = Math.floor(Math.random() * 7) + 2;
+                
+                const resNum = num1 * num2;
+                const resDenom = denom1 * denom2;
+                const gcd = this.getGCD(resNum, resDenom);
+                this.ans = (resNum / gcd) / (resDenom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom1} × ${num2}/${denom2} = ?`;
+            } else {
+                const num1 = Math.floor(Math.random() * 6) + 1;
+                const denom1 = Math.floor(Math.random() * 7) + 2;
+                const num2 = Math.floor(Math.random() * 5) + 1;
+                const denom2 = Math.floor(Math.random() * 6) + 2;
+                
+                const resNum = num1 * denom2;
+                const resDenom = denom1 * num2;
+                const gcd = this.getGCD(resNum, resDenom);
+                this.ans = (resNum / gcd) / (resDenom / gcd);
+                document.getElementById('game-problem').innerText = `${num1}/${denom1} ÷ ${num2}/${denom2} = ?`;
+            }
+        }
+    }
+    
+    document.getElementById('game-input').value = '';
+}
+
+            // --- 4. РЕЖИМ: КЛАССИКА 🔢 ---
             else {
                 // Легко/Средне
                 if (this.difficulty !== 'hard') {
@@ -5505,51 +6052,86 @@ const QuestSys = {
         },
 
         // --- ПРОВЕРКА ЧИСЕЛ (Классика/Квадраты) ---
+        // --- ПРОВЕРКА ЧИСЕЛ (Классика/Степени/Дроби) ---
         check() {
-            if (this.isLocked) return; // Защита от спама
-            
+            if (this.isLocked) return;
             const inputEl = document.getElementById('game-input');
-            const val = parseInt(inputEl.value); 
-            if (isNaN(val)) return;
+            const userInput = inputEl.value.trim();
+            if (!userInput) return;
 
-            this.isLocked = true; // БЛОКИРУЕМ сразу после ввода
-
-            if(val === this.ans) {
+            this.isLocked = true;
+            
+            let userAnswer;
+            
+            // Если режим "Дроби" и введена обычная дробь
+            if (this.mode === 'fractions' && userInput.includes('/')) {
+                const parts = userInput.split('/');
+                if (parts.length !== 2) {
+                    this.fail(inputEl);
+                    return;
+                }
+                const num = parseInt(parts[0]);
+                const denom = parseInt(parts[1]);
+                if (isNaN(num) || isNaN(denom) || denom === 0) {
+                    this.fail(inputEl);
+                    return;
+                }
+                
+                // Упрощаем введенную дробь
+                const gcd = this.getGCD(num, denom);
+                userAnswer = (num / gcd) / (denom / gcd);
+            } 
+            // Если режим "Дроби" и введено десятичное число
+            else if (this.mode === 'fractions') {
+                userAnswer = parseFloat(userInput);
+                if (isNaN(userAnswer)) {
+                    this.fail(inputEl);
+                    return;
+                }
+            }
+            // Для остальных режимов (Классика, Степени) - целое число
+            else {
+                userAnswer = parseInt(userInput);
+                if (isNaN(userAnswer)) {
+                    this.fail(inputEl);
+                    return;
+                }
+            }
+            
+            // Сравниваем (для дробей - с точностью, для остальных - точно)
+            let isCorrect;
+            if (this.mode === 'fractions') {
+                const expected = Math.round(this.ans * 100) / 100;
+                const answer = Math.round(userAnswer * 100) / 100;
+                isCorrect = Math.abs(answer - expected) < 0.01;
+            } else {
+                isCorrect = (userAnswer === this.ans);
+            }
+            
+            if (isCorrect) {
                 this.success(inputEl);
-            } else { 
+            } else {
                 this.fail(inputEl);
             }
         },
 
         // --- ПРОВЕРКА ЗНАКОВ (Найди знак) ---
         checkSign(sign) {
-        if (this.isLocked) return; 
-        this.isLocked = true; // Закрыли
+            if (this.isLocked) return; 
+            this.isLocked = true;
 
-        if(sign === this.correctSign) {
-            this.success(document.getElementById('sign-area'));
-        } else {
-            this.fail(document.getElementById('sign-area'));
-        }
-    },
-
-    check() {
-        if (this.isLocked) return;
-        const inputEl = document.getElementById('game-input');
-        const val = parseInt(inputEl.value); 
-        if (isNaN(val)) return;
-
-        this.isLocked = true; // Закрыли
-        if(val === this.ans) this.success(inputEl);
-        else this.fail(inputEl);
-    },
+            if(sign === this.correctSign) {
+                this.success(document.getElementById('sign-area'));
+            } else {
+                this.fail(document.getElementById('sign-area'));
+            }
+        },
 
         // --- УСПЕХ ---
         success(el) {
         this.score++; 
         DB.user.lifetimeMathSolved = (DB.user.lifetimeMathSolved || 0) + 1;
         document.getElementById('game-score').innerText = this.score; 
-        SoundSys.play('success');
         QuestSys.update('mathSolved', 1);
 
         el.style.borderColor = 'var(--success)'; 
@@ -5587,95 +6169,65 @@ const QuestSys = {
     },
 
         end() {
-            // 1. Останавливаем таймер
             clearInterval(this.interval); 
             document.getElementById('trainer-game').style.display = 'none'; 
             
-            // 2. Рассчитываем награду (ПО НОВОЙ ЭКОНОМИКЕ)
-            // Множитель XP (урезанный)
-            let mult = 2; // Легко = 2 XP за ответ
-            if(this.difficulty === 'medium') mult = 5;
-            if(this.difficulty === 'hard') mult = 10;
-
+            // Расчет награды
+            let mult = (this.difficulty === 'hard') ? 10 : (this.difficulty === 'medium' ? 5 : 2);
             const earnedXP = this.score * mult; 
 
-            // Делитель монет 
-            // Легко/Средне: 1 монета за 10 ответов
-            // Сложно: 1 монета за 5 ответов
             let div = (this.difficulty === 'hard') ? 5 : 10;
             const earnedCoins = Math.floor(this.score / div); 
             
-            // 3. Выдаем награду
             App.addXP(earnedXP);
             if(earnedCoins > 0) { 
                 DB.user.coins += earnedCoins; 
-                SoundSys.play('coin'); 
-                App.toast(`🪙 +${earnedCoins} 💰`); 
             }
 
-            // 🔥 4. ПРОВЕРКА ДУЭЛИ (PVP)
             if (this.isDuel) {
                 this.handleDuelEnd();
-                this.isDuel = false; // Сбрасываем флаг битвы
+                this.isDuel = false;
                 return; 
             }
 
-            // 5. ОБЫЧНАЯ ИГРА: Показываем экран результата
+            // ПОКАЗЫВАЕМ РЕЗУЛЬТАТ
             document.getElementById('trainer-result').style.display = 'block';
-
-            // Проверяем структуру базы (защита от сбоев)
-            if (!DB.user.trainerRecords[this.mode]) {
-                DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
-            }
-
-            // Берем старый рекорд
-            const oldRec = DB.user.trainerRecords[this.mode][this.difficulty];
-
-            // Если побили рекорд — сохраняем и празднуем
-            if(this.score > oldRec) {
-                DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
-                SoundSys.play('win'); 
-                App.toast(`🏆 Новый рекорд в "${this.mode}": ${this.score}!`); 
-                FX.confetti(); 
-            }
-
-            // 6. Сохраняем и обновляем текст
-            Data.save(); 
-            App.updateUI();
-            
             document.getElementById('result-score').innerText = this.score; 
             document.getElementById('result-xp').innerText = `+${earnedXP} XP`; 
             document.getElementById('result-coins').innerText = `+${earnedCoins} 💰`;
-        },
-        // Внутри const Trainer = { ... }
 
-        // --- REALTIME PVP ---
+            // Проверка рекорда
+            if (!DB.user.trainerRecords[this.mode]) DB.user.trainerRecords[this.mode] = { easy:0, medium:0, hard:0 };
+            const oldRec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
+
+            if(this.score > oldRec) {
+                DB.user.trainerRecords[this.mode][this.difficulty] = this.score;
+                document.getElementById('result-title').innerText = "НОВЫЙ РЕКОРД! 🏆";
+                FX.confetti(); 
+            } else {
+                document.getElementById('result-title').innerText = "Время вышло!";
+            }
+
+            Data.save(); 
+            App.updateUI();
+        },    
+            
+
         pvpRole: null, 
         pvpCode: null,
         pvpListener: null,
 
 
         startPVP(role, code, bet, mode, diff) {
-            // 🔒 СПИСАНИЕ МОНЕТ ПРИ РЕАЛЬНОМ СТАРТЕ
-            if (DB.user.coins < 15) {
-                alert("Ошибка: Монеты кончились перед стартом!");
-                location.reload();
-                return;
-            }
-
-            DB.user.coins -= 15; // Снимаем 15 монет
-            Data.save();
-            App.updateUI();
-
             this.pvpRole = role;
             this.pvpCode = code;
-            this.duelBet = 15; 
+            this.duelBet = bet; 
             this.isDuel = true; 
             
             this.mode = mode || 'standard';
             this.difficulty = diff || 'easy';
 
-            App.toast(`⚔️ БОЙ НАЧАЛСЯ! Ставка: 15 💰`);
+            App.toast(`⚔️ БОЙ НАЧАЛСЯ! Ставка: ${bet} 💰`);
             document.getElementById('battle-modal').classList.remove('show');
             this.start(); 
         },
@@ -5727,11 +6279,12 @@ const QuestSys = {
         // Функция для тех. победы
         claimTechnicalWin() {
             alert("⚔️ Соперник сбежал! Техническая победа!");
-            DB.user.coins += this.duelBet * 2;
+            DB.user.coins += this.duelBet; 
+
             DB.user.pvpWins = (DB.user.pvpWins || 0) + 1;
             
-            document.querySelector('#trainer-result h2').innerText = "🏆 ТЕХ. ПОБЕДА";
-            document.getElementById('result-coins').innerText = "Соперник покинул бой";
+            document.querySelector('#trainer-result h2').innerText = "⚖️ НИЧЬЯ";
+            document.getElementById('result-coins').innerText = "Соперник покинул бой (ставка возвращена)";
             Data.save();
             App.updateUI();
         },
@@ -5782,6 +6335,19 @@ const QuestSys = {
         const input = document.getElementById('game-input');
         if (this.mode !== 'sign' && input) input.focus();
         },
+
+        // Вспомогательная функция: наибольший общий делитель (НОД)
+        // Вспомогательная функция: наибольший общий делитель
+        getGCD(a, b) {
+            a = Math.abs(a);
+            b = Math.abs(b);
+            while (b) {
+                let temp = b;
+                b = a % b;
+                a = temp;
+            }
+            return a;
+        }
     };
 
     const AchievementSys = {
@@ -6122,7 +6688,7 @@ const QuestSys = {
             // Слушатель восстановления интернета
             window.addEventListener('online', () => {
                 const warning = document.getElementById('offline-warning');
-                if (warning) {
+                if (warning) { // ТУТ БЫЛА ОШИБКА
                     warning.style.transition = 'opacity 0.5s';
                     warning.style.opacity = '0';
                     setTimeout(() => warning.remove(), 500);
@@ -6640,8 +7206,8 @@ setTimeout(() => {
         }
         
         Data.save();
-        this.renderShop(); // Обновить магазин
-        this.updateRadioWidget(); // 🔥 ОБЯЗАТЕЛЬНО: Обновить виджет на Дашборде
+        this.renderShop(); 
+        this.updateRadioWidget();     
     },
 
     // 3. Виджет на главном экране (ОБНОВЛЕННЫЙ)
@@ -8159,60 +8725,104 @@ function cleanSubjects() {
         </div>
     </div>
 
-    <!-- BATTLE MODAL (Исправленный UI) -->
-    <div id="battle-modal" class="modal" style="z-index: 12000;">
-        <div class="modal-content" style="text-align: center; position: relative;">
-            
-            <!-- КНОПКА ЗАКРЫТЬ (Крестик) -->
-            <button onclick="document.getElementById('battle-modal').classList.remove('show')" 
-                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer;">
-                ✕
-            </button>
+    <!-- BATTLE MODAL (Обновленный с правильными цветами) -->
+        <div id="battle-modal" class="modal" style="z-index: 12000;">
+            <div class="modal-content" style="text-align: center; position: relative;">
+                
+                <!-- КНОПКА ЗАКРЫТЬ (Крестик) -->
+                <button onclick="document.getElementById('battle-modal').classList.remove('show')" 
+                        style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer;">
+                    ✕
+                </button>
 
-            <h2 style="color: #FF4B2B; margin-top: 0;">⚔️ Арена PVP</h2>
-            
-            <!-- ЭКРАН 1: ВХОД / СОЗДАНИЕ -->
-            <div id="battle-login-view">
-                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 20px;">
-                    Введи код друга или создай свой:
-                </p>
+                <h2 style="color: #FF4B2B; margin-top: 0;">⚔️ Арена PVP</h2>
+                
+                <!-- ЭКРАН 1: ВХОД / СОЗДАНИЕ -->
+                <div id="battle-login-view">
+                    <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">
+                        Введи код друга или создай свой:
+                    </p>
 
-                <!-- Группа ввода кода -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="number" id="battle-code-input" class="input-field" placeholder="123" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 3px; margin: 0;">
+                    <!-- Группа ввода кода -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="number" id="battle-code-input" class="input-field" placeholder="123" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 3px; margin: 0;">
+                        
+                        <!-- Кнопка генерации кода -->
+                        <button class="btn btn-outline" onclick="BattleSys.genRandom()" style="width: auto; padding: 0 15px; border-color: var(--primary); color: var(--primary);">
+                            🎲 Создать
+                        </button>
+                    </div>
                     
-                    <!-- Кнопка генерации кода -->
-                    <button class="btn btn-outline" onclick="BattleSys.genRandom()" style="width: auto; padding: 0 15px; border-color: var(--primary); color: var(--primary);">
-                        🎲 Создать
+                    <!-- ВЫБОР РЕЖИМА -->
+                    <div style="background: var(--bg); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                        <label style="font-size: 12px; color: var(--text); font-weight: bold; display: block; margin-bottom: 8px;">Режим битвы:</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <button class="battle-mode-btn active" data-mode="standard" onclick="BattleSys.selectMode('standard', this)" style="padding: 10px; border-radius: 8px; border: 2px solid var(--primary); background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🔢</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Классика</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="sign" onclick="BattleSys.selectMode('sign', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🧩</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Найди знак</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="square" onclick="BattleSys.selectMode('square', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">📐</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Степени</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="fractions" onclick="BattleSys.selectMode('fractions', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🍰</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Дроби</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ВЫБОР СЛОЖНОСТИ -->
+                    <div style="background: var(--bg); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                        <label style="font-size: 12px; color: var(--text); font-weight: bold; display: block; margin-bottom: 8px;">Сложность:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="battle-diff-btn active" data-diff="easy" onclick="BattleSys.selectDiff('easy', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid var(--success); background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🟢 Легко
+                            </button>
+                            <button class="battle-diff-btn" data-diff="medium" onclick="BattleSys.selectDiff('medium', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🟡 Средне
+                            </button>
+                            <button class="battle-diff-btn" data-diff="hard" onclick="BattleSys.selectDiff('hard', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🔴 Сложно
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p style="font-weight: bold; color: var(--gold); margin: 15px 0;">Ставка: 15 💰</p>
+
+                    <button class="btn btn-primary" onclick="BattleSys.connect()" style="width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);">
+                        🚀 В БОЙ
                     </button>
                 </div>
-                
-                <p style="font-weight: bold; color: var(--gold); margin: 15px 0;">Ставка: 15 💰</p>
 
+                <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
+                <div id="battle-lobby-view" style="display: none;">
+                    <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
+                    <h3 style="color: var(--text);">Ожидание соперника...</h3>
+                    
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
+                        <div style="margin-bottom: 5px; color: var(--text);">🔴 Игрок 1: <b id="p1-name">...</b></div>
+                        <div style="margin-bottom: 10px; color: var(--text);">🔵 Игрок 2: <b id="p2-name">...</b></div>
+                        <div style="font-size: 12px; color: var(--text-light); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bg);">
+                            <div style="color: var(--text);">Режим: <b id="lobby-mode-display" style="color: var(--primary);">---</b></div>
+                            <div style="color: var(--text);">Сложность: <b id="lobby-diff-display" style="color: var(--accent);">---</b></div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">
+                        Код комнаты: <b id="lobby-code-display" style="font-size: 16px; color: var(--text);">---</b>
+                    </p>
 
-                <button class="btn btn-primary" onclick="BattleSys.connect()" style="width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);">
-                    🚀 В БОЙ
-                </button>
-            </div>
-
-            <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
-            <div id="battle-lobby-view" style="display: none;">
-                <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
-                <h3>Ожидание соперника...</h3>
-                
-                <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
-                    <div style="margin-bottom: 5px;">🔴 Игрок 1: <b id="p1-name">...</b></div>
-                    <div>🔵 Игрок 2: <b id="p2-name">...</b></div>
+                    <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">
+                        ❌ Выйти
+                    </button>
                 </div>
-                
-                <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">Код комнаты: <b id="lobby-code-display" style="font-size: 16px; color: var(--text);">---</b></p>
-
-                <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">
-                    ❌ Выйти
-                </button>
             </div>
         </div>
-    </div>
 
     <script>
         // 🛡️ ЗАЩИТА ОТ КОПИРОВАНИЯ
@@ -8233,39 +8843,41 @@ function cleanSubjects() {
 document.addEventListener('DOMContentLoaded', () => {
     // Добавляем звук ко ВСЕМ кнопкам
     const addClickSound = () => {
-        document.addEventListener('click', (e) => {
-    const target = e.target.closest('button, .btn');
+        // === ЕДИНАЯ СИСТЕМА ЗВУКОВ (БЕЗ ДУБЛИРОВАНИЯ) ===
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('button, .btn, .nav-btn, .shop-item, .subject-item-fixed');
     if (!target || target.disabled) return;
 
     const text = target.innerText.toLowerCase();
+    let played = false;
 
-    // Звук монет
     if (text.includes('💰') || text.includes('купить') || text.includes('забрать')) {
-        setTimeout(() => SoundSys.play('coin'), 50);
+        SoundSys.play('coin'); played = true;
+    } 
+    else if (text.includes('✅') || text.includes('✓') || text.includes('готов')) {
+        SoundSys.play('success'); played = true;
     }
-    // Звук успеха
-    else if (text.includes('✅') || text.includes('готов') || text.includes('продолжить')) {
-        setTimeout(() => SoundSys.play('success'), 50);
+    else if (text.includes('❌') || text.includes('удалить') || text.includes('сдаться')) {
+        SoundSys.play('error'); played = true;
     }
-    // Звук ошибки
-    else if (text.includes('❌') || text.includes('отмена') || text.includes('удалить')) {
-        setTimeout(() => SoundSys.play('error'), 50);
-    }
-    // Звук старта
     else if (text.includes('старт') || text.includes('🚀')) {
-        setTimeout(() => SoundSys.play('success'), 50);
+        SoundSys.play('win'); played = true;
     }
-    // Обычный клик (для всех остальных)
-    // уже играет через addClickSound()
-}, true); // true = capturing phase (срабатывает раньше)
+
+    // Если ни один спец-звук не сыграл — играем обычный клик
+    if (!played) {
+        SoundSys.play('click');
+    }
+
+    // Вибрация
+    if (navigator.vibrate) navigator.vibrate(10);
+}, true);
         // Все кнопки
         document.querySelectorAll('button, .btn, .nav-btn').forEach(btn => {
             if (!btn.dataset.soundAttached) {
                 btn.addEventListener('click', (e) => {
                     // Не играем звук, если кнопка заблокирована
-                    if (!btn.disabled) {
-                        SoundSys.play('click');
-                        
+                    if (!btn.disabled) {                        
                         // Вибрация на мобильных
                         if (navigator.vibrate) {
                             navigator.vibrate(10);
