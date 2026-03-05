@@ -99,7 +99,7 @@
 // === FIREBASE CLOUD MESSAGING (FCM) ===
 const FCM = {
     messaging: null,
-    vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw', // ← ВСТАВЬТЕ VAPID KEY ИЗ FIREBASE CONSOLE!
+    vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw', //  VAPID KEY ИЗ FIREBASE CONSOLE!
     
     async init() {
         // Проверка поддержки
@@ -185,7 +185,7 @@ const FCM = {
     
     async getToken() {
         try {
-            if (!this.vapidKey || this.vapidKey === 'ВАША_VAPID_KEY') {
+            if (!this.vapidKey || this.vapidKey === 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw') {
                 console.error('❌ VAPID ключ не установлен! Получите его в Firebase Console.');
                 return null;
             }
