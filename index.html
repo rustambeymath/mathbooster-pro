@@ -1257,15 +1257,72 @@ body.dark-mode .subject-item-fixed {
             .confetti-piece { position: fixed; width: 10px; height: 10px; z-index: 9999; pointer-events: none; animation: fall linear forwards; }
             @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
 
-            /* ACHIEVEMENTS LIST */
-            .ach-list { display: flex; flex-direction: column; gap: 10px; }
-            .ach-row { display: flex; align-items: center; gap: 15px; background: var(--bg); padding: 15px; border-radius: 15px; transition: 0.2s; border: 2px solid transparent; }
-    .ach-row.unlocked { 
-        background: linear-gradient(135deg, #ffffff, #fff9e6); 
-        border-color: #FFD700; 
-        box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2); 
-        transform: scale(1.02);
-    }
+            /* 🏅 ОБНОВЛЕННЫЕ НАГРАДЫ */
+            .ach-list { display: flex; flex-direction: column; gap: 12px; }
+
+            .ach-row { 
+                display: flex; 
+                align-items: center; 
+                gap: 15px; 
+                background: var(--surface); 
+                padding: 18px 15px; 
+                border-radius: 20px; 
+                transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+                border: 2px solid var(--bg); 
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Эффект для выполненных наград */
+            .ach-row.unlocked { 
+                background: linear-gradient(135deg, var(--surface), rgba(255, 215, 0, 0.05)); 
+                border-color: #FFD700; 
+                box-shadow: 0 10px 25px rgba(255, 215, 0, 0.15); 
+                transform: scale(1.02);
+            }
+
+            /* Ярлык редкости в углу */
+            .rarity-tag {
+                position: absolute;
+                top: 0; right: 0;
+                font-size: 8px;
+                padding: 4px 12px;
+                text-transform: uppercase;
+                font-weight: 900;
+                border-radius: 0 0 0 12px;
+                color: white;
+                letter-spacing: 1px;
+            }
+            .rarity-bronze { background: #cd7f32; }
+            .rarity-silver { background: #a0a0a0; }
+            .rarity-gold { background: #ffd700; color: #000; }
+            .ach-icon span, .item-icon, .user-avatar {
+                font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
+            }
+            .ach-icon { 
+                font-size: 30px; 
+                width: 55px; 
+                height: 55px; 
+                background: var(--bg); 
+                border-radius: 15px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                flex-shrink: 0;
+                transition: 0.3s;
+                
+                font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
+                line-height: 1;
+                white-space: nowrap; 
+                overflow: hidden;
+            }
+
+
+            .ach-row.unlocked .ach-icon {
+                background: #FFD700;
+                color: #000;
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            }
     /* Для темной темы */
     body.dark-mode .ach-row.unlocked {
         background: linear-gradient(135deg, #16213E, #2c2501);
@@ -2611,7 +2668,10 @@ body.dark-mode .subject-item-fixed {
             <div class="grid">
                 <!-- 1. Активность -->
                 <div class="card">
-                    <h3>🔥 Активность (30 дней)</h3>
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🔥 Активность</span>
+                            <span id="heatmap-info" style="font-size: 11px; font-weight: normal; color: var(--primary); opacity: 0.8;">нажми на квадрат</span>
+                        </h3>                    
                     <div id="heatmap" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px;"></div>
                 </div>
 
@@ -2634,9 +2694,12 @@ body.dark-mode .subject-item-fixed {
 
             <!-- Графики ниже (если нужны) -->
             <div class="grid" style="margin-top: 20px;">
-                <div class="card">
+               <div class="card">
                     <h3>📈 История (Неделя)</h3>
-                    <canvas id="weekChart"></canvas>
+                    <!-- Обертка с фиксированной высотой предотвращает прыжки -->
+                    <div style="position: relative; height: 220px; width: 100%;">
+                        <canvas id="weekChart"></canvas>
+                    </div>
                 </div>
                 <div class="card">
                     <h3>🧩 Распределение</h3>
@@ -2924,6 +2987,16 @@ body.dark-mode .subject-item-fixed {
                         Версия 1.0 PRO (Active)
                     </div>        
                 </div>
+        </div>
+        <!-- КНОПКА СБРОСА -->
+        <div class="card" style="margin-top: 20px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.05);">
+            <h3 style="color: #ff4757;">🧨 Опасная зона</h3>
+            <p style="font-size: 12px; color: var(--text-light); margin-bottom: 15px;">
+                Это действие полностью обнулит твои монеты, уровень, время, историю и удалит тебя из Топа.
+            </p>
+            <button class="btn" onclick="App.resetAllProgress()" style="background: #ff4757; color: white; width: 100%;">
+                Сбросить весь прогресс
+            </button>
         </div>
         </section>
         
@@ -3484,49 +3557,46 @@ body.dark-mode .subject-item-fixed {
     const GenAch = () => {
         const list = []; 
         let id = 1; 
-        const add = (title, desc, max, icon, type) => list.push({id: id++, title, desc, max, icon, type, unlocked:false});
+        const add = (title, desc, max, icon, type, rarity = 'bronze') => 
+            list.push({id: id++, title, desc, max, icon, type, rarity, unlocked: false});
 
-        // --- ⏳ ВРЕМЯ (ИНВЕСТИЦИИ В СЕБЯ) ---
-        add("Первый шаг", "1 минута учебы", 60, "🌱", "total"); 
-        add("Разминка", "15 минут", 900, "🤸", "total"); 
-        add("Час силы", "1 час", 3600, "🕐", "total"); 
-        add("Глубокое погружение", "5 часов", 18000, "🤿", "total"); 
-        add("Марафонец", "24 часа общего времени", 86400, "🏃", "total"); 
-        add("Ученый совет", "100 часов учебы", 360000, "🎓", "total"); 
+        // --- Категория: ВРЕМЯ (Инвестиции в интеллект) ---
+        add("Первый шаг", "1 минута учебы", 60, "🌱", "total", "bronze"); 
+        add("Час силы", "1 час фокуса", 3600, "🕐", "total", "bronze"); 
+        add("Глубокое погружение", "5 часов учебы", 18000, "🤿", "silver"); 
+        add("Марафонец", "24 часа общего времени", 86400, "🏃", "silver"); 
+        add("Ученый совет", "100 часов учебы", 360000, "🎓", "gold"); 
+        add("Магистр времени", "500 часов учебы", 1800000, "🏛️", "gold"); 
 
-        // --- 🔥 СТРИКИ (ДИСЦИПЛИНА) ---
-        add("Три дня", "Держи огонь 3 дня", 3, "🔥", "streak");
-        add("Неделя в огне", "Держи огонь 7 дней", 7, "🔥", "streak");
-        add("Железная привычка", "Держи огонь 30 дней", 30, "🌋", "streak");
+        // --- Категория: ДИСЦИПЛИНА (Стрики) ---
+        add("Три дня", "Держи стрик 3 дня", 3, "🔥", "streak", "bronze");
+        add("Неделя в огне", "Держи стрик 7 дней", 7, "🔥", "streak", "silver");
+        add("Две недели", "Держи стрик 14 дней", 14, "⚡", "streak", "silver");
+        add("Железная воля", "Держи стрик 30 дней", 30, "🌋", "gold");
+        add("Легендарный год", "Держи стрик 365 дней", 365, "👑", "gold");
 
-        // --- 🧠 ТРЕНАЖЕР И PVP ---
-        add("Счетовод", "100 решенных примеров", 100, "🔢", "math_total");
-        add("Калькулятор", "1000 решенных примеров", 1000, "🤖", "math_total");
-        add("Первая кровь", "Выиграй 1 дуэль", 1, "⚔️", "pvp_wins");
-        add("Гладиатор", "Выиграй 10 дуэлей", 10, "🗡️", "pvp_wins");
-        add("Легенда Арены", "Выиграй 50 дуэлей", 50, "👑", "pvp_wins");
+        // --- Категория: ТРЕНАЖЕР И PVP ---
+        add("Счетовод", "100 решенных примеров", 100, "🔢", "math_total", "bronze");
+        add("Калькулятор", "1000 решенных примеров", 1000, "🤖", "math_total", "silver");
+        add("Первая кровь", "Выиграй 1 дуэль", 1, "⚔️", "pvp_wins", "bronze");
+        add("Гладиатор", "Выиграй 10 дуэлей", 10, "🗡️", "pvp_wins", "silver");
+        add("Легенда Арены", "Выиграй 50 дуэлей", 50, "🏆", "pvp_wins", "gold");
 
-        // --- 💰 ЭКОНОМИКА (БОГАТСТВО) ---
-        add("Первая сотня", "Накопи 100 монет", 100, "💰", "coins_max");
-        add("Богатей", "Накопи 1000 монет", 1000, "💎", "coins_max");
-        add("Миллионер", "Накопи 5000 монет", 5000, "💸", "coins_max");
-        add("Шопоголик", "Потрать всего 1000 монет", 1000, "🛒", "coins_spent");
+        // --- Категория: МАГАЗИН И СТИЛЬ ---
+        add("Стильный", "Купи 3 темы оформления", 3, "🎨", "themes_count", "bronze");
+        add("Коллекционер", "Купи 10 тем оформления", 10, "🌈", "themes_count", "silver");
+        add("Меломан", "Купи 3 радиостанции", 3, "📻", "radios_count", "bronze");
+        add("Зоопарк", "Купи 5 аватарок", 5, "🐱", "avatars_count", "bronze");
+        add("Богатей", "Накопи 5000 монет", 5000, "💰", "coins_max", "silver");
 
-        // --- 🆙 УРОВНИ ---
-        add("Новичок", "Достигни 5 уровня", 5, "🐣", "lvl");
-        add("Опытный", "Достигни 15 уровня", 15, "🦊", "lvl");
-        add("Мастер", "Достигни 30 уровня", 30, "🐯", "lvl");
-        add("Грандмастер", "Достигни 50 уровня", 50, "🐉", "lvl");
+        // --- Категория: УРОВНИ ---
+        add("Новичок", "Достигни 5 уровня", 5, "🐣", "lvl", "bronze");
+        add("Мастер", "Достигни 25 уровня", 25, "🎖️", "lvl", "silver");
+        add("Абсолют", "Достигни 50 уровня", 50, "👑", "lvl", "gold");
 
-        // --- 🎨 КОЛЛЕКЦИИ ---
-        add("Стильный", "Купи 3 темы", 3, "🎨", "themes_count");
-        add("Хамелеон", "Купи 7 тем", 7, "🌈", "themes_count");
-        add("Зоопарк", "Купи 5 аватарок", 5, "🐱", "avatars_count");
-
-        // --- 🦉 РЕЖИМ ДНЯ ---
-        add("Ночная сова", "Учись после 22:00", 1, "🦉", "night_study");
-        add("Ранняя пташка", "Учись до 08:00 утра", 1, "🌅", "morning_study");
-        add("Обед — время знаний", "Учись в 14:00", 1, "🍜", "lunch_study");
+        // --- Категория: СЕКРЕТНЫЕ ---
+        add("Ранняя пташка", "Учись в 6-8 утра", 1, "☀️", "morning_study", "silver");
+        add("Ночная сова", "Учись после 23:00", 1, "🦉", "night_study", "silver");
 
         return list;
     };
@@ -3585,14 +3655,7 @@ body.dark-mode .subject-item-fixed {
     };
 
 
-    const AVATARS = [
-        {id:'lion',icon:'🦁',price:50}, 
-        {id:'robot',icon:'🤖',price:100}, 
-        {id:'alien',icon:'👽',price:150}, 
-        {id:'dragon',icon:'🐲',price:300}, 
-        {id:'wizard',icon:'🧙‍♂️',price:300}, 
-        {id:'king',icon:'👑',price:500}
-    ];
+    
 
     const THEMES = [
         // Бесплатные и Дешевые
@@ -3646,7 +3709,6 @@ body.dark-mode .subject-item-fixed {
         { id: 'brother', icon: '🧔', name: 'Бородач', price: 150, gender: 'male' },
         { id: 'gamer', icon: '🎧', name: 'Геймер', price: 100, gender: 'male' },
         { id: 'superman', icon: '🦸‍♂️', name: 'Супермен', price: 350, gender: 'male' },
-        { id: 'king', icon: '👑', name: 'Король', price: 1000, gender: 'male' },
         { id: 'wizard', icon: '🧙‍♂️', name: 'Волшебник', price: 450, gender: 'male' },
 
         // 🔥 ЭПИЧЕСКИЕ (Нейтральные — видят все)
@@ -3961,14 +4023,29 @@ body.dark-mode .subject-item-fixed {
         if (docSnap.exists()) {
             const cloud = docSnap.data();
             
-            // Если мы что-то меняли в последние 10 секунд — не слушаем облако
+            // Если мы что-то меняли в последние 10 секунд — не слушаем облако (защита от отката)
             const timeSinceLastSave = Date.now() - (DB.user.lastSaveTime || 0);
             if (timeSinceLastSave < 10000) return; 
 
             // В остальное время — синхронизируем
             if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
                 DB = cloud;
-                cleanSubjects(); // Сразу чистим имена
+                
+                // 🔥 ВОТ ЭТОТ БЛОК УДАЛИТ ПРИЗРАКОВ:
+                const masterList = GenAch(); // Список из твоего кода
+                if (DB.achievements.length !== masterList.length) {
+                    console.log("🧹 Чистка призрачных наград из облака...");
+                    // Оставляем только те, что есть в коде, сохраняя прогресс
+                    DB.achievements = masterList.map(newA => {
+                        const found = cloud.achievements.find(o => o.title === newA.title);
+                        if (found) newA.unlocked = found.unlocked;
+                        return newA;
+                    });
+                    // Сразу отправляем чистый список обратно в облако
+                    this.save(); 
+                }
+
+                cleanSubjects(); 
                 localStorage.setItem(this.currentKey, JSON.stringify(DB));
                 App.updateUI();
             }
@@ -5533,7 +5610,7 @@ const QuestSys = {
                 mode: this.selectedMode,
                 diff: this.selectedDiff,
                 status: 'waiting',
-                date: new Date().toISOString(),
+                date: new Date(TimeGuard.getTrueTime()).toISOString(),
                 expiresAt: expiresAt // ← ДОБАВЬТЕ
             });
         },
@@ -6497,14 +6574,38 @@ else if (this.mode === 'fractions') {
     };
     const WeeklyReportSys = {
         check() {
+            if (!DB || !DB.achievements) return;
+            let changed = false;
             const now = new Date();
-            const dayOfWeek = now.getDay(); // 0 (Вс) - 6 (Сб)
-            if (dayOfWeek !== 1) return; // Показываем ТОЛЬКО по понедельникам
+            const hour = now.getHours();
 
-            const today = getUZDate();
-            if (DB.user.lastWeeklyReportDate === today) return; // Сегодня уже видели
+            DB.achievements.forEach(a => {
+                if (a.unlocked) return;
 
-            this.show();
+                let currentVal = 0;
+                switch(a.type) {
+                    case 'total': currentVal = DB.user.totalSec; break;
+                    case 'lvl': currentVal = DB.user.level; break;
+                    case 'streak': currentVal = DB.user.dailyStreak; break;
+                    case 'pvp_wins': currentVal = DB.user.pvpWins || 0; break;
+                    case 'math_total': currentVal = DB.user.lifetimeMathSolved || 0; break;
+                    case 'themes_count': currentVal = (DB.user.ownedThemes || []).length; break;
+                    case 'radios_count': currentVal = (DB.user.ownedRadios || []).length; break;
+                    case 'avatars_count': currentVal = (DB.user.ownedAvatars || []).length; break;
+                    case 'coins_max': currentVal = DB.user.coins; break;
+                    case 'morning_study': if (Timer.active && (hour >= 6 && hour <= 8)) currentVal = 1; break;
+                    case 'night_study': if (Timer.active && (hour >= 23 || hour < 4)) currentVal = 1; break;
+                }
+
+                if (currentVal >= a.max) {
+                    a.unlocked = true;
+                    changed = true;
+                    App.toast(`🏅 Награда: ${a.title}`);
+                    SoundSys.play('level_up'); 
+                    FX.confetti();
+                }
+            });
+            if (changed) Data.save();
         },
 
         show() {
@@ -7020,6 +7121,62 @@ setTimeout(() => {
             }
         },
 
+        async resetAllProgress() {
+                // 1. Первое предупреждение
+                const confirm1 = confirm("⚠️ ВНИМАНИЕ!\n\nЭто полностью обнулит твои монеты, уровень, время и историю.\nЭто действие нельзя отменить.\n\nТы уверен?");
+                if (!confirm1) return;
+
+                // 2. Второе предупреждение
+                const confirm2 = confirm("ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nДанные в облаке (Firebase) также будут стерты.\nТы действительно хочешь начать всё с нуля?");
+                if (!confirm2) return;
+
+                App.toast("⏳ Сброс данных...");
+
+                // 3. Создаем абсолютно чистый объект данных
+                const cleanDB = JSON.parse(JSON.stringify(DefaultDB));
+                cleanDB.achievements = GenAch();
+                
+                // Сохраняем только личность (имя, аватар, ID), чтобы не вылетать из аккаунта
+                cleanDB.user.name = DB.user.name;
+                cleanDB.user.avatar = DB.user.avatar;
+                cleanDB.user.gender = DB.user.gender;
+                cleanDB.user.id = Auth.currentUser.id;
+                cleanDB.user.rescueCode = DB.user.rescueCode;
+
+                // 4. Заменяем текущую базу в памяти
+                DB = cleanDB;
+
+                // 5. Принудительно сохраняем в облако (перезаписываем всё)
+                if (window.DB_Online) {
+                    const dbRef = window.DB_Online;
+                    const userId = Auth.currentUser.id;
+                    
+                    try {
+                        // Перезаписываем основной профиль
+                        await dbRef.setDoc(dbRef.doc(dbRef.db, "users", userId), DB);
+                        
+                        // Обнуляем визитку в Топе
+                        await dbRef.setDoc(dbRef.doc(dbRef.db, "leaderboard", userId), {
+                            name: DB.user.name,
+                            totalSec: 0,
+                            avatar: DB.user.avatar,
+                            level: 1,
+                            currentTitle: "",
+                            lastActive: Date.now()
+                        });
+                        
+                        // Очищаем локальную память
+                        localStorage.setItem('MathData_' + userId, JSON.stringify(DB));
+                        
+                        alert("✅ Весь прогресс успешно сброшен!");
+                        location.reload(); // Перезагружаем приложение
+                        
+                    } catch (e) {
+                        console.error(e);
+                        alert("❌ Ошибка при связи с сервером. Попробуй позже.");
+                    }
+                }
+            },
         toggleDarkMode(enabled) {
             DB.user.darkMode = enabled;
             if (enabled) document.body.classList.add('dark-mode');
@@ -7221,11 +7378,38 @@ setTimeout(() => {
                     let currentVal = 0;
                     if (a.type === 'total') currentVal = DB.user.totalSec;
                     else if (a.type === 'lvl') currentVal = DB.user.level;
-                    else if (a.type === 'xp') currentVal = DB.user.lifetimeXP || DB.user.xp;
+                    else if (a.type === 'streak') currentVal = DB.user.dailyStreak;
+                    else if (a.type === 'math_total') currentVal = DB.user.lifetimeMathSolved || 0;
+                    else if (a.type === 'pvp_wins') currentVal = DB.user.pvpWins || 0;
+                    else if (a.type === 'themes_count') currentVal = (DB.user.ownedThemes || []).length;
+                    else if (a.type === 'radios_count') currentVal = (DB.user.ownedRadios || []).length;
                     
                     const pct = Math.min(100, (currentVal / a.max) * 100);
                     const isUnlocked = a.unlocked || (pct >= 100);
-                    return `<div class="ach-row ${isUnlocked ? 'unlocked' : ''}"><div class="ach-icon">${isUnlocked ? '✅' : a.icon}</div><div class="ach-info"><div class="ach-title"><span>${a.title}</span></div><div class="ach-desc">${a.desc}</div><div class="ach-bar-bg"><div class="ach-bar-fill" style="width:${pct}%; background:${isUnlocked?'#00d26a':'var(--primary)'}"></div></div><div style="font-size:10px;text-align:right;margin-top:2px;color:var(--text-light)">${Math.floor(currentVal)} / ${a.max}</div></div></div>`;
+                    
+                    // 🛠️ ИСПРАВЛЕНИЕ: Если редкость не определена, пишем BRONZE
+                    const rarityText = (a.rarity || 'bronze').toUpperCase();
+
+                    return `
+                    <div class="ach-row ${isUnlocked ? 'unlocked' : ''}">
+                        <div class="rarity-tag rarity-${a.rarity || 'bronze'}">${rarityText}</div>
+                        
+                        <!-- 🔓 ВРЕМЕННО ОТКРЫТО: заменяем '🔒' на a.icon чтобы ты видел ошибки -->
+                        <div class="ach-icon">
+                            <span style="display: block; line-height: 1;">${a.icon}</span>
+                        </div>
+
+                        <div class="ach-info" style="flex-grow:1;">
+                            <div class="ach-title" style="font-weight:900; font-size:14px; color:var(--text);">${a.title}</div>
+                            <div class="ach-desc" style="font-size:11px; color:var(--text-light); margin-bottom:8px;">${a.desc}</div>
+                            <div class="ach-bar-bg" style="height:6px; background:rgba(0,0,0,0.05); border-radius:3px; overflow:hidden;">
+                                <div class="ach-bar-fill" style="width:${pct}%; height:100%; background:${isUnlocked ? '#FFD700' : 'var(--primary)'}; transition:1s;"></div>
+                            </div>
+                            <div style="font-size:9px; text-align:right; margin-top:4px; font-weight:bold; opacity:0.6;">
+                                ${Math.floor(currentVal)} / ${a.max}
+                            </div>
+                        </div>
+                    </div>`;
                 }).join('');
             }
             // Применяем золотое свечение для ветеранов
@@ -7316,39 +7500,52 @@ setTimeout(() => {
         if (!container) return;
 
         const ownedRadios = DB.user.ownedRadios || [];
+
+        // 1. Если ничего не куплено — показываем заглушку с кнопкой в магазин
         if (ownedRadios.length === 0) {
-            container.innerHTML = `<div class="card"><h3>📻 Радио</h3><p style="font-size:12px; color:var(--text-light);">Радио заблокировано.</p></div>`;
+            container.innerHTML = `
+                <div class="card">
+                    <h3>📻 Радио</h3>
+                    <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Музыка для фокуса заблокирована.</p>
+                    <button class="btn btn-primary" onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);" style="font-size:13px; width: 100%;">
+                        В магазин 🛒
+                    </button>
+                </div>`;
             return;
         }
 
-        // Находим текущую станцию
+        // 2. Если есть купленные — показываем плеер и кнопку смены
         const currentId = DB.user.currentRadio || ownedRadios[0];
         const current = SHOP_RADIOS.find(x => x.id === currentId);
-
-        // Перерисовываем карточку полностью
+        
         container.innerHTML = `
             <div class="card">
                 <h3>📻 Радио</h3>
-                <div class="music-widget">
-                    <div class="music-info">
+                
+                <div class="music-widget" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg); padding: 10px 15px; border-radius: 15px; margin-bottom: 10px;">
+                    <div class="music-info" style="display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 13px;">
                         <span style="font-size: 20px;">${current.icon}</span>
-                        <span style="font-weight:bold;">${current.name}</span>
+                        <span>${current.name}</span>
                     </div>
-                    <div class="visualizer" id="music-vis" style="opacity: ${MusicPlayer.playing ? '1' : '0'};">
+                    <div class="visualizer" id="music-vis" style="opacity: ${MusicPlayer.playing ? '1' : '0'}; display: flex; gap: 2px; align-items: flex-end; height: 15px;">
                         <div class="bar" style="animation-duration: 0.5s"></div>
                         <div class="bar" style="animation-duration: 0.7s"></div>
                         <div class="bar" style="animation-duration: 0.4s"></div>
                     </div>
-                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px;" onclick="MusicPlayer.toggle()">
+                    <button id="music-btn" class="btn btn-primary" style="width: auto; padding: 5px 15px; font-size: 12px; margin: 0;" onclick="MusicPlayer.toggle()">
                         ${MusicPlayer.playing ? '⏸' : '▶'}
                     </button>
                 </div>
-                <p style="font-size:10px; color:var(--text-light); margin-top:8px; text-align:center;">Сменить станцию можно в Магазине 🛒</p>
+                
+                <button class="btn btn-outline" style="font-size:11px; width:100%; padding: 8px; border: 1px dashed var(--primary); color: var(--primary);" 
+                        onclick="App.switchTab('shop'); setTimeout(()=>document.getElementById('radio-shop-list').scrollIntoView({behavior:'smooth', block:'center'}), 150);">
+                    Сменить станцию 🛒
+                </button>
             </div>`;
     },
         
 
-copyRescueCode() {
+        copyRescueCode() {
             const code = DB.user.rescueCode;
             if (!code) return;
             
@@ -7872,14 +8069,18 @@ copyRescueCode() {
             const tooltip = `${displayDate}: ${minutes > 0 ? minutes + ' мин' : 'Нет активности'}`;
             
             // Добавляем HTML кубика (с анимацией при наведении)
+            // Добавляем HTML кубика (с обработкой клика для телефона)
             daysHtml.push(`
-                <div title="${tooltip}" style="
+                <div title="${tooltip}" 
+                    onclick="document.getElementById('heatmap-info').innerText = '${tooltip}'; SoundSys.play('click');" 
+                    style="
                     aspect-ratio: 1; 
                     border-radius: 6px; 
                     background: ${color}; 
                     opacity: ${opacity}; 
                     cursor: pointer;
                     transition: transform 0.2s ease, opacity 0.2s;
+                    border: ${i === 29 ? '2px solid var(--primary)' : 'none'};
                 " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>
             `);
         }
@@ -7921,9 +8122,18 @@ renderCharts(weekSec) {
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: false, // 🔥 Это самое важное: график будет слушаться высоты контейнера
+                    animation: {
+                        duration: 0 // Можно отключить анимацию появления, чтобы всё было мгновенно
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { precision: 0 } // Только целые числа
+                        }
                     }
                 }
             });
@@ -8044,8 +8254,19 @@ renderCharts(weekSec) {
 
                 // 2. Красивая дата (27 янв, 14:30)
                 const dateObj = new Date(s.date);
-                const dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                const timeStr = dateObj.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+                // Принудительно выставляем часовой пояс Ташкента для отображения
+                const dateStr = dateObj.toLocaleDateString('ru-RU', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    timeZone: 'Asia/Tashkent' 
+                });
+
+                const timeStr = dateObj.toLocaleTimeString('ru-RU', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    timeZone: 'Asia/Tashkent' 
+                });
 
                 // 3. Ищем иконку предмета по названию
                 let icon = '⏱️'; // Иконка по умолчанию
