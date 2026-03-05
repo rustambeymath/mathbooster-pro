@@ -96,6 +96,244 @@
     window.DB = { user: { coins: 0, level: 0 }, msg: "Nice try, hacker!" };
     window.Data = { save: () => console.log("Save blocked by security system 🛡️") };
 
+// === FIREBASE CLOUD MESSAGING (FCM) ===
+const FCM = {
+    messaging: null,
+    vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw', // ← ВСТАВЬТЕ VAPID KEY ИЗ FIREBASE CONSOLE!
+    
+    async init() {
+        // Проверка поддержки
+        if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+            console.warn('Push-уведомления не поддерживаются');
+            return;
+        }
+        
+        // Проверка Firebase
+        if (!window.firebase || !firebase.messaging) {
+            console.warn('Firebase Messaging не инициализирован');
+            return;
+        }
+        
+        try {
+            // Регистрируем Service Worker
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('✅ Service Worker зарегистрирован:', registration);
+            
+            // Ждем активации
+            await navigator.serviceWorker.ready;
+            console.log('✅ Service Worker активен');
+            
+            // Инициализируем messaging
+            this.messaging = firebase.messaging();
+            
+            // Слушаем уведомления когда приложение ОТКРЫТО
+            this.messaging.onMessage((payload) => {
+                console.log('📩 Уведомление (приложение открыто):', payload);
+                
+                const { title, body } = payload.notification;
+                
+                // Показываем тост
+                App.toast(`${title}: ${body}`);
+                
+                // И браузерное уведомление
+                if (Notification.permission === 'granted') {
+                    new Notification(title, {
+                        body: body,
+                        icon: '/icon-192.png',
+                        badge: '/icon-192.png'
+                    });
+                }
+            });
+            
+            // Запрашиваем разрешение
+            await this.requestPermission();
+            
+        } catch (error) {
+            console.error('Ошибка инициализации FCM:', error);
+        }
+    },
+    
+    async requestPermission() {
+        try {
+            // Проверяем текущее разрешение
+            if (Notification.permission === 'granted') {
+                console.log('✅ Разрешение уже есть');
+                await this.getToken();
+                return;
+            }
+            
+            if (Notification.permission === 'denied') {
+                console.warn('❌ Разрешение отклонено пользователем');
+                return;
+            }
+            
+            // Запрашиваем разрешение
+            console.log('📱 Запрашиваем разрешение...');
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                console.log('✅ Разрешение получено!');
+                await this.getToken();
+            } else {
+                console.warn('❌ Пользователь отклонил разрешение');
+            }
+            
+        } catch (error) {
+            console.error('Ошибка запроса разрешения:', error);
+        }
+    },
+    
+    async getToken() {
+        try {
+            if (!this.vapidKey || this.vapidKey === 'ВАША_VAPID_KEY') {
+                console.error('❌ VAPID ключ не установлен! Получите его в Firebase Console.');
+                return null;
+            }
+            
+            const token = await this.messaging.getToken({
+                vapidKey: this.vapidKey,
+                serviceWorkerRegistration: await navigator.serviceWorker.ready
+            });
+            
+            if (token) {
+                console.log('✅ FCM Token получен:', token);
+                localStorage.setItem('fcm_token', token);
+                
+                // Сохраняем токен в профиль пользователя
+                if (DB.user && Auth.currentUser) {
+                    DB.user.fcmToken = token;
+                    await Data.save();
+                    console.log('✅ Токен сохранен в профиль');
+                }
+                
+                return token;
+            } else {
+                console.warn('⚠️ Не удалось получить токен');
+                return null;
+            }
+            
+        } catch (error) {
+            console.error('Ошибка получения токена:', error);
+            return null;
+        }
+    },
+    
+    async refreshToken() {
+        try {
+            await this.messaging.deleteToken();
+            localStorage.removeItem('fcm_token');
+            console.log('🔄 Токен удален, получаем новый...');
+            await this.getToken();
+        } catch (error) {
+            console.error('Ошибка обновления токена:', error);
+        }
+    }
+};
+
+// === FIREBASE CLOUD MESSAGING (ЕДИНСТВЕННЫЙ БЛОК!) ===
+
+window.addEventListener('load', () => {
+    // Запускаем инициализацию через 3 секунды после загрузки страницы
+    setTimeout(async () => {
+        // 1. Проверка поддержки браузером
+        if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+            console.warn('❌ [FCM] Push-уведомления не поддерживаются этим браузером');
+            return;
+        }
+        
+        try {
+            console.log('🔧 [FCM] Начинаем инициализацию...');
+            
+            // 2. Ждём загрузки модульного Firebase (максимум 10 секунд)
+            let attempts = 0;
+            while (!window.DB_Online?.messaging && attempts < 20) {
+                console.log(`⏳ [FCM] Ожидание Firebase Messaging... (${attempts + 1}/20)`);
+                await new Promise(r => setTimeout(r, 500));
+                attempts++;
+            }
+            
+            if (!window.DB_Online?.messaging) {
+                console.error('❌ [FCM] Firebase Messaging не загрузился. Проверьте импорты в начале файла.');
+                return;
+            }
+            
+            console.log('✅ [FCM] Firebase Messaging доступен');
+            
+            // 3. Регистрируем Service Worker (путь БЕЗ слеша в начале для GitHub Pages)
+            const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            console.log('✅ [FCM] Service Worker зарегистрирован');
+            
+            await navigator.serviceWorker.ready;
+            console.log('✅ [FCM] Service Worker готов');
+            
+            // 4. Запрашиваем разрешение на уведомления
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                console.log('📱 [FCM] Разрешение:', permission);
+            }
+            
+            if (Notification.permission !== 'granted') {
+                console.warn('⚠️ [FCM] Доступ к уведомлениям отклонен');
+                return;
+            }
+            
+            // 5. Получаем токен устройства
+            const { messaging, getToken, onMessage } = window.DB_Online;
+            
+            const token = await getToken(messaging, {
+                vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw',
+                serviceWorkerRegistration: registration
+            });
+            
+            if (token) {
+                console.log('✅ [FCM] Токен получен:', token);
+                localStorage.setItem('fcm_token', token);
+                
+                // Сохраняем токен в профиль игрока, если он вошел
+                if (window.DB && DB.user) {
+                    DB.user.fcmToken = token;
+                    // Сохраняем в облако через 2 секунды
+                    setTimeout(() => {
+                        if (window.Data && typeof Data.save === 'function') {
+                            Data.save();
+                            console.log('✅ [FCM] Токен привязан к аккаунту в БД');
+                        }
+                    }, 2000);
+                }
+            } else {
+                console.warn('⚠️ [FCM] Токен не получен. Проверьте настройки Firebase Console.');
+            }
+            
+            // 6. Слушатель уведомлений, когда приложение ОТКРЫТО
+            onMessage(messaging, (payload) => {
+                console.log('📩 [FCM] Получено сообщение:', payload);
+                const title = payload?.notification?.title || 'MathBooster PRO';
+                const body = payload?.notification?.body || 'У вас новое уведомление';
+                
+                // Показываем Toast внутри приложения
+                if (window.App?.toast) {
+                    App.toast(`🔔 ${title}: ${body}`);
+                }
+                
+                // Показываем системное уведомление
+                new Notification(title, {
+                    body: body,
+                    icon: 'icon-192.png',
+                    badge: 'icon-192.png'
+                });
+            });
+            
+            console.log('✅ [FCM] Система уведомлений полностью готова');
+            
+        } catch (error) {
+            console.error('❌ [FCM] Критическая ошибка инициализации:', error);
+        }
+    }, 3000);
+});
+
+// Глобальный доступ
+window.FCM = FCM;
+
         </script>
         
     <style>
@@ -2246,15 +2484,7 @@ body.dark-mode .subject-item-fixed {
     }
 
     // Плавное исчезновение splash через 1.8 секунды после загрузки
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                splash.style.opacity = '0';
-                setTimeout(() => splash.remove(), 800);
-            }
-        }, 1800); // 1.8 секунды показа
-    });
+    
     </script>
 
     <!-- AUTH SCREEN -->
@@ -3800,7 +4030,7 @@ body.dark-mode .subject-item-fixed {
             name: 'Nature Sounds', 
             icon: '🌿', 
             price: 200, 
-            url: 'https://radio.stereoscenic.com/asp-s' // Plaza One (ambient/nature)
+            url: 'https://stream.zeno.fm/0r0xa792kwzuv'
         },
         { 
             id: 'electronic', 
