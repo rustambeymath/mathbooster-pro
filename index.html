@@ -2591,8 +2591,12 @@ body.dark-mode .subject-item-fixed {
                 <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
             </div>
             
-            <h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>
-            <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
+<!-- Временные отладочные часы -->
+<div id="debug-clock" style="font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 5px; background: rgba(108, 99, 255, 0.05); padding: 5px 10px; border-radius: 10px; display: inline-block;">
+    🕒 Загрузка времени...
+</div>
+
+<h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>            <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
             
             <div id="timer" class="timer-display">00:00:00</div>
             
@@ -3168,12 +3172,21 @@ body.dark-mode .subject-item-fixed {
             <input type="checkbox" id="notify-toggle" onchange="Notify.toggle(this.checked)" style="transform: scale(1.4);">
         </div>
 
-        <div id="notify-time-box" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--bg); padding: 12px 15px; border-radius: 15px; border: 1px dashed var(--primary);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 20px;">⏰</span>
-                <div style="font-weight: bold; font-size: 13px; color: var(--text);">Время напоминания</div>
+        
+        <div style="margin-bottom: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                <span style="font-size: 22px;">🌐</span>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text);">Часовой пояс</div>
+                    <div style="font-size: 11px; opacity: 0.6; color: var(--text);">Для точности Журнала занятий</div>
+                </div>
             </div>
-            <input type="time" id="notify-time-input" onchange="Notify.updateTime(this.value)" style="border: none; background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; color: var(--primary); font-size: 15px; outline: none; box-shadow: var(--shadow);">
+            <select id="timezone-select" onchange="App.changeTimezone(this.value)" class="input-field" style="margin-bottom: 0; padding: 10px; background: var(--surface); border: 1px solid var(--primary); color: var(--text);">
+                <option value="Asia/Tashkent">🇺🇿 Узбекистан (GMT+5)</option>
+                <option value="Europe/Moscow">🇷🇺 Россия / Москва (GMT+3)</option>
+                <option value="Asia/Almaty">🇰🇿 Казахстан / Алматы (GMT+5)</option>
+            </select>
+
         </div>
 
         <!-- Управление предметами -->
@@ -3846,6 +3859,7 @@ body.dark-mode .subject-item-fixed {
             dailyStreak: 0, lastDailyClaim: null, 
             ownedThemes: ['standard'], ownedAvatars: [], 
             ownedTitles: [],
+            timezone: 'Asia/Tashkent', // По умолчанию Узбекистан
             currentTitle: null, // Если null, показываем Лигу
             lastSaveTime: 0,
             lifetimeStrictSec: 0,
@@ -4061,14 +4075,14 @@ body.dark-mode .subject-item-fixed {
 
 
     // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
-    const getUZDate = (dateObj = new Date()) => {
-    // Если в TimeGuard есть офсет, прибавляем его к времени телефона
-    const offset = (window.TimeGuard && TimeGuard.serverOffset) ? TimeGuard.serverOffset : 0;
-    const correctedTime = dateObj.getTime() + offset;
+    const getUZDate = (dateObj = null) => {
+    // Если передали конкретную дату (например, для стриков), используем её.
+    // Если нет — берем честное время Ташкента из TimeGuard.
+    const timestamp = dateObj ? dateObj.getTime() : TimeGuard.getTrueTime();
     
-    // Переводим в дату Ташкента (+5 часов)
-    const uzDate = new Date(correctedTime + (3600000 * 5)); 
-    return uzDate.toISOString().slice(0, 10);
+    const date = new Date(timestamp);
+    // Возвращаем ГГГГ-ММ-ДД
+    return date.toISOString().slice(0, 10);
 };
 
 
@@ -5060,7 +5074,7 @@ const Timer = {
     isRunning: false,
     isPaused: false,
     isStrict: false,
-    
+    sessionStartTime: 0, 
     startTime: 0,
     pausedTime: 0,
     totalPausedDuration: 0,
@@ -5131,8 +5145,7 @@ const Timer = {
                             this.resetTimerUI();
                             
                             // Показываем уведомление
-                            App.toast("❌ ХАРДКОР: Сессия аннулирована (свернул экран)");
-                            
+                            App.toast("💀 ХАРДКОР провален! Дисциплина требует полной отдачи.");                            
                             // Показываем модалку с объяснением
                             const modal = document.createElement('div');
                             modal.className = 'modal show';
@@ -5252,6 +5265,7 @@ const Timer = {
         await TimeGuard.sync(); // Получаем честное время
 
         this.active = true;
+        this.sessionStartTime = Number(TimeGuard.getTrueTime());
         this.isRunning = true;
         this.startTime = TimeGuard.getTrueTime();
         this.sessionCoins = 0;
@@ -5270,8 +5284,20 @@ const Timer = {
 
         document.getElementById('timer').classList.add('timer-active-anim');
         this.tick();
-        App.toast("🚀 Сессия подтверждена сервером");
-
+        // --- РАНДОМНЫЕ ФРАЗЫ ПРИ СТАРТЕ ---
+        const startPhrases = [
+            "🚀 Время становиться умнее!",
+            "🧠 Режим глубокого фокуса включен",
+            "⚡️ Протокол обучения запущен",
+            "📈 Твой путь к мастерству начат",
+            "📚 Удачной учебы, не отвлекайся!",
+            "💎 Каждая минута — это вклад в себя",
+            "🔥 Погнали! Мозг готов к работе",
+            "🎯 Фокус на максимум!"
+        ];
+        const randomPhrase = startPhrases[Math.floor(Math.random() * startPhrases.length)];
+        App.toast(randomPhrase);
+        // ----------------------------------
         const btn = document.getElementById('btn-start');
         if (btn) {
             if (this.isStrict) {
@@ -5317,7 +5343,6 @@ const Timer = {
                 window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(TimeGuard.getTrueTime()) });
             }
 
-            // ← ДОБАВЬТЕ ЭТО СЮДА (после пинга):
             // 🚨 ПРОВЕРКА ПРИСУТСТВИЯ
             if (this.realSec > 0 && this.realSec % this.CHECK_AFTER_SECONDS === 0) {
                 this.showMathCheck();
@@ -5552,7 +5577,17 @@ const Timer = {
             this.realSec = verifiedSec;
             await this.saveSession();
         } else {
-            App.toast("⚠️ Сессия аннулирована (слишком короткая или сбой времени)");
+            // --- РАНДОМНЫЕ ФРАЗЫ ПРИ ОТМЕНЕ ---
+            const cancelPhrases = [
+                "⚠️ Слишком коротко. Нужно больше старания!",
+                "🚫 Фокус потерян. Попробуй еще раз",
+                "📉 Сессия аннулирована. Не сдавайся!",
+                "❌ Прогресс не засчитан. Дисциплина — это важно",
+                "🕯️ Огонь погас... Начни новую сессию!",
+                "🧱 Сессия прервана. Построй свою империю знаний заново"
+            ];
+            const randomCancel = cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)];
+            App.toast(randomCancel);
         }
 
         // Очистка в облаке
@@ -5668,7 +5703,7 @@ const Timer = {
     subject: subject.name,
     sec: this.realSec,
     coins: earnedCoins,
-    date: new Date(this.startTime).toISOString() 
+    date: this.sessionStartTime 
 });
 
     if (DB.sessions.length > 100) DB.sessions = DB.sessions.slice(0, 100);
@@ -5684,9 +5719,19 @@ const Timer = {
     App.renderMonthlyWidget();
     AchievementSys.check();
 
+    const finishPhrases = [
+        "✅ Отличная работа! Ты стал ближе к цели",
+        "🧠 Сессия завершена. Мозг прокачан!",
+        "💎 Мастерство растет! Так держать",
+        "📈 Знания получены. Время отдохнуть?",
+        "🌟 Прекрасный результат! Горжусь тобой",
+        "🏆 Еще одна победа над ленью!",
+        "💪 Кирпичик в фундамент будущего заложен"
+    ];
+    const randomFinish = finishPhrases[Math.floor(Math.random() * finishPhrases.length)];
+    
     const h = Math.floor(this.realSec / 3600);
     const m = Math.floor((this.realSec % 3600) / 60);
-    App.toast(`✅ Сохранено: ${h}ч ${m}м (+${earnedCoins} 💰)`);
     SoundSys.play('success');
     FX.confetti();
 },
@@ -5709,7 +5754,9 @@ const Timer = {
         }
     }
 };
+
 window.Timer = Timer;    
+
 const QuestSys = {
         // 1. Список квестов (цели обновляются в checkDay)
         list: [
@@ -6697,30 +6744,35 @@ else if (this.mode === 'fractions') {
         },
 
         // --- УСПЕХ ---
-        success(el) {
+    success(el) {
         this.score++; 
         DB.user.lifetimeMathSolved = (DB.user.lifetimeMathSolved || 0) + 1;
         document.getElementById('game-score').innerText = this.score; 
         QuestSys.update('mathSolved', 1);
 
-        el.style.borderColor = 'var(--success)'; 
+        // Подсвечиваем рамку, если элемент существует
+        if (el && el.style) el.style.borderColor = 'var(--success)'; 
         
-        // Быстрая разблокировка для правильного ответа
+        // Переход к следующему вопросу
         setTimeout(() => {
-            el.style.borderColor = ''; 
+            if (el && el.style) el.style.borderColor = ''; 
             this.nextProblem(); 
-            this.unlockControls(); // Вызываем единый разблокировщик
+            this.unlockControls(); // Разблокируем ввод
         }, 200);
-        
-        if (el && el.getBoundingClientRect) {
-            const rect = el.getBoundingClientRect(); 
-            FX.floatText(rect.left + rect.width/2, rect.top, `+XP`, "#6C63FF");
-        }
+
+        // 🛡️ АВАРИЙНАЯ РАЗБЛОКИРОВКА (если через 1 сек всё еще висит)
+        setTimeout(() => {
+            if (this.isLocked) {
+                console.log("⚠️ Сработала аварийная разблокировка (Success)");
+                this.unlockControls();
+            }
+        }, 1000);
     },
 
+    // --- УЛУЧШЕННАЯ ОШИБКА (БЕЗ ЗАВИСАНИЙ) ---
     fail(el) {
         SoundSys.play('error'); 
-        el.classList.add('error-shake');
+        if (el && el.classList) el.classList.add('error-shake');
         
         // Визуально блокируем кнопки
         document.getElementById('input-area').classList.add('input-locked');
@@ -6732,9 +6784,16 @@ else if (this.mode === 'fractions') {
 
         // Штрафная разблокировка (1.2 секунды)
         setTimeout(() => {
-            this.unlockControls(); // Вызываем тот же разблокировщик
-            if(el.tagName === 'INPUT') el.value = '';
+            this.unlockControls(); 
         }, 1200);
+
+        // 🛡️ АВАРИЙНАЯ РАЗБЛОКИРОВКА (если через 2 сек всё еще висит)
+        setTimeout(() => {
+            if (this.isLocked) {
+                console.log("⚠️ Сработала аварийная разблокировка (Fail)");
+                this.unlockControls();
+            }
+        }, 2000);
     },
 
         end() {
@@ -6907,18 +6966,21 @@ else if (this.mode === 'fractions') {
         this.isLocked = false; // Открываем замок
         
         // Убираем все красные рамки и тряску
-        const elements = document.querySelectorAll('.error-shake');
-        elements.forEach(el => el.classList.remove('error-shake'));
+        document.querySelectorAll('.error-shake').forEach(el => el.classList.remove('error-shake'));
         
-        // Убираем визуальную блокировку
-        document.getElementById('input-area').classList.remove('input-locked');
-        document.getElementById('sign-area').classList.remove('input-locked');
+        // Убираем визуальную блокировку (серый фон)
+        const inputArea = document.getElementById('input-area');
+        const signArea = document.getElementById('sign-area');
+        if (inputArea) inputArea.classList.remove('input-locked');
+        if (signArea) signArea.classList.remove('input-locked');
         
-        // Возвращаем фокус на поле ввода, если это не режим знаков
+        // Очищаем поле и возвращаем фокус
         const input = document.getElementById('game-input');
-        if (this.mode !== 'sign' && input) input.focus();
-        },
-
+        if (this.mode !== 'sign' && input) {
+            input.value = ''; // Очищаем старый ответ
+            input.focus();    // Ставим курсор
+        }
+    },
         // Вспомогательная функция: наибольший общий делитель (НОД)
         // Вспомогательная функция: наибольший общий делитель
         getGCD(a, b) {
@@ -7071,43 +7133,41 @@ else if (this.mode === 'fractions') {
     
 
     const TimeGuard = {
-        serverOffset: 0,
-        isSyncing: false,
+    serverOffset: 0,
+    isSyncing: false,
 
-        async sync() {
-            this.isSyncing = true;
-            const servers = [
-                'https://timeapi.io/api/Time/current/zone?timeZone=UTC',
-                'https://worldtimeapi.org/api/timezone/Etc/UTC'
-            ];
+    async sync() {
+        this.isSyncing = true;
+        
+        // 1. Берем пояс из настроек или ставим Ташкент по умолчанию
+        const userTZ = (window.DB && DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+        
+        // 2. Вставляем этот пояс в ссылку
+        const url = `https://timeapi.io/api/Time/current/zone?timeZone=${userTZ}`;
 
-            for (let url of servers) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-                    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
-                    const data = await response.json();
-                    clearTimeout(timeoutId);
-                    
-                    const serverTime = new Date(data.dateTime || data.utc_datetime).getTime();
-                    // Вычисляем разницу: Настоящее время минус время телефона
-                    this.serverOffset = serverTime - Date.now();
-                    
-                    console.log("✅ Синхронизация: Офсет " + this.serverOffset + "ms");
-                    this.isSyncing = false;
-                    return; 
-                } catch (e) {
-                    console.warn("⚠️ Сервер времени не ответил, пробуем следующий...");
-                }
-            }
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+            const data = await response.json();
+            clearTimeout(timeoutId);
+            
+            const serverTime = new Date(data.dateTime).getTime();
+            this.serverOffset = serverTime - Date.now();
+            
+            console.log(`✅ Синхронизация с ${userTZ}. Офсет: ${this.serverOffset}ms`);
+        } catch (e) {
+            console.warn("⚠️ Ошибка синхронизации, используем локальное время.");
             this.serverOffset = 0;
-            this.isSyncing = false;
-        },
-
-        getTrueTime() {
-            return Date.now() + this.serverOffset;
         }
-    };
+        this.isSyncing = false;
+    },
+
+    getTrueTime() {
+        // Теперь эта функция ВСЕГДА возвращает точное время Ташкента
+        return Date.now() + this.serverOffset;
+    }
+};
 
     const SecretSys = {
         logoTaps: 0,
@@ -7327,7 +7387,22 @@ else if (this.mode === 'fractions') {
                 navigator.serviceWorker.register('sw.js?v=2').catch(err => console.log(err));
             }
         },
-
+    async changeTimezone(tz) {
+        if (!DB.user) return;
+        DB.user.timezone = tz;
+        
+        App.toast("⏳ Синхронизация пояса...");
+        
+        // 1. Сохраняем в базу
+        Data.save();
+        
+        // 2. Принудительно обновляем время под новый пояс
+        await TimeGuard.sync();
+        
+        // 3. Обновляем интерфейс
+        this.renderHistory();
+        App.toast("✅ Пояс изменен на " + tz);
+    },
         async syncWithCloud() {
             if (!Auth.currentUser || !window.DB_Online) return;
 
@@ -7630,7 +7705,10 @@ setTimeout(() => {
         updateUI() {
             if (!DB || !DB.user || !Auth.currentUser) return;
             const newClass = `theme-${DB.user.theme} ${DB.user.darkMode ? 'dark-mode' : ''}`.trim();
-
+            const tzSelect = document.getElementById('timezone-select');
+            if (tzSelect && DB.user.timezone) {
+                tzSelect.value = DB.user.timezone;
+            }
   
             // Оптимизированная смена классов
             if (document.body.className !== newClass) document.body.className = newClass;
@@ -7729,16 +7807,12 @@ setTimeout(() => {
             this.setText('profile-league-big', statusText);
 
             // Блок уведомлений (Безопасный)
-            const nBox = document.getElementById('notify-time-box');
-            const nInput = document.getElementById('notify-time-input');
+            
             const nToggle = document.getElementById('notify-toggle');
 
             if (DB.settings) {
                 if (nToggle) nToggle.checked = DB.settings.notifications || false;
-                if (nBox && nInput) {
-                    nBox.style.display = DB.settings.notifications ? 'flex' : 'none';
-                    nInput.value = DB.settings.notifyTime || "19:00";
-                }
+                
             }
             // Аватарки с рамками
             const headerBox = document.getElementById('header-avatar-box');
@@ -8654,25 +8728,29 @@ renderCharts(weekSec) {
             }
 
             logContainer.innerHTML = DB.sessions.map(s => {
-                // 1. Расчет минут (округляем вверх, чтобы 10 сек не показывало как 0)
                 let minutes = Math.floor(s.sec / 60);
-                if (minutes < 1) minutes = "< 1"; // Если меньше минуты
+                if (minutes < 1) minutes = "< 1";
 
-                // 2. Красивая дата (27 янв, 14:30)
+                // 1. Создаем дату из сохраненного числа
+                // Если в записи строка (старая сессия), Date её поймет. Если число — тоже.
                 const dateObj = new Date(s.date);
 
-                // Принудительно выставляем часовой пояс Ташкента для отображения
+                // 2. Берем часовой пояс из настроек (или Ташкент по умолчанию)
+                const userTZ = (DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+
+                // 3. Форматируем время СТРОГО по выбранному поясу
                 const dateStr = dateObj.toLocaleDateString('ru-RU', { 
                     day: 'numeric', 
                     month: 'short', 
-                    timeZone: 'Asia/Tashkent' 
+                    timeZone: userTZ 
                 });
 
                 const timeStr = dateObj.toLocaleTimeString('ru-RU', { 
                     hour: '2-digit', 
                     minute: '2-digit', 
-                    timeZone: 'Asia/Tashkent' 
+                    timeZone: userTZ 
                 });
+
 
                 // 3. Ищем иконку предмета по названию
                 let icon = '⏱️'; // Иконка по умолчанию
@@ -8945,65 +9023,56 @@ renderCharts(weekSec) {
 
     
     const Notify = {
-        isSupported: 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window,
+    isSupported: 'Notification' in window && 'serviceWorker' in navigator,
 
-        async toggle(isChecked) {
-            if (!this.isSupported) {
-                alert("Ваш браузер не поддерживает Push-уведомления.");
-                document.getElementById('notify-toggle').checked = false;
-                return;
-            }
-
-            if (isChecked) {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    if (!DB.settings) DB.settings = { sfx: true, notifications: false, notifyTime: "19:00" };
-                    DB.settings.notifications = true;
-                    App.toast("✅ Напоминания включены");
-                    
-                    // Самое главное: получаем уникальный паспорт телефона
-                    this.subscribeFCM(); 
-                } else {
-                    alert("Разрешите уведомления в настройках телефона/браузера.");
-                    document.getElementById('notify-toggle').checked = false;
-                    DB.settings.notifications = false;
-                }
-            } else {
-                DB.settings.notifications = false;
-                App.toast("🔕 Напоминания выключены");
-            }
-            Data.save();
-        },
-
-        async subscribeFCM() {
-            try {
-                // ⚠️ ВСТАВЬ СЮДА СВОЙ КЛЮЧ ИЗ ШАГА 1 ⚠️
-                const currentToken = await window.DB_Online.getToken(window.DB_Online.messaging, {
-                    vapidKey: "BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw"
-                });
-
-                if (currentToken) {
-                    console.log("📱 Токен устройства:", currentToken);
-                    DB.user.fcmToken = currentToken; 
-                    Data.save(); // Сохраняем токен в карточку юзера в Firebase
-
-                    // Слушаем пуши, если пользователь прямо сейчас сидит в приложении
-                    window.DB_Online.onMessage(window.DB_Online.messaging, (payload) => {
-                        App.toast(`🔔 ${payload.notification.title}`);
-                        SoundSys.play('quest_done');
-                    });
-                }
-            } catch (error) {
-                console.error("Ошибка при получении FCM токена:", error);
-            }
-        },
-
-        updateTime(val) {
-            DB.settings.notifyTime = val;
-            Data.save();
-            App.toast(`🕒 Время пуша изменено на ${val}`);
+    async toggle(isChecked) {
+        if (!this.isSupported) {
+            alert("Ваш браузер не поддерживает уведомления.");
+            document.getElementById('notify-toggle').checked = false;
+            return;
         }
-    };
+
+        if (isChecked) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                DB.settings.notifications = true;
+                App.toast("✅ Уведомления включены");
+                this.subscribeFCM(); // Получаем токен для рассылок
+            } else {
+                alert("Разрешите уведомления в настройках браузера.");
+                document.getElementById('notify-toggle').checked = false;
+                DB.settings.notifications = false;
+            }
+        } else {
+            DB.settings.notifications = false;
+            App.toast("🔕 Уведомления выключены");
+        }
+        Data.save();
+    },
+
+    async subscribeFCM() {
+        try {
+            const { messaging, getToken, onMessage } = window.DB_Online;
+            const currentToken = await getToken(messaging, {
+                vapidKey: "BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw"
+            });
+
+            if (currentToken) {
+                console.log("📱 Токен получен");
+                DB.user.fcmToken = currentToken;
+                Data.save();
+
+                // Слушаем сообщения, если приложение открыто
+                onMessage(messaging, (payload) => {
+                    App.toast(`🔔 ${payload.notification.title}`);
+                    SoundSys.play('quest_done');
+                });
+            }
+        } catch (error) {
+            console.error("Ошибка FCM:", error);
+        }
+    }
+};
     // Делаем эти объекты доступными для кнопок в HTML
         window.App = App;
         window.Auth = Auth;
@@ -9388,8 +9457,24 @@ function cleanSubjects() {
         }
     };
 
+// Функция для обновления отладочных часов
+// Улучшенная функция отладочных часов
+setInterval(() => {
+    const clockEl = document.getElementById('debug-clock');
+    if (!clockEl) return;
 
-
+    const tashkentTimestamp = TimeGuard.getTrueTime();
+    const now = new Date(tashkentTimestamp);
+    const userTZ = (window.DB && DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+    
+    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
+                    now.getMinutes().toString().padStart(2, '0') + ":" + 
+                    now.getSeconds().toString().padStart(2, '0');
+                    
+    clockEl.innerText = `🕒 ${timeStr} (${userTZ.split('/')[1] || userTZ})`;
+}, 1000);  
+    
+    
     </script>
 
     <!-- ECO MODE OVERLAY -->
@@ -9790,3 +9875,4 @@ App.selectSubject = function(key, event) {
 </div>
     </body>
     </html>
+
