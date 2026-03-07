@@ -5070,17 +5070,100 @@ const Timer = {
     interval: null,
     checkInterval: null,
     lastCheckTime: 0,
-    
+    hardcoreTimeout: null, 
     // Настройки проверки
     CHECK_AFTER_SECONDS: 3600,  // Проверка 
     CHECK_TIMEOUT: 60,          // Время на решение капчи
     
     lastRewardTime: 0,
     REWARD_INTERVAL: 600,
+    async requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    this.wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('✅ Экран не будет гаснуть');
+                } catch (err) {
+                    console.warn('Wake Lock не поддерживается');
+                }
+            }
+        },
+        
+        releaseWakeLock() {
+            if (this.wakeLock) {
+                this.wakeLock.release();
+                this.wakeLock = null;
+            }
+        },
 
-    getTrueTime() {
-        return TimeGuard.getTrueTime();
-    },
+        getTrueTime() {
+            return TimeGuard.getTrueTime();
+        },
+
+    initHardcoreWatch() {
+            if (!this.isStrict) return;
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && this.active && this.isStrict && !this.isPaused) {
+                    // Свернули экран в ХАРДКОРЕ - запускаем таймер на 5 секунд
+                    console.log('⚠️ ХАРДКОР: Экран свёрнут, даём 5 секунд...');
+                    
+                    this.hardcoreTimeout = setTimeout(() => {
+                        if (document.hidden && this.active) {
+                            // Всё ещё свёрнуто через 5 секунд - аннулируем
+                            console.log('❌ ХАРДКОР: Время вышло, сессия аннулирована');
+                            SoundSys.play('error');
+                            
+                            // Останавливаем БЕЗ сохранения
+                            clearInterval(this.interval);
+                            this.active = false;
+                            this.isRunning = false;
+                            this.releaseWakeLock();
+                            
+                            // Очистка в облаке
+                            if (window.DB_Online && Auth.currentUser) {
+                                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                                window.DB_Online.updateDoc(docRef, {
+                                    "user.activeSessionStart": null,
+                                    "user.lastPing": null
+                                });
+                            }
+                            
+                            this.resetTimerUI();
+                            
+                            // Показываем уведомление
+                            App.toast("❌ ХАРДКОР: Сессия аннулирована (свернул экран)");
+                            
+                            // Показываем модалку с объяснением
+                            const modal = document.createElement('div');
+                            modal.className = 'modal show';
+                            modal.style.zIndex = '99999';
+                            modal.innerHTML = `
+                                <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white;">
+                                    <h2 style="font-size: 28px; margin-bottom: 15px;">❌ Сессия аннулирована</h2>
+                                    <p style="font-size: 16px; margin-bottom: 20px;">
+                                        В режиме <b>ХАРДКОР</b> нельзя сворачивать экран.<br>
+                                        Ты не вернулся за 5 секунд.
+                                    </p>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                                        <div style="font-size: 14px; margin-bottom: 5px;">Монеты: <b style="font-size: 20px;">0 💰</b></div>
+                                        <div style="font-size: 12px; opacity: 0.8;">Прогресс не сохранён</div>
+                                    </div>
+                                    <button class="btn" style="background: white; color: #FF4757; font-weight: bold; width: 100%; padding: 15px;" onclick="this.closest('.modal').remove()">
+                                        Понятно
+                                    </button>
+                                </div>`;
+                            document.body.appendChild(modal);
+                        }
+                    }, 5000); // 5 секунд
+                    
+                } else if (!document.hidden && this.hardcoreTimeout) {
+                    // Вернулись на экран - отменяем таймер
+                    console.log('✅ ХАРДКОР: Вернулся вовремя');
+                    clearTimeout(this.hardcoreTimeout);
+                    this.hardcoreTimeout = null;
+                }
+            });
+        },
 
     preStart() {
         if (!navigator.onLine) return App.toast("❌ Нужен интернет для работы таймера");
@@ -5101,6 +5184,8 @@ const Timer = {
             }
         ];
 
+
+        
         const modal = document.createElement('div');
         modal.className = 'modal show';
         modal.style.zIndex = '15000';
@@ -5156,18 +5241,6 @@ const Timer = {
     selectMode(mode) {
         this.isStrict = (mode === 'strict');
         document.querySelector('.modal.show')?.remove();
-        
-        if (this.isStrict) {
-            const confirm = window.confirm(
-                "⚠️ РЕЖИМ ХАРДКОР\n\n" +
-                "• Нельзя ставить на паузу\n" +
-                "• Нельзя выходить с экрана\n" +
-                "• Награда ×1.5\n\n" +
-                "Ты готов?"
-            );
-            if (!confirm) return;
-        }
-        
         this.start();
     },
 
@@ -5184,6 +5257,8 @@ const Timer = {
         this.sessionCoins = 0;
         this.lastPaidBlock = 0;
 
+        await this.requestWakeLock(); 
+
         // 🛡️ ЗАПИСЫВАЕМ СТАРТ В ОБЛАКО (ЭТО НЕЛЬЗЯ ПОДДЕЛАТЬ)
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
@@ -5196,6 +5271,22 @@ const Timer = {
         document.getElementById('timer').classList.add('timer-active-anim');
         this.tick();
         App.toast("🚀 Сессия подтверждена сервером");
+
+        const btn = document.getElementById('btn-start');
+        if (btn) {
+            if (this.isStrict) {
+                btn.innerText = '🔥 ХАРДКОР';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            } else {
+                btn.innerText = '⏸ ПАУЗА';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.onclick = () => this.pause();
+            }
+        }
+
+        this.initHardcoreWatch();
     },
 
     tick() {
@@ -5210,9 +5301,9 @@ const Timer = {
             const now = TimeGuard.getTrueTime();
             const calculatedSec = Math.floor((now - this.startTime) / 1000);
 
-            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ (Если юзер перевел время прямо сейчас)
+            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ
             if (calculatedSec - this.visualSec > 3) {
-                await TimeGuard.sync(); // Перепроверяем офсет
+                await TimeGuard.sync();
                 return;
             }
 
@@ -5220,10 +5311,16 @@ const Timer = {
             this.realSec = calculatedSec;
             this.updateDisplay();
 
-            // Пинг сервера каждые 30 секунд (Heartbeat)
+            // Пинг сервера каждые 30 секунд
             if (this.realSec % 30 === 0) {
                 const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
                 window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(TimeGuard.getTrueTime()) });
+            }
+
+            // ← ДОБАВЬТЕ ЭТО СЮДА (после пинга):
+            // 🚨 ПРОВЕРКА ПРИСУТСТВИЯ
+            if (this.realSec > 0 && this.realSec % this.CHECK_AFTER_SECONDS === 0) {
+                this.showMathCheck();
             }
 
             // Награда каждые 10 минут
@@ -5235,8 +5332,35 @@ const Timer = {
         }, 1000);
     },
 
-    showMathCheck() {
+    async showMathCheck() {
         this.pause(true);
+
+        // 🔊 ЗВУК + ВИБРАЦИЯ + УВЕДОМЛЕНИЕ
+        SoundSys.play('error');
+
+        setTimeout(() => SoundSys.play('error'), 200);
+        setTimeout(() => SoundSys.play('error'), 400);
+
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 200]);
+        }
+        
+        // 🔔 Push-уведомление
+        if ('Notification' in window && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                await registration.showNotification('🚨 ПРОВЕРКА ПРИСУТСТВИЯ!', {
+                    body: 'Реши пример за 60 секунд!',
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: 'mathbooster-check',
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200, 100, 200]
+                });
+            } catch (e) {
+                console.warn('Уведомление не отправлено:', e);
+            }
+        }
 
         const a = Math.floor(Math.random() * 9) + 2;
         const b = Math.floor(Math.random() * 9) + 2;
@@ -5246,17 +5370,17 @@ const Timer = {
         modal.className = 'modal show';
         modal.style.zIndex = '99999';
         modal.innerHTML = `
-            <div class="modal-content" style="text-align:center;">
-                <h2 style="color:var(--primary);">👮 Проверка присутствия</h2>
-                <p style="margin:10px 0;">Ты долго учишься. Реши пример за 60 секунд:</p>
-                <div class="trainer-problem" style="font-size:48px; margin:20px 0;">${a} × ${b}</div>
+            <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white; animation: shake 0.5s;">
+                <h2 style="color:white; font-size: 28px; margin-bottom: 10px; animation: pulse 1s infinite;">🚨 ПРОВЕРКА! 🚨</h2>
+                <p style="margin:10px 0; font-size: 16px; font-weight: bold;">Реши пример за 60 секунд:</p>
+                <div style="font-size:48px; margin:20px 0; color: white; font-weight: bold;">${a} × ${b}</div>
                 <input type="number" id="check-answer" class="input-field" placeholder="?" 
-                       style="text-align:center; font-size:32px; margin-bottom:15px;">
-                <div id="check-timer" style="font-size:18px; color:var(--accent); margin-bottom:15px;">
+                    style="text-align:center; font-size:32px; margin-bottom:15px; border: 3px solid white; background: white; color: #333;">
+                <div id="check-timer" style="font-size:22px; color:white; margin-bottom:15px; font-weight: bold;">
                     Осталось: <b>60</b> сек
                 </div>
-                <button class="btn btn-primary" onclick="Timer.checkAnswer(${correctAnswer}, this)">
-                    Ответить ➜
+                <button class="btn" style="background: white; color: #FF4757; font-weight: bold; font-size: 18px; padding: 15px 30px;" onclick="Timer.checkAnswer(${correctAnswer}, this)">
+                    ✓ ОТВЕТИТЬ
                 </button>
             </div>`;
         document.body.appendChild(modal);
@@ -5265,7 +5389,7 @@ const Timer = {
         input.focus();
         input.onkeypress = (e) => {
             if (e.key === 'Enter') {
-                const btn = modal.querySelector('.btn-primary');
+                const btn = modal.querySelector('.btn');
                 if (btn) Timer.checkAnswer(correctAnswer, btn);
             }
         };
@@ -5273,9 +5397,22 @@ const Timer = {
         let timeLeft = this.CHECK_TIMEOUT;
         const countdown = setInterval(() => {
             timeLeft--;
+            
+            // 🔊 Звук каждые 10 секунд
+            if (timeLeft % 10 === 0 && timeLeft > 0) {
+                SoundSys.play('click');
+                if (navigator.vibrate) navigator.vibrate(100);
+            }
+            
+            // 🚨 Последние 10 секунд - частые звуки
+            if (timeLeft <= 10 && timeLeft > 0) {
+                SoundSys.play('error');
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+            
             const timerEl = document.getElementById('check-timer');
             if (timerEl) {
-                timerEl.innerHTML = `Осталось: <b style="color:${timeLeft < 10 ? '#FF4757' : 'var(--accent)'}">${timeLeft}</b> сек`;
+                timerEl.innerHTML = `Осталось: <b style="color:${timeLeft < 10 ? '#FFD700' : 'white'}; font-size: ${timeLeft < 10 ? '32px' : '22px'}">${timeLeft}</b> сек`;
             }
 
             if (timeLeft <= 0) {
@@ -5332,17 +5469,23 @@ const Timer = {
         this.isRunning = false;
         this.pausedTime = this.getTrueTime();
         
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+        
         if (!isCheckPause) {
             const btn = document.getElementById('btn-start');
             if (btn) {
                 btn.innerText = '▶️ ПРОДОЛЖИТЬ';
                 btn.onclick = () => this.resume();
                 btn.disabled = false;
+                btn.style.opacity = '1'; 
             }
             App.toast("⏸ Пауза");
         }
         
-        stopAfkCheck();
+        if (window.stopAfkCheck) stopAfkCheck(); 
     },
 
     resume() {
@@ -5350,18 +5493,22 @@ const Timer = {
 
         const pauseDuration = this.getTrueTime() - this.pausedTime;
         this.totalPausedDuration += pauseDuration;
+        
+        this.startTime += pauseDuration;
 
         this.isPaused = false;
         this.isRunning = true;
 
         const btn = document.getElementById('btn-start');
         if (btn) {
-            btn.innerText = this.isStrict ? '🔥 ХАРДКОР' : '⏸ ПАУЗА';
+            btn.innerText = '⏸ ПАУЗА';
             btn.onclick = () => this.pause();
-            btn.disabled = this.isStrict;
+            btn.disabled = false;
+            btn.style.opacity = '1';
         }
 
-        startAfkCheck();
+        this.tick();
+
         App.toast("▶️ Продолжаем!");
     },
 
@@ -5374,9 +5521,16 @@ const Timer = {
     async stop(saveSession = true) {
         if (!this.active) return;
 
+        if (this.hardcoreTimeout) {
+                clearTimeout(this.hardcoreTimeout);
+                this.hardcoreTimeout = null;
+            }
+
         clearInterval(this.interval);
         this.active = false;
         this.isRunning = false;
+
+        this.releaseWakeLock(); 
 
         // 1. Получаем данные с сервера
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
@@ -5394,8 +5548,8 @@ const Timer = {
         const endPoint = Math.min(stopTime, serverLastPing + 40000);
         const verifiedSec = Math.floor((endPoint - serverStart) / 1000);
 
-        if (saveSession && verifiedSec >= 60) {
-            this.realSec = verifiedSec; // Подменяем время на честное перед сохранением
+        if (saveSession && verifiedSec >= 60) { // ← ВЕРНУЛИ >= 60
+            this.realSec = verifiedSec;
             await this.saveSession();
         } else {
             App.toast("⚠️ Сессия аннулирована (слишком короткая или сбой времени)");
@@ -5413,10 +5567,21 @@ const Timer = {
     resetTimerUI() {
         this.realSec = 0;
         this.visualSec = 0;
+        this.isPaused = false;
+        this.isRunning = false;
+        this.isStrict = false; // ← ДОБАВЬТЕ ЭТО
+        
         this.updateDisplay();
         document.getElementById('timer').classList.remove('timer-active-anim');
-        document.getElementById('btn-start').innerText = '🚀 СТАРТ';
-        document.getElementById('btn-start').onclick = () => Timer.preStart();
+        
+        const btn = document.getElementById('btn-start');
+        if (btn) {
+            btn.innerText = '🚀 СТАРТ';
+            btn.onclick = () => Timer.preStart();
+            btn.disabled = false; // ← ДОБАВЬТЕ ЭТО
+            btn.style.opacity = '1'; // ← ДОБАВЬТЕ ЭТО
+        }
+        
         SoundSys.play('click');
     },
 
@@ -5500,11 +5665,11 @@ const Timer = {
     }
 
     DB.sessions.unshift({
-        subject: subject.name,
-        sec: this.realSec,
-        coins: earnedCoins,
-        date: new Date(this.getTrueTime()).toISOString()
-    });
+    subject: subject.name,
+    sec: this.realSec,
+    coins: earnedCoins,
+    date: new Date(this.startTime).toISOString() 
+});
 
     if (DB.sessions.length > 100) DB.sessions = DB.sessions.slice(0, 100);
 
@@ -5689,262 +5854,259 @@ const QuestSys = {
                         document.getElementById('math-answer').style.borderColor='red'; 
                         SoundSys.play('error'); } } };
 
+    
     const BattleSys = {
-        bet: 50,
-        currentCode: null,
-        listener: null,
-        myRole: null, // 'p1' или 'p2'
-        gameStarted: false, // Чтобы игра не запускалась дважды
-        selectedMode: 'standard',
-        selectedDiff: 'easy',
+    bet: 50,
+    currentCode: null,
+    listener: null,
+    myRole: null,
+    gameStarted: false,
+    
+    selectedMode: 'standard',
+    selectedDiff: 'easy',
+    
+    // Генерация кода
+    generateCode() {
+        const rand = Math.floor(Math.random() * 900) + 100;
+        document.getElementById('battle-code-create').value = rand;
+    },
+    
+    // Создать бой
+    async createBattle() {
+        const code = document.getElementById('battle-code-create').value.trim();
+        if (!code || code.length < 3) {
+            return App.toast("❌ Сгенерируй код сначала!");
+        }
         
-        genRandom() {
-            // Генерируем число от 100 до 999
-            const rand = Math.floor(Math.random() * 900) + 100;
-            document.getElementById('battle-code-input').value = rand;
-        },
-        openMenu() {
-            if (!window.DB_Online) return App.toast("Нужен интернет!");
-            document.getElementById('battle-modal').classList.add('show');
-            document.getElementById('battle-login-view').style.display = 'block';
-            document.getElementById('battle-lobby-view').style.display = 'none';
-            
-            // Сброс состояний
-            this.gameStarted = false;
-            if (this.listener) this.listener(); // Отключаем старую прослушку
-        },
+        this.currentCode = code;
+        await this.connect();
+    },
+    
+    // Присоединиться к бою
+    async joinBattle() {
+        const code = document.getElementById('battle-code-join').value.trim();
+        if (!code || code.length < 3) {
+            return App.toast("❌ Введи код комнаты!");
+        }
+        
+        this.currentCode = code;
+        await this.connect();
+    },
+    
+    openMenu() {
+        if (!window.DB_Online) return App.toast("Нужен интернет!");
+        document.getElementById('battle-modal').classList.add('show');
+        document.getElementById('battle-login-view').style.display = 'block';
+        document.getElementById('battle-lobby-view').style.display = 'none';
+        
+        this.gameStarted = false;
+        if (this.listener) this.listener();
+    },
 
-        setBet(amount, btn) {
-            this.bet = amount;
-            document.querySelectorAll('#battle-modal .diff-btn').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-        },
+    selectMode(mode, btn) {
+        this.selectedMode = mode;
+        document.querySelectorAll('.battle-mode-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.borderColor = 'transparent';
+        });
+        btn.classList.add('active');
+        btn.style.borderColor = 'var(--primary)';
+    },
 
-        selectMode(mode, btn) {
-            this.selectedMode = mode;
-            document.querySelectorAll('.battle-mode-btn').forEach(b => {
-                b.classList.remove('active');
-                b.style.borderColor = 'transparent';
-            });
-            btn.classList.add('active');
-            btn.style.borderColor = 'var(--primary)';
-        },
+    selectDiff(diff, btn) {
+        this.selectedDiff = diff;
+        const colors = { easy: 'var(--success)', medium: '#F39C12', hard: '#E74C3C' };
+        document.querySelectorAll('.battle-diff-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.borderColor = 'transparent';
+        });
+        btn.classList.add('active');
+        btn.style.borderColor = colors[diff];
+    },
 
-        selectDiff(diff, btn) {
-            this.selectedDiff = diff;
-            const colors = { easy: 'var(--success)', medium: '#F39C12', hard: '#E74C3C' };
-            document.querySelectorAll('.battle-diff-btn').forEach(b => {
-                b.classList.remove('active');
-                b.style.borderColor = 'transparent';
-            });
-            btn.classList.add('active');
-            btn.style.borderColor = colors[diff];
-        },
+    getModeLabel(mode) {
+        const labels = { 
+            'standard': '🔢 Классика', 
+            'sign': '🧩 Найди знак', 
+            'square': '📐 Степени', 
+            'fractions': '🍰 Дроби' 
+        };
+        return labels[mode] || mode;
+    },
 
-        getModeLabel(mode) {
-            const labels = { 
-                'standard': '🔢 Классика', 
-                'sign': '🧩 Найди знак', 
-                'square': '📐 Степени', 
-                'fractions': '🍰 Дроби' 
-            };
-            return labels[mode] || mode;
-        },
+    getDiffLabel(diff) {
+        const labels = { 
+            'easy': '🟢 Легко', 
+            'medium': '🟡 Средне', 
+            'hard': '🔴 Сложно' 
+        };
+        return labels[diff] || diff;
+    },
 
-        getDiffLabel(diff) {
-            const labels = { 
-                'easy': '🟢 Легко', 
-                'medium': '🟡 Средне', 
-                'hard': '🔴 Сложно' 
-            };
-            return labels[diff] || diff;
-        },
-        // ГЛАВНАЯ ФУНКЦИЯ ВХОДА
-        async connect() {
-            const rawCode = document.getElementById('battle-code-input').value.trim();
-            if (rawCode.length < 3) return App.toast("Код слишком короткий!");
-            const code = rawCode.replace(/\s/g, ''); 
-            this.currentCode = code;
+    // ГЛАВНАЯ ФУНКЦИЯ ВХОДА
+    async connect() {
+        // this.currentCode уже установлен в createBattle() или joinBattle()
+        const code = this.currentCode;
 
-            // 1. Ограничение 4 часа
-            const lastBattle = DB.user.lastBattleTime || 0;
-            const now = Date.now();
-            const waitTime = 4 * 60 * 60 * 1000; 
+        // 1. Ограничение 4 часа
+        const lastBattle = DB.user.lastBattleTime || 0;
+        const now = Date.now();
+        const waitTime = 1 * 60 * 60 * 1000;
 
-            if (now - lastBattle < waitTime) {
-                const remaining = waitTime - (now - lastBattle);
-                const hours = Math.floor(remaining / (60 * 60 * 1000));
-                const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-                return alert(`🕒 Арена закрыта! \n\nСледующий бой через ${hours}ч ${mins}мин.`);
-            }
+        if (now - lastBattle < waitTime) {
+            const remaining = waitTime - (now - lastBattle);
+            const hours = Math.floor(remaining / (60 * 60 * 1000));
+            const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+            return alert(`🕒 Арена закрыта! \n\nСледующий бой через ${hours}ч ${mins}мин.`);
+        }
 
-            // 2. Проверка фиксированной ставки 15 монет
-            this.bet = 15; 
-            if (DB.user.coins < this.bet) return App.toast("Нужно минимум 15 монет!");
+        // 2. Проверка монет
+        this.bet = 15;
+        if (DB.user.coins < this.bet) return App.toast("Нужно минимум 15 монет!");
 
-            // 🔒 СПИСЫВАЕМ МОНЕТЫ СРАЗУ (ДО подключения)
-            DB.user.coins -= 15;
-            Data.save();
-            App.updateUI();
+        // 🔒 СПИСЫВАЕМ МОНЕТЫ
+        DB.user.coins -= 15;
+        Data.save();
+        App.updateUI();
 
-            App.toast("⏳ Подключение...");
+        App.toast("⏳ Подключение...");
 
-            try {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code);
-                const snap = await window.DB_Online.getDoc(docRef);
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code);
+            const snap = await window.DB_Online.getDoc(docRef);
 
-                // СЦЕНАРИЙ 1: КОМНАТЫ НЕТ -> Я СОЗДАТЕЛЬ (P1)
-                if (!snap.exists()) {
-                    this.myRole = 'p1';
-                    await this.createRoom(docRef);
-                } 
-                // СЦЕНАРИЙ 2: КОМНАТА ЕСТЬ -> Я ГОСТЬ (P2)
-                else {
-                    const data = snap.data();
-                    if (data.p2) {
-                        // ❌ КОМНАТА ПОЛНАЯ - ВОЗВРАЩАЕМ ДЕНЬГИ
-                        DB.user.coins += 15;
-                        Data.save();
-                        App.updateUI();
-                        return alert("⛔️ Комната уже полная!");
-                    }
-                    
-                    this.myRole = 'p2';
-                    await this.joinRoom(docRef, data);
-                }
-
-                this.showLobby();
-                this.startListening(docRef);
-
-            } catch (e) {
-                console.error(e);
-                // ❌ ОШИБКА - ВОЗВРАЩАЕМ ДЕНЬГИ
-                DB.user.coins += 15;
-                Data.save();
-                App.updateUI();
-                App.toast("Ошибка сети");
-            }
-        },
-
-        async createRoom(docRef) {
-            const expiresAt = Date.now() + (5 * 60 * 1000); // 5 минут на ожидание
-            
-            await window.DB_Online.setDoc(docRef, {
-                p1: DB.user.name,
-                p1_id: Auth.currentUser.id,
-                p1_score: -1,
-                p2: null,
-                p2_id: null,
-                p2_score: -1,
-                bet: 15,
-                mode: this.selectedMode,
-                diff: this.selectedDiff,
-                status: 'waiting',
-                date: new Date(TimeGuard.getTrueTime()).toISOString(),
-                expiresAt: expiresAt // ← ДОБАВЬТЕ
-            });
-        },
-
-        async joinRoom(docRef, currentData) {
-            // Проверяем, есть ли у входящего 15 монет
-            if (DB.user.coins < 15) return alert("Недостаточно монет для участия (нужно 15)!");
-
-            this.bet = 15;
-            await window.DB_Online.updateDoc(docRef, {
-                p2: DB.user.name,
-                p2_id: Auth.currentUser.id,
-                status: 'ready'
-            });
-        },
-
-
-        showLobby() {
-            document.getElementById('battle-login-view').style.display = 'none';
-            document.getElementById('battle-lobby-view').style.display = 'block';
-            document.getElementById('lobby-code-display').innerText = this.currentCode;
-
-            // Сразу пишем себя
-            if (this.myRole === 'p1') {
-                document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
-                document.getElementById('p2-name').innerText = "Ожидание...";
-                
-                // ← ДОБАВЬТЕ ЭТИ СТРОКИ (для создателя)
-                document.getElementById('lobby-mode-display').innerText = this.getModeLabel(this.selectedMode);
-                document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(this.selectedDiff);
+            if (!snap.exists()) {
+                this.myRole = 'p1';
+                await this.createRoom(docRef);
             } else {
-                document.getElementById('p1-name').innerText = "Соперник";
-                document.getElementById('p2-name').innerText = DB.user.name + " (Вы)";
-            }
-        },
-
-        // СЛУШАЕМ ИЗМЕНЕНИЯ (ЧТОБЫ УВИДЕТЬ ДРУГА И НАЧАТЬ ИГРУ)
-        startListening(docRef) {
-            this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
-                if (!docSnap.exists()) return;
-                const data = docSnap.data();
-
-                // 🔒 ПРОВЕРКА ИСТЕЧЕНИЯ ВРЕМЕНИ
-                if (data.expiresAt && Date.now() > data.expiresAt && data.status === 'waiting') {
-                    if (this.listener) this.listener();
-                    
-                    // Возвращаем монеты
+                const data = snap.data();
+                if (data.p2) {
                     DB.user.coins += 15;
                     Data.save();
                     App.updateUI();
-                    
-                    alert("⏰ Время ожидания истекло. Монеты возвращены.");
-                    location.reload();
-                    return;
+                    return alert("⛔️ Комната уже полная!");
                 }
+                
+                this.myRole = 'p2';
+                await this.joinRoom(docRef, data);
+            }
 
-                // Обновляем имена на экране
-                if (data.p1) document.getElementById('p1-name').innerText = data.p1 + (this.myRole === 'p1' ? " (Вы)" : "");
-                if (data.p2) document.getElementById('p2-name').innerText = data.p2 + (this.myRole === 'p2' ? " (Вы)" : "");
+            this.showLobby();
+            this.startListening(docRef);
 
-                // ← ДОБАВЬТЕ ЭТИ СТРОКИ (для гостя показываем настройки хоста)
-                if (this.myRole === 'p2' && data.mode && data.diff) {
-                    document.getElementById('lobby-mode-display').innerText = this.getModeLabel(data.mode);
-                    document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(data.diff);
-                }
+        } catch (e) {
+            console.error(e);
+            DB.user.coins += 15;
+            Data.save();
+            App.updateUI();
+            App.toast("Ошибка сети");
+        }
+    },
 
-                // 🔥 ЗАПУСК ИГРЫ (Если статус ready и мы еще не начали)
-                if (data.status === 'ready' && !this.gameStarted) {
-                    this.gameStarted = true;
-                    
-                    setTimeout(() => {
-                        if (this.listener) this.listener();
-                        document.getElementById('battle-modal').classList.remove('show');
-                        Trainer.startPVP(this.myRole, this.currentCode, data.bet, data.mode, data.diff);
-                    }, 1000);
-                }
-            });
-        },
-
-
-        async leaveLobby() {
-    if (this.listener) this.listener();
-    
-    // 🔒 ВОЗВРАЩАЕМ МОНЕТЫ ПРИ ВЫХОДЕ ИЗ ЛОББИ (если битва не началась)
-    if (!this.gameStarted) {
-        DB.user.coins += 15;
-        Data.save();
-        App.updateUI();
-        App.toast("💰 Монеты возвращены");
+    async createRoom(docRef) {
+        const expiresAt = Date.now() + (5 * 60 * 1000);
         
-        // Если вы создатель - удаляем комнату
-        if (this.myRole === 'p1' && this.currentCode) {
-            try {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode);
-                await window.DB_Online.deleteDoc(docRef);
-            } catch (e) {
-                console.error("Не удалось удалить комнату:", e);
+        await window.DB_Online.setDoc(docRef, {
+            p1: DB.user.name,
+            p1_id: Auth.currentUser.id,
+            p1_score: -1,
+            p2: null,
+            p2_id: null,
+            p2_score: -1,
+            bet: 15,
+            mode: this.selectedMode,
+            diff: this.selectedDiff,
+            status: 'waiting',
+            date: new Date().toISOString(),
+            expiresAt: expiresAt
+        });
+    },
+
+    async joinRoom(docRef, currentData) {
+        await window.DB_Online.updateDoc(docRef, {
+            p2: DB.user.name,
+            p2_id: Auth.currentUser.id,
+            status: 'ready'
+        });
+    },
+
+    showLobby() {
+        document.getElementById('battle-login-view').style.display = 'none';
+        document.getElementById('battle-lobby-view').style.display = 'block';
+        document.getElementById('lobby-code-display').innerText = this.currentCode;
+
+        if (this.myRole === 'p1') {
+            document.getElementById('p1-name').innerText = DB.user.name + " (Вы)";
+            document.getElementById('p2-name').innerText = "Ожидание...";
+            document.getElementById('lobby-mode-display').innerText = this.getModeLabel(this.selectedMode);
+            document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(this.selectedDiff);
+        } else {
+            document.getElementById('p1-name').innerText = "Соперник";
+            document.getElementById('p2-name').innerText = DB.user.name + " (Вы)";
+        }
+    },
+
+    startListening(docRef) {
+        this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+
+            // Проверка истечения времени
+            if (data.expiresAt && Date.now() > data.expiresAt && data.status === 'waiting') {
+                if (this.listener) this.listener();
+                DB.user.coins += 15;
+                Data.save();
+                App.updateUI();
+                alert("⏰ Время ожидания истекло. Монеты возвращены.");
+                location.reload();
+                return;
+            }
+
+            // Обновляем имена
+            if (data.p1) document.getElementById('p1-name').innerText = data.p1 + (this.myRole === 'p1' ? " (Вы)" : "");
+            if (data.p2) document.getElementById('p2-name').innerText = data.p2 + (this.myRole === 'p2' ? " (Вы)" : "");
+
+            // Гость видит настройки хоста
+            if (this.myRole === 'p2' && data.mode && data.diff) {
+                document.getElementById('lobby-mode-display').innerText = this.getModeLabel(data.mode);
+                document.getElementById('lobby-diff-display').innerText = this.getDiffLabel(data.diff);
+            }
+
+            // Запуск игры
+            if (data.status === 'ready' && !this.gameStarted) {
+                this.gameStarted = true;
+                
+                setTimeout(() => {
+                    if (this.listener) this.listener();
+                    document.getElementById('battle-modal').classList.remove('show');
+                    Trainer.startPVP(this.myRole, this.currentCode, data.bet, data.mode, data.diff);
+                }, 1000);
+            }
+        });
+    },
+
+    async leaveLobby() {
+        if (this.listener) this.listener();
+        
+        if (!this.gameStarted) {
+            DB.user.coins += 15;
+            Data.save();
+            App.updateUI();
+            App.toast("💰 Монеты возвращены");
+            
+            if (this.myRole === 'p1' && this.currentCode) {
+                try {
+                    const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode);
+                    await window.DB_Online.deleteDoc(docRef);
+                } catch (e) {
+                    console.error("Не удалось удалить комнату:", e);
+                }
             }
         }
+        
+        location.reload();
     }
-    
-    location.reload();
-},
-    };
+};                    
 
     const Trainer = { 
         lastAnswerTime: 0,
@@ -6698,30 +6860,44 @@ else if (this.mode === 'fractions') {
 
         // Финал: оба закончили
         finishPVP(data) {
-            if (this.pvpListener) this.pvpListener(); // Выключаем слушатель
+            if (this.pvpListener) this.pvpListener();
 
             const myScore = (this.pvpRole === 'p1') ? data.p1_score : data.p2_score;
             const oppScore = (this.pvpRole === 'p1') ? data.p2_score : data.p1_score;
             const oppName = (this.pvpRole === 'p1') ? data.p2 : data.p1;
 
             let msg = "";
+            let resultMsg = "";
             
             if (myScore > oppScore) {
-            msg = "🏆 ПОБЕДА!";
-            DB.user.coins += data.bet * 2;
-            DB.user.pvpWins = (DB.user.pvpWins || 0) + 1; // +1 к победам
-        } else if (myScore < oppScore) {
-            msg = "💀 Поражение";
-            DB.user.pvpLosses = (DB.user.pvpLosses || 0) + 1; // +1 к поражениям
-        }
+                msg = "🏆 ПОБЕДА!";
+                resultMsg = `Ты выиграл ${myScore} : ${oppScore}`;
+                DB.user.coins += data.bet * 2;
+                DB.user.pvpWins = (DB.user.pvpWins || 0) + 1;
+                SoundSys.play('win');
+                FX.confetti();
+            } else if (myScore < oppScore) {
+                msg = "💀 ПОРАЖЕНИЕ";
+                resultMsg = `Ты проиграл ${myScore} : ${oppScore}`;
+                DB.user.pvpLosses = (DB.user.pvpLosses || 0) + 1;
+                SoundSys.play('error');
+            } else {
+                msg = "🤝 НИЧЬЯ";
+                resultMsg = `Счёт равный ${myScore} : ${oppScore}`;
+                DB.user.coins += data.bet; // Возвращаем свою ставку
+            }
 
             document.querySelector('#trainer-result h2').innerText = msg;
-            document.getElementById('result-xp').innerText = `Ты: ${myScore}`;
-            document.getElementById('result-coins').innerText = `${oppName}: ${oppScore}`;
+            document.getElementById('result-score').innerText = myScore; // Твой счёт
+            document.getElementById('result-xp').innerText = resultMsg; // Результат
+            document.getElementById('result-coins').innerText = `Соперник: ${oppName}`; // Имя соперника
             
-            // Добавляем красивую кнопку выхода
             const btn = document.querySelector('#trainer-result button');
-            btn.innerText = "Забрать награду и выйти";
+            btn.innerText = "✓ Закрыть";
+            btn.onclick = () => {
+                document.getElementById('trainer-result').style.display = 'none';
+                Trainer.init(); // Возврат в меню тренажера
+            };
             
             Data.save();
             App.updateUI();
@@ -9271,11 +9447,11 @@ function cleanSubjects() {
         </div>
     </div>
 
-    <!-- BATTLE MODAL (Обновленный с правильными цветами) -->
+    <!-- BATTLE MODAL (Обновленный с раздельными кнопками) -->
         <div id="battle-modal" class="modal" style="z-index: 12000;">
             <div class="modal-content" style="text-align: center; position: relative;">
                 
-                <!-- КНОПКА ЗАКРЫТЬ (Крестик) -->
+                <!-- КНОПКА ЗАКРЫТЬ -->
                 <button onclick="document.getElementById('battle-modal').classList.remove('show')" 
                         style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer;">
                     ✕
@@ -9285,19 +9461,6 @@ function cleanSubjects() {
                 
                 <!-- ЭКРАН 1: ВХОД / СОЗДАНИЕ -->
                 <div id="battle-login-view">
-                    <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">
-                        Введи код друга или создай свой:
-                    </p>
-
-                    <!-- Группа ввода кода -->
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <input type="number" id="battle-code-input" class="input-field" placeholder="123" style="text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 3px; margin: 0;">
-                        
-                        <!-- Кнопка генерации кода -->
-                        <button class="btn btn-outline" onclick="BattleSys.genRandom()" style="width: auto; padding: 0 15px; border-color: var(--primary); color: var(--primary);">
-                            🎲 Создать
-                        </button>
-                    </div>
                     
                     <!-- ВЫБОР РЕЖИМА -->
                     <div style="background: var(--bg); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
@@ -9340,12 +9503,37 @@ function cleanSubjects() {
                     
                     <p style="font-weight: bold; color: var(--gold); margin: 15px 0;">Ставка: 15 💰</p>
 
-                    <button class="btn btn-primary" onclick="BattleSys.connect()" style="width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);">
-                        🚀 В БОЙ
-                    </button>
+                    <!-- СОЗДАТЬ БОЙ -->
+                    <div style="background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 14px;">🎲 Создать бой</h4>
+                        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 10px;">Сгенерируй код и отправь другу</p>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="battle-code-create" class="input-field" placeholder="Код" readonly style="text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 2px; margin: 0; background: var(--surface);">
+                            <button class="btn btn-outline" onclick="BattleSys.generateCode()" style="padding: 0 15px; border-color: var(--primary); color: var(--primary);">
+                                🎲
+                            </button>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="BattleSys.createBattle()" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 16px;">
+                            🚀 Создать бой
+                        </button>
+                    </div>
+
+                    <!-- ПРИСОЕДИНИТЬСЯ -->
+                    <div style="background: var(--bg); padding: 15px; border-radius: 12px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 14px;">🔗 Присоединиться</h4>
+                        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 10px;">Введи код друга</p>
+                        
+                        <input type="number" id="battle-code-join" class="input-field" placeholder="123" style="text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px;">
+                        
+                        <button class="btn btn-primary" onclick="BattleSys.joinBattle()" style="width: 100%; padding: 12px; font-size: 16px; background: #2ECC71;">
+                            ⚔️ Присоединиться
+                        </button>
+                    </div>
                 </div>
 
-                <!-- ЭКРАН 2: ЛОББИ (ОЖИДАНИЕ) -->
+                <!-- ЭКРАН 2: ЛОББИ -->
                 <div id="battle-lobby-view" style="display: none;">
                     <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
                     <h3 style="color: var(--text);">Ожидание соперника...</h3>
