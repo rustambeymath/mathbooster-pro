@@ -336,7 +336,7 @@ window.FCM = FCM;
 
         </script>
         
-    <style>
+<style>
         .profile-img div, .item-icon, .user-avatar {
             font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
         }
@@ -1794,6 +1794,8 @@ body.dark-mode .subject-item-fixed {
         color: #333; /* Очень тусклый текст */
         font-family: monospace;
         touch-action: manipulation;
+        cursor: none;
+        backdrop-filter: brightness(0.2);
     }
 
     #eco-overlay.active {
@@ -1831,17 +1833,37 @@ body.dark-mode .subject-item-fixed {
         100% { transform: translate(0, 0); }
     }
 
-    .eco-floater {
-        animation: drift 60s infinite linear;
-        text-align: center;
-    }
+    /* Контейнер, который будет двигаться */
+.eco-floater {
+    position: absolute; /* Обязательно для свободного перемещения */
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Запускаем медленное движение на 60 секунд */
+    animation: drift 60s infinite linear; 
+    will-change: transform; /* Подсказка браузеру для плавности */
+}
 
-    #eco-timer-display {
-        font-size: 80px;
-        font-weight: bold;
-        color: #444444; /* <--- ТЕПЕРЬ ОН БУДЕТ ВИДЕН */
-        font-family: monospace;
-    }
+/* Траектория движения (плавный хаотичный круг) */
+@keyframes drift {
+    0% { transform: translate(0, -30px); }
+    25% { transform: translate(30px, 30px); }
+    50% { transform: translate(-30px, 60px); }
+    75% { transform: translate(-50px, 0px); }
+    100% { transform: translate(0, -30px); }
+}
+
+/* Сам текст таймера в Эко-режиме */
+#eco-timer-display {
+    font-size: 80px;
+    font-weight: bold;
+    color: #444; /* Тусклый цвет, чтобы не слепить ночью */
+    font-family: monospace;
+    text-shadow: 0 0 10px rgba(255,255,255,0.05);
+}
 
 
 
@@ -2426,7 +2448,68 @@ body.dark-mode .subject-item-fixed {
                 width: 100%;
                 transition: width 1s linear;
             }
+            /* Фиксация размера кнопки старта/паузы */
+            #btn-start {
+                height: 55px !important; /* Фиксированная высота */
+                white-space: nowrap;     /* Запрет переноса текста */
+                overflow: hidden;        /* Скрывать всё, что не влезло */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;         /* Базовый размер */
+                transition: background 0.2s, transform 0.1s;
+            }
 
+            /* Если экран маленький, уменьшаем шрифт внутри кнопки автоматически */
+            @media (max-width: 380px) {
+                #btn-start {
+                    font-size: 12px;
+                }
+            }
+            /* 🛡️ СТРОГИЙ ХАРДКОР (Minimalist Ember) */
+
+            /* ❤️ ХАРДКОР */
+            body #timer.timer-hardcore {
+                color: #FF4757 !important;
+                background: none !important; /* Отключает золотой/платиновый градиент */
+                -webkit-background-clip: initial !important; /* Сброс эффектов темы */
+                -webkit-text-fill-color: #FF4757 !important; /* Принудительный красный */
+                text-shadow: 0 0 20px rgba(255, 71, 87, 0.5) !important;
+                display: inline-block;
+                animation: simple-heartbeat 1s infinite ease-in-out !important;
+            }
+
+            @keyframes simple-heartbeat {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.08); }
+            }
+        /* 🔥 ЭВОЛЮЦИЯ СТРИКОВ */
+.streak-icon {
+    display: inline-block;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Свечение для синего пламени (14+ дней) */
+.streak-blue {
+    filter: drop-shadow(0 0 8px #00d2ff);
+    animation: streak-pulse 1.5s infinite alternate;
+}
+
+/* Эффект для вулкана (30+ дней) */
+.streak-volcano {
+    filter: drop-shadow(0 0 12px #ff4757);
+    animation: volcano-shake 0.2s infinite alternate;
+}
+
+@keyframes streak-pulse {
+    from { transform: scale(1); opacity: 0.8; }
+    to { transform: scale(1.2); opacity: 1; }
+}
+
+@keyframes volcano-shake {
+    from { transform: rotate(-5deg); }
+    to { transform: rotate(5deg); }
+}
         </style>
         
     </head>
@@ -2639,6 +2722,7 @@ body.dark-mode .subject-item-fixed {
     <div style="margin-top: 25px;">
         <h3 style="margin-bottom: 10px;">🎯 Квесты на сегодня</h3>
         <div id="quests-container"></div>
+        <div id="weekly-quest-container"></div>
     </div>
 
     <div class="card" onclick="App.editMonthlyGoal()" style="margin-top: 20px; cursor: pointer; background: linear-gradient(135deg, var(--surface), #f0f3ff);">
@@ -3345,50 +3429,82 @@ body.dark-mode .subject-item-fixed {
         </div>
     </div>
 
-    <!-- ABOUT MODAL -->
-    <div id="about-modal" class="modal">
-        <div class="modal-content" style="padding: 0; overflow: hidden; max-width: 360px; border-radius: 30px;">
+    <!-- ABOUT MODAL (Финальная адаптивная версия) -->
+<div id="about-modal" class="modal">
+    <!-- Добавлен overflow-y: auto и max-height для прокрутки -->
+    <div class="modal-content" style="padding: 0; max-width: 360px; border-radius: 30px; border: none; position: relative; max-height: 90vh; overflow-y: auto; overflow-x: hidden; display: block;">
+        
+        <!-- КРЕСТИК (Фиксированный сверху справа) -->
+        <div style="position: sticky; top: 0; width: 100%; height: 0; z-index: 100;">
+            <button onclick="document.getElementById('about-modal').classList.remove('show')" 
+                    style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+                ✕
+            </button>
+        </div>
+
+        <!-- Шапка -->
+        <div style="background: linear-gradient(135deg, #6C63FF, #8B7EFF); padding: 40px 20px 30px 20px; color: white; text-align: center;">
+            <div style="width: 70px; height: 70px; background: white; border-radius: 22px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); animation: float 3s infinite ease-in-out;">
+                🚀
+            </div>
+            <h2 style="margin: 0; font-size: 24px; font-weight: 900;">MathBooster PRO</h2>
+            <div style="opacity: 0.9; font-size: 13px; font-weight: 500;">Твой личный бухгалтер знаний</div>
+        </div>
+
+        <!-- Контент -->
+        <div style="padding: 25px; background: var(--surface);">
+            <h4 style="margin-bottom: 15px; color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Возможности системы:</h4>
             
-            <!-- Шапка -->
-            <div style="background: linear-gradient(135deg, #6C63FF, #8B7EFF); padding: 30px 20px; color: white; text-align: center;">
-                <div style="width: 65px; height: 65px; background: white; border-radius: 20px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
-                    🚀
+            <div style="text-align: left; display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">🛡️</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Контроль:</b> Умный таймер с защитой от читов.</span>
                 </div>
-                <h2 style="margin: 0; font-size: 22px; font-weight: 800;">MathBooster PRO</h2>
-                <div style="opacity: 0.9; font-size: 13px;">Эволюция твоего обучения</div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">💰</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Экономика:</b> Зарабатывай на своем интеллекте.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">⚔️</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Арена:</b> PVP дуэли в реальном времени.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">🔐</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Безопасность:</b> Облако и коды спасения.</span>
+                </div>
             </div>
 
-            <!-- Контент -->
-            <div style="padding: 25px;">
-                <h4 style="margin-bottom: 10px; color: var(--primary);">Что ты получаешь?</h4>
-                <ul style="text-align: left; font-size: 13px; color: var(--text); padding-left: 20px; line-height: 1.6;">
-                    <li><b>Контроль времени:</b> Умный таймер с Anti-AFK защитой.</li>
-                    <li><b>Экономика:</b> Зарабатывай монеты своим умом.</li>
-                    <li><b>PVP Арена:</b> Вызывай друзей на математические дуэли.</li>
-                    <li><b>RPG Прогресс:</b> Пройди путь от Бронзы до Легенды.</li>
-                    <li><b>Безопасность:</b> Код спасения защитит твой прогресс.</li>
-                </ul>
-
-                <div style="background: var(--bg); border-radius: 15px; padding: 15px; margin-top: 20px; text-align: left; font-size: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: var(--text-light);">Автор:</span>
-                        <span style="font-weight: bold;">Mansurov Rustam</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: var(--text-light);">Версия:</span>
-                        <span style="font-weight: bold; color: var(--success);">1.0 PRO Active ✅</span>
-                    </div>
+            <!-- Инфо-бокс -->
+            <div style="background: var(--bg); border-radius: 20px; padding: 15px; text-align: left; font-size: 12px; border: 1px solid rgba(0,0,0,0.03); margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: var(--text-light);">Разработчик:</span>
+                    <span style="font-weight: 800; color: var(--text);">Mansurov Rustam</span>
                 </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-light);">Статус:</span>
+                    <span style="font-weight: 800; color: var(--success);">PRO Active ✅</span>
+                </div>
+            </div>
 
-                <button class="btn btn-primary" style="margin-top: 20px; width: 100%;" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">
-                    📖 Узнать больше
+            <!-- Кнопки действий -->
+            <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 10px;">
+                <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">
+                    📖 Подробная философия
                 </button>
-                <button class="btn btn-outline" style="margin-top: 10px; width: 100%; border: none;" onclick="document.getElementById('about-modal').classList.remove('show')">
-                    Закрыть
+                
+                <button class="btn btn-outline" style="width: 100%; padding: 15px; border: 2px solid var(--primary); color: var(--primary); background: transparent;" 
+                        onclick="document.getElementById('about-modal').classList.remove('show'); Tutorial.start()">
+                    🎓 Посмотреть обучение заново
+                </button>
+
+                <button class="btn" style="width: 100%; background: #eee; color: #333; padding: 15px; font-weight: bold;" 
+                        onclick="document.getElementById('about-modal').classList.remove('show')">
+                    Закрыть окно
                 </button>
             </div>
         </div>
     </div>
+</div>
 
     <!-- LEVEL UP MODAL (Новое красивое окно) -->
     <div id="levelup-modal" class="modal" style="z-index: 10000;">
@@ -3876,7 +3992,17 @@ body.dark-mode .subject-item-fixed {
             },
             usedCodes: [],
             lifetimeXP: 0,
-            inventory: { shield: 0 }
+            inventory: { shield: 0 },
+            dailyQuests: { 
+                date: "", studyMin: 0, mathSolved: 0, pvpDone: 0, claimed: [], 
+                targets: { studyMin: 30, mathSolved: 20, pvpDone: 1 } 
+            },
+            weeklyQuest: {
+                weekId: "", 
+                progressSec: 0,
+                targetSec: 18000, // Цель: 5 часов (5 * 3600)
+                claimed: false
+            }
         }, 
 
         settings: { 
@@ -4704,56 +4830,53 @@ body.dark-mode .subject-item-fixed {
                 const nowTime = Date.now();
 
                 snap.forEach(doc => {
-                    const u = doc.data();
-                    const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
-                    const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
-                    const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
-                    const isTitan = u.isTitan === true;
-                    
-                    html += `
-                        <div class="user-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; gap: 10px; ${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : ''}">
-                            
-                            <!-- ЛЕВАЯ ЧАСТЬ (Номер + Аватар + Имя) -->
-                            <!-- 🌟 УВЕЛИЧЕН GAP ДО 15px 🌟 -->
-                            <div style="display:flex; align-items:center; gap:15px; flex: 1; min-width: 0;">
-                                
-                                <div style="font-weight:bold; min-width:45px; white-space:nowrap; flex-shrink:0; color:var(--text-light); text-align:left;">#${rank}</div>
-                                
-                                <!-- Аватарка -->
-                                <div style="position:relative; width:45px; height:45px; flex-shrink: 0;">
-                                    <div class="${frameClass}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                                        <span style="font-size:24px; line-height: 1; display: block; transform: translateY(-2px);">
-                                            ${u.avatar || '😎'}
-                                        </span>
-                                    </div>
-                                    ${isOnline ? '<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:2;"></div>' : ''}
-                                </div>
+    const u = doc.data();
+    const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
+    const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
+    const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
+    
+    html += `
+        <div class="user-list-item" style="display: flex; align-items: center; padding: 8px 10px; ${isMe ? 'border:2px solid var(--primary); background:rgba(108,99,255,0.05);' : 'border: 1px solid rgba(0,0,0,0.05);'}">
+            
+            <!-- 1. НОМЕР И АВАТАР (Сгруппированы плотно) -->
+            <div style="display: flex; align-items: center; flex-shrink: 0; gap: 6px;">
+                <div style="font-weight:900; width: 26px; color:var(--text-light); font-size: 11px; text-align: right;">
+                    #${rank}
+                </div>
+                
+                <div style="position:relative; width:36px; height:36px;">
+                    <div class="${frameClass}" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius: 50%;">
+                        <span style="font-size:18px; line-height: 1;">
+                            ${u.avatar || '😎'}
+                        </span>
+                    </div>
+                    ${isOnline ? '<div style="position:absolute; bottom:-1px; right:-1px; width:10px; height:10px; background:#00d26a; border:2px solid var(--surface); border-radius:50%; z-index:2;"></div>' : ''}
+                </div>
+            </div>
 
-                                <!-- ИМЯ И СТАТУС -->
-                                <!-- 🌟 ДОБАВЛЕН margin-left: 8px ДЛЯ ЗАЩИТЫ ОТ ШИРОКИХ РАМОК 🌟 -->
-                                <div style="display:flex; flex-direction:column; justify-content:center; flex: 1; min-width: 0; margin-left: 8px;">
-                                    
-                                    <!-- 🌟 ДОБАВЛЕН margin-bottom: 3px ЧТОБЫ ИМЯ И СТАТУС НЕ СЛИПАЛИСЬ 🌟 -->
-                                    <b style="display:block; font-size: clamp(13px, 4vw, 15px); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 3px;">
-                                        ${u.isTitan ? '🌌 ' : (u.isKing ? '👑 ' : (u.isPro ? '⭐ ' : (u.isVip ? '💎 ' : '')))}${u.name}
-                                    </b>
-                                    
-                                    <small style="font-size:11px; opacity:0.7; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                        Lvl ${u.level} • ${u.currentTitle || 'Участник'}
-                                    </small>
-                                </div>
-                            </div>
+            <!-- 2. ИМЯ И СТАТУС (Добавлен отступ слева 12px) -->
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; margin-left: 12px;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 12px; flex-shrink: 0;">${u.isTitan ? '🌌' : (u.isKing ? '👑' : (u.isPro ? '⭐' : (u.isVip ? '💎' : '')))}</span>
+                    <b style="font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${u.name}
+                    </b>
+                </div>
+                <small style="font-size:10px; opacity:0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Lvl ${u.level} • ${u.currentTitle || 'Участник'}
+                </small>
+            </div>
 
-                            <!-- ПРАВАЯ ЧАСТЬ (Часы) -->
-                            <div style="text-align:right; flex-shrink: 0; padding-left: 10px;">
-                                <b style="color:var(--primary); font-size:15px; white-space:nowrap;">
-                                    ${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м
-                                </b>
-                            </div>
+            <!-- 3. ВРЕМЯ -->
+            <div style="text-align:right; flex-shrink: 0; margin-left: 6px;">
+                <b style="color:var(--primary); font-size: 12px; white-space:nowrap;">
+                    ${Math.floor(u.totalSec/3600)}ч ${Math.floor((u.totalSec%3600)/60)}м
+                </b>
+            </div>
 
-                        </div>`;
-                    rank++;
-                });
+        </div>`;
+    rank++;
+});
                 list.innerHTML = html;
             } catch (e) {
                 console.error(e);
@@ -5054,20 +5177,37 @@ body.dark-mode .subject-item-fixed {
         },
 
         next(slideNum) {
-            document.querySelectorAll('.tutorial-slide').forEach(el => el.style.display = 'none');
-            const slide = document.getElementById('tut-' + slideNum);
-            if(slide) {
-                slide.style.display = 'block';
-                slide.style.animation = 'fadeIn 0.5s';
-            }
-        },
-
-        close() {
-            document.getElementById('tutorial-modal').classList.remove('show');
-            FX.confetti(); 
-            SoundSys.play('success');
+        // Скрываем все слайды
+        document.querySelectorAll('.tutorial-slide').forEach(el => el.style.display = 'none');
+        
+        // Показываем нужный
+        const slide = document.getElementById('tut-' + slideNum);
+        if(slide) {
+            slide.style.display = 'block';
+            slide.style.animation = 'fadeInUp 0.4s ease';
         }
-    };
+
+        // Обновляем точки
+        document.querySelectorAll('.tut-dot').forEach((dot, index) => {
+            if (index + 1 === slideNum) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+
+        SoundSys.play('click');
+    },
+
+    close() {
+        document.getElementById('tutorial-modal').classList.remove('show');
+        FX.confetti(); 
+        SoundSys.play('level_up');
+        App.toast("🚀 Добро пожаловать!");
+
+        // 🔥 ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ НАГРАДЫ ДЛЯ НОВИЧКА
+        setTimeout(() => {
+            if (window.DailySys) DailySys.check();
+        }, 600);
+    }
+};
 
 const Timer = {
     active: false,
@@ -5085,170 +5225,113 @@ const Timer = {
     checkInterval: null,
     lastCheckTime: 0,
     hardcoreTimeout: null, 
-    // Настройки проверки
-    CHECK_AFTER_SECONDS: 3600,  // Проверка 
-    CHECK_TIMEOUT: 60,          // Время на решение капчи
-    
-    lastRewardTime: 0,
-    REWARD_INTERVAL: 600,
-    async requestWakeLock() {
-            if ('wakeLock' in navigator) {
-                try {
-                    this.wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('✅ Экран не будет гаснуть');
-                } catch (err) {
-                    console.warn('Wake Lock не поддерживается');
-                }
-            }
-        },
-        
-        releaseWakeLock() {
-            if (this.wakeLock) {
-                this.wakeLock.release();
-                this.wakeLock = null;
-            }
-        },
+    hardcoreListenerAdded: false, // Флаг, чтобы не дублировать слушателя
 
-        getTrueTime() {
-            return TimeGuard.getTrueTime();
-        },
+    CHECK_AFTER_SECONDS: 3600,
+    CHECK_TIMEOUT: 60,
+    REWARD_INTERVAL: 600,
+
+    async requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+                console.log('✅ Экран не будет гаснуть');
+            } catch (err) {
+                console.warn('Wake Lock не поддерживается');
+            }
+        }
+    },
+    
+    releaseWakeLock() {
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+        }
+    },
+
+    getTrueTime() {
+        return TimeGuard.getTrueTime();
+    },
 
     initHardcoreWatch() {
-            if (!this.isStrict) return;
-            
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden && this.active && this.isStrict && !this.isPaused) {
-                    // Свернули экран в ХАРДКОРЕ - запускаем таймер на 5 секунд
-                    console.log('⚠️ ХАРДКОР: Экран свёрнут, даём 5 секунд...');
-                    
-                    this.hardcoreTimeout = setTimeout(() => {
-                        if (document.hidden && this.active) {
-                            // Всё ещё свёрнуто через 5 секунд - аннулируем
-                            console.log('❌ ХАРДКОР: Время вышло, сессия аннулирована');
-                            SoundSys.play('error');
-                            
-                            // Останавливаем БЕЗ сохранения
-                            clearInterval(this.interval);
-                            this.active = false;
-                            this.isRunning = false;
-                            this.releaseWakeLock();
-                            
-                            // Очистка в облаке
-                            if (window.DB_Online && Auth.currentUser) {
-                                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-                                window.DB_Online.updateDoc(docRef, {
-                                    "user.activeSessionStart": null,
-                                    "user.lastPing": null
-                                });
-                            }
-                            
-                            this.resetTimerUI();
-                            
-                            // Показываем уведомление
-                            App.toast("💀 ХАРДКОР провален! Дисциплина требует полной отдачи.");                            
-                            // Показываем модалку с объяснением
-                            const modal = document.createElement('div');
-                            modal.className = 'modal show';
-                            modal.style.zIndex = '99999';
-                            modal.innerHTML = `
-                                <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white;">
-                                    <h2 style="font-size: 28px; margin-bottom: 15px;">❌ Сессия аннулирована</h2>
-                                    <p style="font-size: 16px; margin-bottom: 20px;">
-                                        В режиме <b>ХАРДКОР</b> нельзя сворачивать экран.<br>
-                                        Ты не вернулся за 5 секунд.
-                                    </p>
-                                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                                        <div style="font-size: 14px; margin-bottom: 5px;">Монеты: <b style="font-size: 20px;">0 💰</b></div>
-                                        <div style="font-size: 12px; opacity: 0.8;">Прогресс не сохранён</div>
-                                    </div>
-                                    <button class="btn" style="background: white; color: #FF4757; font-weight: bold; width: 100%; padding: 15px;" onclick="this.closest('.modal').remove()">
-                                        Понятно
-                                    </button>
-                                </div>`;
-                            document.body.appendChild(modal);
+        if (!this.isStrict || this.hardcoreListenerAdded) return;
+        
+        this.hardcoreListenerAdded = true; // Ставим метку, что слушатель уже есть
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.active && this.isStrict && !this.isPaused) {
+                console.log('⚠️ ХАРДКОР: Экран свёрнут, даём 5 секунд...');
+                
+                this.hardcoreTimeout = setTimeout(() => {
+                    if (document.hidden && this.active) {
+                        console.log('❌ ХАРДКОР: Время вышло, сессия аннулирована');
+                        SoundSys.play('error');
+                        
+                        clearInterval(this.interval);
+                        this.active = false;
+                        this.isRunning = false;
+                        this.releaseWakeLock();
+                        
+                        if (window.DB_Online && Auth.currentUser) {
+                            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                            window.DB_Online.updateDoc(docRef, {
+                                "user.activeSessionStart": null,
+                                "user.lastPing": null
+                            });
                         }
-                    }, 5000); // 5 секунд
-                    
-                } else if (!document.hidden && this.hardcoreTimeout) {
-                    // Вернулись на экран - отменяем таймер
-                    console.log('✅ ХАРДКОР: Вернулся вовремя');
-                    clearTimeout(this.hardcoreTimeout);
-                    this.hardcoreTimeout = null;
-                }
-            });
-        },
+                        
+                        this.resetTimerUI();
+                        App.toast("💀 ХАРДКОР провален! Дисциплина требует полной отдачи.");
+                        
+                        const modal = document.createElement('div');
+                        modal.className = 'modal show';
+                        modal.style.zIndex = '99999';
+                        modal.innerHTML = `
+                            <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white;">
+                                <h2 style="font-size: 28px; margin-bottom: 15px;">❌ Сессия аннулирована</h2>
+                                <p style="font-size: 16px; margin-bottom: 20px;">В режиме <b>ХАРДКОР</b> нельзя сворачивать экран.</p>
+                                <button class="btn" style="background: white; color: #FF4757; font-weight: bold; width: 100%; padding: 15px;" onclick="this.closest('.modal').remove()">Понятно</button>
+                            </div>`;
+                        document.body.appendChild(modal);
+                    }
+                }, 5000);
+                
+            } else if (!document.hidden && this.hardcoreTimeout) {
+                clearTimeout(this.hardcoreTimeout);
+                this.hardcoreTimeout = null;
+            }
+        });
+    },
 
     preStart() {
         if (!navigator.onLine) return App.toast("❌ Нужен интернет для работы таймера");
         if (this.active) return App.toast("Таймер уже запущен");
 
         const options = [
-            { 
-                label: '🎯 Обычный', 
-                value: 'normal', 
-                reward: '5-20 💰',
-                desc: 'Можно ставить на паузу'
-            },
-            { 
-                label: '🔥 Хардкор', 
-                value: 'strict', 
-                reward: '7-30 💰',
-                desc: 'Награда ×1.5, но нельзя паузу'
-            }
+            { label: '🎯 Обычный', value: 'normal', reward: '5-20 💰', desc: 'Можно ставить на паузу' },
+            { label: '🔥 Хардкор', value: 'strict', reward: '7-30 💰', desc: 'Награда ×1.5, но нельзя паузу' }
         ];
 
-
-        
         const modal = document.createElement('div');
         modal.className = 'modal show';
         modal.style.zIndex = '15000';
         modal.innerHTML = `
             <div class="modal-content" style="text-align:center; max-width: 340px;">
                 <h3 style="margin-bottom: 10px;">⏱️ Выбери режим</h3>
-                
                 <div style="display:grid; gap:10px; margin-bottom: 15px;">
                     ${options.map(o => `
                         <div class="mode-btn" onclick="Timer.selectMode('${o.value}')" 
-                             style="padding:15px; border:2px solid var(--bg); border-radius:15px; cursor:pointer; transition:0.2s; text-align:left; background: var(--surface);">
-                            
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                <div style="font-size:20px; font-weight: bold;">${o.label}</div>
-                                <div style="font-size:16px; font-weight: bold; color: var(--primary);">${o.reward}</div>
+                             style="padding:15px; border:2px solid var(--bg); border-radius:15px; cursor:pointer; text-align:left; background: var(--surface);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-weight: bold;">${o.label}</div>
+                                <div style="font-weight: bold; color: var(--primary);">${o.reward}</div>
                             </div>
-                            
-                            <div style="font-size:12px; color: var(--text-light);">
-                                ${o.desc}
-                            </div>
+                            <div style="font-size:12px; color: var(--text-light);">${o.desc}</div>
                         </div>
                     `).join('')}
                 </div>
-
-                <div style="background: rgba(108, 99, 255, 0.05); padding: 10px; border-radius: 10px; margin-bottom: 15px; cursor: pointer;" onclick="document.querySelector('.modal.show').remove(); document.getElementById('timer-rules-modal').classList.add('show');">
-                    <div style="font-size: 11px; color: var(--primary); font-weight: bold;">
-                        💡 Как начисляются монеты? (нажми)
-                    </div>
-                </div>
-
-                <button class="btn btn-outline" onclick="this.closest('.modal').remove()" style="width: 100%;">
-                    Отмена
-                </button>
+                <button class="btn btn-outline" onclick="this.closest('.modal').remove()" style="width: 100%;">Отмена</button>
             </div>`;
         document.body.appendChild(modal);
-
-        setTimeout(() => {
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.onmouseenter = function() {
-                    this.style.borderColor = 'var(--primary)';
-                    this.style.transform = 'scale(1.02)';
-                    this.style.boxShadow = '0 5px 15px rgba(108, 99, 255, 0.15)';
-                };
-                btn.onmouseleave = function() {
-                    this.style.borderColor = 'var(--bg)';
-                    this.style.transform = 'scale(1)';
-                    this.style.boxShadow = 'none';
-                };
-            });
-        }, 100);
     },
 
     selectMode(mode) {
@@ -5257,23 +5340,24 @@ const Timer = {
         this.start();
     },
 
-        async start() {
-        if (!navigator.onLine) 
-            return App.toast("❌ Нужен интернет!");
+    async start() {
+        if (!navigator.onLine) return App.toast("❌ Нужен интернет!");
         if (this.active) return;
 
-        await TimeGuard.sync(); // Получаем честное время
+        await TimeGuard.sync();
 
         this.active = true;
-        this.sessionStartTime = Number(TimeGuard.getTrueTime());
         this.isRunning = true;
-        this.startTime = TimeGuard.getTrueTime();
+        this.isPaused = false;
+        this.sessionStartTime = Number(this.getTrueTime());
+        this.startTime = this.sessionStartTime;
+        this.totalPausedDuration = 0;
         this.sessionCoins = 0;
         this.lastPaidBlock = 0;
+        this.lastCheckTime = 0;
 
         await this.requestWakeLock(); 
 
-        // 🛡️ ЗАПИСЫВАЕМ СТАРТ В ОБЛАКО (ЭТО НЕЛЬЗЯ ПОДДЕЛАТЬ)
         if (window.DB_Online && Auth.currentUser) {
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             await window.DB_Online.updateDoc(docRef, {
@@ -5282,22 +5366,31 @@ const Timer = {
             });
         }
 
-        document.getElementById('timer').classList.add('timer-active-anim');
+        // --- ЛОГИКА ЦВЕТА И АНИМАЦИИ ---
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            // Полностью очищаем классы перед выбором
+            timerEl.classList.remove('timer-active-anim', 'timer-hardcore');
+            
+            if (this.isStrict) {
+                // Включаем КРАСНЫЙ ПУЛЬС
+                timerEl.classList.add('timer-hardcore');
+            } else {
+                // Включаем ОБЫЧНОЕ ДЫХАНИЕ
+                timerEl.classList.add('timer-active-anim');
+            }
+        }
+
+
         this.tick();
-        // --- РАНДОМНЫЕ ФРАЗЫ ПРИ СТАРТЕ ---
+
         const startPhrases = [
-            "🚀 Время становиться умнее!",
-            "🧠 Режим глубокого фокуса включен",
-            "⚡️ Протокол обучения запущен",
-            "📈 Твой путь к мастерству начат",
-            "📚 Удачной учебы, не отвлекайся!",
-            "💎 Каждая минута — это вклад в себя",
-            "🔥 Погнали! Мозг готов к работе",
-            "🎯 Фокус на максимум!"
+            "🚀 Время становиться умнее!", "🧠 Режим глубокого фокуса включен",
+            "⚡️ Протокол обучения запущен", "📈 Твой путь к мастерству начат",
+            "📚 Удачной учебы, не отвлекайся!", "🎯 Фокус на максимум!"
         ];
-        const randomPhrase = startPhrases[Math.floor(Math.random() * startPhrases.length)];
-        App.toast(randomPhrase);
-        // ----------------------------------
+        App.toast(startPhrases[Math.floor(Math.random() * startPhrases.length)]);
+
         const btn = document.getElementById('btn-start');
         if (btn) {
             if (this.isStrict) {
@@ -5306,12 +5399,9 @@ const Timer = {
                 btn.style.opacity = '0.5';
             } else {
                 btn.innerText = '⏸ ПАУЗА';
-                btn.disabled = false;
-                btn.style.opacity = '1';
                 btn.onclick = () => this.pause();
             }
         }
-
         this.initHardcoreWatch();
     },
 
@@ -5321,34 +5411,46 @@ const Timer = {
         this.interval = setInterval(async () => {
             if (!this.isRunning || this.isPaused) return;
 
-            // Если инет пропал — стоп
             if (!navigator.onLine) { this.stop(true); return; }
 
-            const now = TimeGuard.getTrueTime();
-            const calculatedSec = Math.floor((now - this.startTime) / 1000);
+            const now = this.getTrueTime();
+            this.realSec = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+            this.visualSec = this.realSec;
 
-            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ
-            if (calculatedSec - this.visualSec > 3) {
-                await TimeGuard.sync();
-                return;
+            // --- ОПТИМИЗАЦИЯ ECO MODE ---
+            const ecoOverlay = document.getElementById('eco-overlay');
+            const isEcoActive = ecoOverlay && ecoOverlay.classList.contains('active');
+
+            if (!isEcoActive) {
+                // Если обычный режим: обновляем всё и крутим анимации
+                this.updateDisplay();
+                document.getElementById('timer').classList.add('timer-active-anim');
+            } else {
+                // Если ЭКО-РЕЖИМ:
+                // 1. Обновляем ТОЛЬКО цифры на черном экране
+                const h = Math.floor(this.visualSec / 3600);
+                const m = Math.floor((this.visualSec % 3600) / 60);
+                const s = this.visualSec % 60;
+                const str = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
+                const ecoDisplay = document.getElementById('eco-timer-display');
+                if (ecoDisplay) ecoDisplay.innerText = str;
+
+                // 2. Выключаем анимацию "дыхания" у главного таймера (её не видно, незачем тратить CPU)
+                document.getElementById('timer').classList.remove('timer-active-anim');
             }
+            // ----------------------------
 
-            this.visualSec = calculatedSec;
-            this.realSec = calculatedSec;
-            this.updateDisplay();
-
-            // Пинг сервера каждые 30 секунд
             if (this.realSec % 30 === 0) {
                 const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-                window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(TimeGuard.getTrueTime()) });
+                window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(this.getTrueTime()) });
             }
 
-            // 🚨 ПРОВЕРКА ПРИСУТСТВИЯ
-            if (this.realSec > 0 && this.realSec % this.CHECK_AFTER_SECONDS === 0) {
+            if (this.realSec > 0 && this.realSec - this.lastCheckTime >= this.CHECK_AFTER_SECONDS) {
+                this.lastCheckTime = this.realSec;
                 this.showMathCheck();
             }
 
-            // Награда каждые 10 минут
             let currentBlock = Math.floor(this.realSec / 600);
             if (currentBlock > this.lastPaidBlock) {
                 this.giveReward(currentBlock);
@@ -5359,33 +5461,8 @@ const Timer = {
 
     async showMathCheck() {
         this.pause(true);
-
-        // 🔊 ЗВУК + ВИБРАЦИЯ + УВЕДОМЛЕНИЕ
         SoundSys.play('error');
-
-        setTimeout(() => SoundSys.play('error'), 200);
-        setTimeout(() => SoundSys.play('error'), 400);
-
-        if (navigator.vibrate) {
-            navigator.vibrate([200, 100, 200, 100, 200]);
-        }
-        
-        // 🔔 Push-уведомление
-        if ('Notification' in window && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.showNotification('🚨 ПРОВЕРКА ПРИСУТСТВИЯ!', {
-                    body: 'Реши пример за 60 секунд!',
-                    icon: '/icon-192.png',
-                    badge: '/icon-192.png',
-                    tag: 'mathbooster-check',
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200, 100, 200]
-                });
-            } catch (e) {
-                console.warn('Уведомление не отправлено:', e);
-            }
-        }
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
         const a = Math.floor(Math.random() * 9) + 2;
         const b = Math.floor(Math.random() * 9) + 2;
@@ -5395,57 +5472,23 @@ const Timer = {
         modal.className = 'modal show';
         modal.style.zIndex = '99999';
         modal.innerHTML = `
-            <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white; animation: shake 0.5s;">
-                <h2 style="color:white; font-size: 28px; margin-bottom: 10px; animation: pulse 1s infinite;">🚨 ПРОВЕРКА! 🚨</h2>
-                <p style="margin:10px 0; font-size: 16px; font-weight: bold;">Реши пример за 60 секунд:</p>
-                <div style="font-size:48px; margin:20px 0; color: white; font-weight: bold;">${a} × ${b}</div>
-                <input type="number" id="check-answer" class="input-field" placeholder="?" 
-                    style="text-align:center; font-size:32px; margin-bottom:15px; border: 3px solid white; background: white; color: #333;">
-                <div id="check-timer" style="font-size:22px; color:white; margin-bottom:15px; font-weight: bold;">
-                    Осталось: <b>60</b> сек
-                </div>
-                <button class="btn" style="background: white; color: #FF4757; font-weight: bold; font-size: 18px; padding: 15px 30px;" onclick="Timer.checkAnswer(${correctAnswer}, this)">
-                    ✓ ОТВЕТИТЬ
-                </button>
+            <div class="modal-content" style="text-align:center; background: linear-gradient(135deg, #FF4757, #FF6B81); color: white;">
+                <h2 style="color:white;">🚨 ПРОВЕРКА!</h2>
+                <p>Реши пример за 60 секунд:</p>
+                <div style="font-size:48px; margin:20px 0; font-weight: bold;">${a} × ${b}</div>
+                <input type="number" id="check-answer" class="input-field" style="text-align:center; font-size:32px; background: white; color: #333;">
+                <div id="check-timer" style="margin-bottom:15px;">Осталось: <b>60</b> сек</div>
+                <button class="btn" style="background: white; color: #FF4757; font-weight: bold;" onclick="Timer.checkAnswer(${correctAnswer}, this)">ОТВЕТИТЬ</button>
             </div>`;
         document.body.appendChild(modal);
-
-        const input = document.getElementById('check-answer');
-        input.focus();
-        input.onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                const btn = modal.querySelector('.btn');
-                if (btn) Timer.checkAnswer(correctAnswer, btn);
-            }
-        };
 
         let timeLeft = this.CHECK_TIMEOUT;
         const countdown = setInterval(() => {
             timeLeft--;
-            
-            // 🔊 Звук каждые 10 секунд
-            if (timeLeft % 10 === 0 && timeLeft > 0) {
-                SoundSys.play('click');
-                if (navigator.vibrate) navigator.vibrate(100);
-            }
-            
-            // 🚨 Последние 10 секунд - частые звуки
-            if (timeLeft <= 10 && timeLeft > 0) {
-                SoundSys.play('error');
-                if (navigator.vibrate) navigator.vibrate(50);
-            }
-            
             const timerEl = document.getElementById('check-timer');
-            if (timerEl) {
-                timerEl.innerHTML = `Осталось: <b style="color:${timeLeft < 10 ? '#FFD700' : 'white'}; font-size: ${timeLeft < 10 ? '32px' : '22px'}">${timeLeft}</b> сек`;
-            }
-
-            if (timeLeft <= 0) {
-                clearInterval(countdown);
-                this.failCheck(modal);
-            }
+            if (timerEl) timerEl.innerHTML = `Осталось: <b>${timeLeft}</b> сек`;
+            if (timeLeft <= 0) { clearInterval(countdown); this.failCheck(modal); }
         }, 1000);
-
         modal.dataset.countdown = countdown;
     },
 
@@ -5453,32 +5496,21 @@ const Timer = {
         const input = document.getElementById('check-answer');
         const userAnswer = parseInt(input.value);
         const modal = btn.closest('.modal');
-        
-        if (modal.dataset.countdown) {
-            clearInterval(parseInt(modal.dataset.countdown));
-        }
+        clearInterval(parseInt(modal.dataset.countdown));
 
-        if (userAnswer && !isNaN(userAnswer)) {
-            if (userAnswer === correct) {
-                SoundSys.play('success');
-                App.toast("✅ Правильно! Продолжай!");
-            } else {
-                SoundSys.play('error');
-                App.toast("❌ Неверно, но продолжаем!");
-            }
+        if (userAnswer === correct) {
+            SoundSys.play('success');
+            App.toast("✅ Продолжаем!");
             modal.remove();
             this.resume();
         } else {
-            SoundSys.play('error');
-            input.classList.add('error-shake');
-            setTimeout(() => input.classList.remove('error-shake'), 400);
-            App.toast("⚠️ Введи хоть что-то!");
+            this.failCheck(modal);
         }
     },
 
     failCheck(modal) {
         SoundSys.play('error');
-        App.toast("⏰ Время вышло. Таймер остановлен.");
+        App.toast("⏰ Проверка провалена.");
         modal.remove();
         this.stop(true);
     },
@@ -5494,32 +5526,21 @@ const Timer = {
         this.isRunning = false;
         this.pausedTime = this.getTrueTime();
         
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
+        const btn = document.getElementById('btn-start');
+        if (btn && !isCheckPause) {
+            btn.innerText = '▶️ ПРОДОЛЖИТЬ';
+            btn.style.fontSize = '12px';
+            btn.onclick = () => this.resume();
         }
-        
-        if (!isCheckPause) {
-            const btn = document.getElementById('btn-start');
-            if (btn) {
-                btn.innerText = '▶️ ПРОДОЛЖИТЬ';
-                btn.onclick = () => this.resume();
-                btn.disabled = false;
-                btn.style.opacity = '1'; 
-            }
-            App.toast("⏸ Пауза");
-        }
-        
-        if (window.stopAfkCheck) stopAfkCheck(); 
+        App.toast("⏸ Пауза");
     },
 
     resume() {
         if (!this.active || !this.isPaused) return;
 
+        // Считаем, сколько времени мы пробыли на паузе
         const pauseDuration = this.getTrueTime() - this.pausedTime;
         this.totalPausedDuration += pauseDuration;
-        
-        this.startTime += pauseDuration;
 
         this.isPaused = false;
         this.isRunning = true;
@@ -5527,75 +5548,42 @@ const Timer = {
         const btn = document.getElementById('btn-start');
         if (btn) {
             btn.innerText = '⏸ ПАУЗА';
+            btn.style.fontSize = '14px'; 
             btn.onclick = () => this.pause();
-            btn.disabled = false;
-            btn.style.opacity = '1';
         }
-
-        this.tick();
-
         App.toast("▶️ Продолжаем!");
-    },
-
-    forcePause(reason) {
-        if (!this.active) return;
-        this.pause(true);
-        App.toast("⚠️ " + reason);
     },
 
     async stop(saveSession = true) {
         if (!this.active) return;
 
-        if (this.hardcoreTimeout) {
-                clearTimeout(this.hardcoreTimeout);
-                this.hardcoreTimeout = null;
-            }
+        if (this.hardcoreTimeout) clearTimeout(this.hardcoreTimeout);
 
         clearInterval(this.interval);
         this.active = false;
         this.isRunning = false;
-
         this.releaseWakeLock(); 
 
-        // 1. Получаем данные с сервера
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
         const snap = await window.DB_Online.getDoc(docRef);
         const data = snap.data();
         
         const serverStart = Number(data.user.activeSessionStart || 0);
         const serverLastPing = Number(data.user.lastPing || serverStart);
-        
-        await TimeGuard.sync();
-        const stopTime = TimeGuard.getTrueTime();
+        const stopTime = this.getTrueTime();
 
-        // 🛡️ РАСЧЕТ ЧЕСТНОГО ВРЕМЕНИ
-        // Берем либо время СТОП, либо последний пинг + 40 сек (если юзер выключил инет и схитрил)
         const endPoint = Math.min(stopTime, serverLastPing + 40000);
-        const verifiedSec = Math.floor((endPoint - serverStart) / 1000);
+        const verifiedSec = Math.floor((endPoint - serverStart - this.totalPausedDuration) / 1000);
 
-        if (saveSession && verifiedSec >= 60) { // ← ВЕРНУЛИ >= 60
+        if (saveSession && verifiedSec >= 60) {
             this.realSec = verifiedSec;
             await this.saveSession();
         } else {
-            // --- РАНДОМНЫЕ ФРАЗЫ ПРИ ОТМЕНЕ ---
-            const cancelPhrases = [
-                "⚠️ Слишком коротко. Нужно больше старания!",
-                "🚫 Фокус потерян. Попробуй еще раз",
-                "📉 Сессия аннулирована. Не сдавайся!",
-                "❌ Прогресс не засчитан. Дисциплина — это важно",
-                "🕯️ Огонь погас... Начни новую сессию!",
-                "🧱 Сессия прервана. Построй свою империю знаний заново"
-            ];
-            const randomCancel = cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)];
-            App.toast(randomCancel);
+            const cancelPhrases = ["⚠️ Слишком коротко!", "🚫 Фокус потерян.", "📉 Сессия аннулирована."];
+            App.toast(cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)]);
         }
 
-        // Очистка в облаке
-        await window.DB_Online.updateDoc(docRef, {
-            "user.activeSessionStart": null,
-            "user.lastPing": null
-        });
-
+        await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null });
         this.resetTimerUI();
     },
 
@@ -5604,157 +5592,104 @@ const Timer = {
         this.visualSec = 0;
         this.isPaused = false;
         this.isRunning = false;
-        this.isStrict = false; // ← ДОБАВЬТЕ ЭТО
-        
+        this.isStrict = false; 
         this.updateDisplay();
-        document.getElementById('timer').classList.remove('timer-active-anim');
+        
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            // Удаляем все анимации
+            timerEl.classList.remove('timer-active-anim', 'timer-hardcore');
+            // Сбрасываем ручные настройки цвета
+            timerEl.style.color = "";
+            timerEl.style.webkitTextFillColor = "";
+        }
         
         const btn = document.getElementById('btn-start');
         if (btn) {
             btn.innerText = '🚀 СТАРТ';
+            btn.style.fontSize = '14px';
             btn.onclick = () => Timer.preStart();
-            btn.disabled = false; // ← ДОБАВЬТЕ ЭТО
-            btn.style.opacity = '1'; // ← ДОБАВЬТЕ ЭТО
+            btn.disabled = false;
+            btn.style.opacity = '1';
         }
-        
-        SoundSys.play('click');
     },
 
     giveReward(intervals) {
-        const baseReward = 5;
-        let coinsEarned = baseReward + Math.min(intervals - 1, 15);
-
+        let coinsEarned = 5 + Math.min(intervals - 1, 15);
         if (this.isStrict) coinsEarned = Math.floor(coinsEarned * 1.5);
-
         DB.user.coins += coinsEarned;
-        
-        const timerEl = document.getElementById('timer');
-        if (timerEl) {
-            const rect = timerEl.getBoundingClientRect();
-            FX.floatText(rect.left + rect.width / 2, rect.top, `+${coinsEarned} 💰`, '#FFD700');
-        }
-
-        SoundSys.play('coin');
         Data.save();
         App.updateUI();
+        SoundSys.play('coin');
     },
 
     async saveSession() {
-    await TimeGuard.sync();
-    
-    const subject = DB.subjects[DB.user.subject];
-    
-    // 🔥 ПРОПОРЦИОНАЛЬНОЕ НАЧИСЛЕНИЕ МОНЕТ
-    // Считаем сколько полных 10-минутных интервалов прошло
-    const fullIntervals = Math.floor(this.realSec / this.REWARD_INTERVAL);
-    
-    // Остаток секунд после последнего полного интервала
-    const remainingSeconds = this.realSec % this.REWARD_INTERVAL;
-    
-    // Базовая награда за полные интервалы
-    let earnedCoins = 0;
-    for (let i = 1; i <= fullIntervals; i++) {
-        const baseReward = 5;
-        let intervalReward = baseReward + Math.min(i - 1, 15);
-        if (this.isStrict) intervalReward = Math.floor(intervalReward * 1.5);
-        earnedCoins += intervalReward;
-    }
-    
-    // Пропорциональная награда за неполный интервал (например, 9 из 10 минут)
-    if (remainingSeconds > 0) {
-        const nextIntervalNumber = fullIntervals + 1;
-        const baseReward = 5;
-        let nextIntervalReward = baseReward + Math.min(nextIntervalNumber - 1, 15);
-        if (this.isStrict) nextIntervalReward = Math.floor(nextIntervalReward * 1.5);
+        const subject = DB.subjects[DB.user.subject];
+        const fullIntervals = Math.floor(this.realSec / this.REWARD_INTERVAL);
+        const remainingSeconds = this.realSec % this.REWARD_INTERVAL;
         
-        // Пропорция: (секунды / 600) * награда следующего интервала
-        const proportionalReward = Math.floor((remainingSeconds / this.REWARD_INTERVAL) * nextIntervalReward);
-        earnedCoins += proportionalReward;
-    }
-
-    DB.user.coins += earnedCoins;
-    DB.user.totalSec += this.realSec;
-    subject.sec += this.realSec;
-    
-    if (this.isStrict) {
-        DB.user.lifetimeStrictSec = (DB.user.lifetimeStrictSec || 0) + this.realSec;
-    }
-
-    const today = getUZDate();
-    if (!DB.history[today]) DB.history[today] = 0;
-    DB.history[today] += this.realSec;
-
-    DB.user.lastStudyDate = today;
-    
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = getUZDate(yesterday);
-
-    if (DB.user.lastStudyDate === yesterdayStr || DB.user.lastStudyDate === today) {
-        if (DB.user.lastStudyDate !== today) {
-            DB.user.streak = (DB.user.streak || 0) + 1;
-            DB.user.dailyStreak = (DB.user.dailyStreak || 0) + 1;
+        let earnedCoins = 0;
+        for (let i = 1; i <= fullIntervals; i++) {
+            let r = 5 + Math.min(i - 1, 15);
+            if (this.isStrict) r = Math.floor(r * 1.5);
+            earnedCoins += r;
         }
-    } else if (DB.user.lastStudyDate !== today) {
-        DB.user.streak = 1;
-    }
+        
+        if (remainingSeconds > 0) {
+            let nextR = 5 + Math.min(fullIntervals, 15);
+            if (this.isStrict) nextR = Math.floor(nextR * 1.5);
+            earnedCoins += Math.floor((remainingSeconds / this.REWARD_INTERVAL) * nextR);
+        }
 
-    DB.sessions.unshift({
-    subject: subject.name,
-    sec: this.realSec,
-    coins: earnedCoins,
-    date: this.sessionStartTime 
-});
+        DB.user.coins += earnedCoins;
+        DB.user.totalSec += this.realSec;
+        subject.sec += this.realSec;
+        
+        const today = getUZDate();
+        if (!DB.history[today]) DB.history[today] = 0;
+        DB.history[today] += this.realSec;
 
-    if (DB.sessions.length > 100) DB.sessions = DB.sessions.slice(0, 100);
+        DB.sessions.unshift({
+            subject: subject.name,
+            sec: this.realSec,
+            coins: earnedCoins,
+            date: this.sessionStartTime 
+        });
 
-    const xpEarned = Math.floor(this.realSec / 60) * 10;
-    App.addXP(xpEarned);
-    
-    QuestSys.update('studyMin', Math.floor(this.realSec / 60));
-    
-    await Data.save();
-    App.updateUI();
-    App.renderHistory();
-    App.renderMonthlyWidget();
-    AchievementSys.check();
+        if (DB.sessions.length > 100) DB.sessions.pop();
 
-    const finishPhrases = [
-        "✅ Отличная работа! Ты стал ближе к цели",
-        "🧠 Сессия завершена. Мозг прокачан!",
-        "💎 Мастерство растет! Так держать",
-        "📈 Знания получены. Время отдохнуть?",
-        "🌟 Прекрасный результат! Горжусь тобой",
-        "🏆 Еще одна победа над ленью!",
-        "💪 Кирпичик в фундамент будущего заложен"
-    ];
-    const randomFinish = finishPhrases[Math.floor(Math.random() * finishPhrases.length)];
-    
-    const h = Math.floor(this.realSec / 3600);
-    const m = Math.floor((this.realSec % 3600) / 60);
-    SoundSys.play('success');
-    FX.confetti();
-},
+        App.addXP(Math.floor(this.realSec / 60) * 10);
+        QuestSys.update('studyMin', Math.floor(this.realSec / 60));
+        WeeklyQuestSys.update(this.realSec); 
+
+        await Data.save();
+        App.updateUI();
+        App.renderHistory();
+        
+        // 🔥 ИСПРАВЛЕНО: Теперь фразы успеха показываются!
+        const finishPhrases = [
+            "✅ Отличная работа! Ты стал ближе к цели",
+            "🧠 Сессия завершена. Мозг прокачан!",
+            "💎 Мастерство растет! Так держать",
+            "🌟 Прекрасный результат! Горжусь тобой"
+        ];
+        const h = Math.floor(this.realSec / 3600);
+        const m = Math.floor((this.realSec % 3600) / 60);
+        App.toast(`${finishPhrases[Math.floor(Math.random() * finishPhrases.length)]} (${h}ч ${m}м, +${earnedCoins} 💰)`);
+        
+        SoundSys.play('success');
+        FX.confetti();
+    },
 
     updateDisplay() {
-        const display = document.getElementById('timer');
-        if (display) {
-            const h = Math.floor(this.visualSec / 3600);
-            const m = Math.floor((this.visualSec % 3600) / 60);
-            const s = this.visualSec % 60;
-            display.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-
-        const ecoDisplay = document.getElementById('eco-timer-display');
-        if (ecoDisplay) {
-            const h = Math.floor(this.visualSec / 3600);
-            const m = Math.floor((this.visualSec % 3600) / 60);
-            const s = this.visualSec % 60;
-            ecoDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
+        const h = Math.floor(this.visualSec / 3600);
+        const m = Math.floor((this.visualSec % 3600) / 60);
+        const s = this.visualSec % 60;
+        const str = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        if (document.getElementById('timer')) document.getElementById('timer').innerText = str;
+        if (document.getElementById('eco-timer-display')) document.getElementById('eco-timer-display').innerText = str;
     }
 };
-
 window.Timer = Timer;    
 
 const QuestSys = {
@@ -5767,26 +5702,35 @@ const QuestSys = {
 
         // 2. Проверка дня и генерация целей
         checkDay() {
-            const today = getUZDate();
-            if (DB.user.dailyQuests.date !== today) {
-                const randomStudy = 20 + Math.floor(Math.random() * 21); // 20-40 мин
-                const randomMath = 15 + Math.floor(Math.random() * 21);  // 15-35 прим
-                
-                DB.user.dailyQuests = {
-                    date: today,
-                    studyMin: 0,
-                    mathSolved: 0,
-                    pvpDone: 0,
-                    claimed: [],
-                    targets: {
-                        studyMin: randomStudy,
-                        mathSolved: randomMath,
-                        pvpDone: 1
-                    }
-                };
-                Data.save();
-            }
-        },
+    const today = getUZDate();
+    
+        // 🛡️ СТРАХОВКА: Если папки квестов нет, создаем её мгновенно
+        if (!DB.user.dailyQuests) {
+            DB.user.dailyQuests = {
+                date: today, studyMin: 0, mathSolved: 0, pvpDone: 0, claimed: [],
+                targets: { studyMin: 30, mathSolved: 20, pvpDone: 1 }
+            };
+        }
+
+        if (DB.user.dailyQuests.date !== today) {
+            const randomStudy = 20 + Math.floor(Math.random() * 21);
+            const randomMath = 15 + Math.floor(Math.random() * 21);
+            
+            DB.user.dailyQuests = {
+                date: today,
+                studyMin: 0,
+                mathSolved: 0,
+                pvpDone: 0,
+                claimed: [],
+                targets: {
+                    studyMin: randomStudy,
+                    mathSolved: randomMath,
+                    pvpDone: 1
+                }
+            };
+            Data.save();
+        }
+    },
 
         // 3. Обновление прогресса
         update(type, amount = 1) {
@@ -5885,6 +5829,92 @@ const QuestSys = {
             }
         }
     };
+    
+const WeeklyQuestSys = {
+    getWeekID() {
+        const now = new Date();
+        const oneJan = new Date(now.getFullYear(), 0, 1);
+        const numberOfDays = Math.floor((now - oneJan) / (24 * 60 * 60 * 1000));
+        const weekNum = Math.ceil((now.getDay() + 1 + numberOfDays) / 7);
+        return `${now.getFullYear()}-${weekNum}`;
+    },
+
+    checkWeek() {
+        const currentWeek = this.getWeekID();
+        
+        // Если квеста еще нет или наступила новая неделя
+        if (!DB.user.weeklyQuest || DB.user.weeklyQuest.weekId !== currentWeek) {
+            
+            // Генерируем случайную цель от 4 до 10 часов
+            const randomHours = 4 + Math.floor(Math.random() * 7); // Выберет 4, 5, 6, 7, 8, 9 или 10
+            
+            DB.user.weeklyQuest = {
+                weekId: currentWeek,
+                progressSec: 0,
+                targetSec: randomHours * 3600, // Переводим часы в секунды
+                claimed: false
+            };
+            
+            Data.save();
+            console.log("📅 Новая неделя! Цель установлена на " + randomHours + " ч.");
+        }
+    },
+
+    update(seconds) {
+        this.checkWeek();
+        if (DB.user.weeklyQuest.claimed) return;
+        DB.user.weeklyQuest.progressSec += seconds;
+        Data.save();
+        if (document.getElementById('dashboard').classList.contains('active')) this.render();
+    },
+
+    render() {
+        const container = document.getElementById('weekly-quest-container');
+        if (!container) return;
+        this.checkWeek();
+        const q = DB.user.weeklyQuest;
+        
+        const pct = Math.min(100, (q.progressSec / q.targetSec) * 100);
+        const isDone = q.progressSec >= q.targetSec;
+        const hoursLeft = Math.max(0, ((q.targetSec - q.progressSec) / 3600).toFixed(1));
+
+        container.innerHTML = `
+            <div class="card" style="background: linear-gradient(135deg, var(--surface), #f0f3ff); border: 2px solid ${isDone ? 'var(--gold)' : 'transparent'}; position: relative; overflow: hidden; margin-top: 20px;">
+                <h3 style="margin-bottom: 5px; font-size: 16px;">📅 Недельный Марафон</h3>
+                <p style="font-size: 12px; color: var(--text-light); margin-bottom: 15px;">
+                    ${isDone ? 'Цель достигнута! Забирай награду.' : `Осталось учиться: <b>${hoursLeft} ч.</b> на этой неделе`}
+                </p>
+                
+                <div style="height: 12px; background: var(--bg); border-radius: 6px; overflow: hidden; margin-bottom: 15px;">
+                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, var(--primary), #a29bfe); transition: 1s;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-weight: 900; color: var(--primary); font-size: 14px;">
+                        ${Math.floor(q.progressSec / 3600)} / 5 ч.
+                    </div>
+                    ${isDone && !q.claimed ? 
+                        `<button class="btn btn-primary" onclick="WeeklyQuestSys.claim()" style="padding: 8px 20px; width: auto; background: var(--gold); color: #000;">🎁 ЗАБРАТЬ 500 💰</button>` : 
+                        (q.claimed ? '<b style="color:var(--success);">✅ НАГРАДА ВЗЯТА</b>' : '<span style="font-size:11px; opacity:0.6;">Награда: 500 💰</span>')
+                    }
+                </div>
+            </div>`;
+    },
+
+    claim() {
+        if (DB.user.weeklyQuest.claimed) return;
+        DB.user.weeklyQuest.claimed = true;
+        DB.user.coins += 500;
+        App.addXP(1000);
+        Data.save();
+        App.updateUI();
+        this.render();
+        SoundSys.play('level_up');
+        FX.confetti();
+        App.toast("🏆 Марафон недели пройден! +500 💰");
+    }
+};
+    
     const MathGame = { 
         ans:0, show(isCheck=false) { 
             const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; 
@@ -6749,6 +6779,7 @@ else if (this.mode === 'fractions') {
         DB.user.lifetimeMathSolved = (DB.user.lifetimeMathSolved || 0) + 1;
         document.getElementById('game-score').innerText = this.score; 
         QuestSys.update('mathSolved', 1);
+        WeeklyQuestSys.update('mathSolved', 1);
 
         // Подсвечиваем рамку, если элемент существует
         if (el && el.style) el.style.borderColor = 'var(--success)'; 
@@ -7303,6 +7334,26 @@ else if (this.mode === 'fractions') {
 
     const App = {
 
+        getStreakVisual(days) {
+            let icon = '🕯️'; // 0-2 дня: маленькая свечка
+            let cssClass = '';
+
+            if (days >= 30) {
+                icon = '🌋'; // 30+ дней: Вулкан
+                cssClass = 'streak-volcano';
+            } else if (days >= 14) {
+                icon = '⚡'; // 14-29 дней: Электрический разряд (или синий огонь)
+                cssClass = 'streak-blue';
+            } else if (days >= 7) {
+                icon = '💥'; // 7-13 дней: Взрыв
+                cssClass = 'streak-mid';
+            } else if (days >= 3) {
+                icon = '🔥'; // 3-6 дней: Обычный огонь
+                cssClass = 'streak-mid';
+            }
+
+            return { icon, cssClass };
+        },
         // Радио
             radioPlayer: null,
             radioPlaying: false,
@@ -7489,6 +7540,7 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
 // ------------------------------------------------
             this.updateRadioWidget();
             QuestSys.render();
+            WeeklyQuestSys.render();
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
@@ -7526,7 +7578,18 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
 
             setTimeout(() => {
                 this.renderHistory();
-                if (window.DailySys) DailySys.check(); 
+                
+                // 1. Проверяем, новый ли это пользователь (был ли запуск туториала)
+                // Мы смотрим на количество сессий. Если их 0, значит юзер только зашел.
+                const isNewUser = (!DB.sessions || DB.sessions.length === 0);
+                
+                // 2. Если юзер старый — показываем награду сразу
+                if (window.DailySys && !isNewUser) {
+                    DailySys.check();
+                }
+                
+                // Если юзер новый, DailySys.check() сработает только при закрытии туториала
+                
                 if (window.AchievementSys) AchievementSys.check();
             }, 400);
 
@@ -7754,8 +7817,20 @@ setTimeout(() => {
             this.setText('header-avatar', DB.user.avatar || '😎');
             this.setText('profile-name-big', DB.user.name || 'Игрок');
             this.setText('profile-avatar-big', DB.user.avatar || '😎');
-            this.setText('streak-display', DB.user.dailyStreak);
-            this.setText('profile-id-text', Auth.currentUser ? Auth.currentUser.id : "...");
+            // Обновление иконки и счетчика стрика
+            const streakInfo = this.getStreakVisual(DB.user.dailyStreak || 0);
+            const streakContainer = document.getElementById('streak-display').parentElement;
+
+            if (streakContainer) {
+                // Находим эмодзи внутри блока (первый span)
+                const iconEl = streakContainer.querySelector('span');
+                if (iconEl) {
+                    iconEl.innerText = streakInfo.icon;
+                    iconEl.className = 'streak-icon ' + streakInfo.cssClass;
+                }
+                // Обновляем само число
+                this.setText('streak-display', DB.user.dailyStreak || 0);
+            }            this.setText('profile-id-text', Auth.currentUser ? Auth.currentUser.id : "...");
 
             // Обновление заголовка предмета под таймером
             const currentSub = DB.subjects[DB.user.subject];
@@ -8405,6 +8480,7 @@ setTimeout(() => {
                     if (id === 'dashboard') {
                         this.renderMonthlyWidget();
                         QuestSys.render();
+                        WeeklyQuestSys.render();
                         this.renderSubjects();
                     }
                     
@@ -9478,59 +9554,92 @@ setInterval(() => {
     </script>
 
     <!-- ECO MODE OVERLAY -->
-    <div id="eco-overlay" onclick="App.toggleEcoMode(false)">
-        <div class="eco-floater">
-            <div id="eco-timer-display">00:00:00</div>
-            <div class="eco-text">
-                🔋 Режим энергосбережения<br>
-                Таймер работает<br>
-                Нажми, чтобы разбудить
+        <div id="eco-overlay" onclick="App.toggleEcoMode(false)">
+            <div class="eco-floater">
+                <div id="eco-timer-display">00:00:00</div>
+                <div class="eco-text">
+                    🔋 Режим энергосбережения<br>
+                    Таймер работает<br>
+                    Нажми, чтобы разбудить
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- TUTORIAL MODAL (Обучение для новичков) -->
-    <div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.95);">
-        <div class="modal-content" style="text-align: center; max-width: 340px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px;">
-            
-            <!-- Слайд 1: Философия -->
-            <div class="tutorial-slide" id="tut-1">
-                <div style="font-size: 60px; margin-bottom: 20px;">⏳</div>
-                <h2 style="margin-bottom: 15px;">Время = Опыт</h2>
-                <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                    В жизни нет полоски прогресса, и это демотивирует. <br>
-                    <b>MathBooster исправит это.</b><br><br>
-                    Мы будем считать каждый час, который ты инвестировал в свои знания.
-                </p>
-                <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Понятно 👇</button>
+    <!-- TUTORIAL MODAL (Улучшенное обучение) -->
+        <div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.96);">
+            <div class="modal-content" style="text-align: center; max-width: 360px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px; position: relative;">
+                
+                <!-- Индикатор шагов -->
+                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
+                    <div class="tut-dot active" id="dot-1"></div>
+                    <div class="tut-dot" id="dot-2"></div>
+                    <div class="tut-dot" id="dot-3"></div>
+                    <div class="tut-dot" id="dot-4"></div>
+                </div>
+
+                <!-- Слайд 1: Философия -->
+                <div class="tutorial-slide" id="tut-1">
+                    <div style="font-size: 64px; margin-bottom: 20px; filter: drop-shadow(0 0 15px var(--primary));">⏳</div>
+                    <h2 style="margin-bottom: 15px; font-size: 24px;">Твой труд станет видимым</h2>
+                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                        В обычной жизни учеба кажется бесконечной. <br>
+                        <b>MathBooster</b> превращает каждую минуту твоего фокуса в реальный прогресс.
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Понятно, дальше! 👇</button>
+                </div>
+
+                <!-- Слайд 2: Механика -->
+                <div class="tutorial-slide" id="tut-2" style="display: none;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">💰</div>
+                    <h2 style="margin-bottom: 15px; font-size: 24px;">Учись и зарабатывай</h2>
+                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px; text-align: left;">
+                        • <b>Таймер:</b> Включай, когда садишься за уроки.<br>
+                        • <b>Монеты:</b> Капают каждые 10 минут учебы.<br>
+                        • <b>Опыт (XP):</b> Повышает твой уровень и открывает новые Лиги.
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.next(3)" style="width: 100%;">Интересно... 👇</button>
+                </div>
+
+                <!-- Слайд 3: Магазин и Топ -->
+                <div class="tutorial-slide" id="tut-3" style="display: none;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">🏆</div>
+                    <h2 style="margin-bottom: 15px; font-size: 24px;">Стань лучшим</h2>
+                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                        Трать заработанное в <b>Магазине</b> на редкие аватары и 3D-темы. <br><br>
+                        Сражайся в <b>PVP-дуэлях</b> и поднимись на вершину Глобального Топа!
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.next(4)" style="width: 100%;">Почти всё! 👇</button>
+                </div>
+
+                <!-- Слайд 4: Безопасность (КРИТИЧНО) -->
+                <div class="tutorial-slide" id="tut-4" style="display: none;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">🔐</div>
+                    <h2 style="margin-bottom: 15px; font-size: 24px; color: #FFD700;">Важное правило!</h2>
+                    <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                        Твой прогресс привязан к устройству. <br><br>
+                        Обязательно сохрани <b>Код Спасения</b> в настройках. Только он поможет вернуть аккаунт при смене телефона.
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.close()" style="width: 100%; background: #00d26a; box-shadow: 0 5px 15px rgba(0, 210, 106, 0.4);">Начать путь 🚀</button>
+                </div>
+
             </div>
-
-            <!-- Слайд 2: Механика -->
-            <div class="tutorial-slide" id="tut-2" style="display: none;">
-                <div style="font-size: 60px; margin-bottom: 20px;">⏱️</div>
-                <h2 style="margin-bottom: 15px;">Как это работает?</h2>
-                <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                    1. Садишься за уроки — <b>включай таймер</b>.<br>
-                    2. Твое время превращается в <b>XP</b> (Опыт) и <b>Coins</b> (Монеты).<br>
-                    3. Чем больше учишься, тем выше твой Ранг.
-                </p>
-                <button class="btn btn-primary" onclick="Tutorial.next(3)" style="width: 100%;">Дальше 👇</button>
-            </div>
-
-            <!-- Слайд 3: Мотивация -->
-            <div class="tutorial-slide" id="tut-3" style="display: none;">
-                <div style="font-size: 60px; margin-bottom: 20px;">🏆</div>
-                <h2 style="margin-bottom: 15px;">Стань Легендой</h2>
-                <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                    Трать монеты на крутые темы и аватары.<br>
-                    Соревнуйся с друзьями.<br>
-                    Докажи, что ты самый продуктивный!
-                </p>
-                <button class="btn btn-primary" onclick="Tutorial.close()" style="width: 100%; background: #00d26a; box-shadow: 0 5px 15px rgba(0, 210, 106, 0.4);">Начать путь 🚀</button>
-            </div>
-
         </div>
-    </div>
+
+        <style>
+        /* Стили для точек прогресса */
+        .tut-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: 0.3s;
+        }
+        .tut-dot.active {
+            background: var(--primary);
+            transform: scale(1.3);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        </style>
 
     <!-- BATTLE MODAL (Обновленный с раздельными кнопками) -->
         <div id="battle-modal" class="modal" style="z-index: 12000;">
