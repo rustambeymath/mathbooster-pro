@@ -1,6 +1,6 @@
 {
-    "name": "MathBooster PRO",
-    "short_name": "MathBooster",
+    "name": "MathBooster Pro",
+    "short_name": "MathBooster Pro",
     "start_url": "/mathbooster-pro/",
     "display": "standalone",
     "background_color": "#F4F7FE",
