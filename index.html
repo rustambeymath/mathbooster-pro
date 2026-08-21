@@ -17,9 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
-    <!-- Отключаем автоматическое масштабирование и убираем адресную строку -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"><meta name="mobile-web-app-capable" content="yes"> <!-- ← новая -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="MathBooster Pro">
 
     <!-- Иконки -->
@@ -95,140 +93,6 @@
     // а не реальные деньги в приложении.
     window.DB = { user: { coins: 0, level: 0 }, msg: "Nice try, hacker!" };
     window.Data = { save: () => console.log("Save blocked by security system 🛡️") };
-
-// === FIREBASE CLOUD MESSAGING (FCM) ===
-const FCM = {
-    messaging: null,
-    vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw', //  VAPID KEY ИЗ FIREBASE CONSOLE!
-    
-    async init() {
-        // Проверка поддержки
-        if (!('serviceWorker' in navigator) || !('Notification' in window)) {
-            console.warn('Push-уведомления не поддерживаются');
-            return;
-        }
-        
-        // Проверка Firebase
-        if (!window.firebase || !firebase.messaging) {
-            console.warn('Firebase Messaging не инициализирован');
-            return;
-        }
-        
-        try {
-            // Регистрируем Service Worker
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('✅ Service Worker зарегистрирован:', registration);
-            
-            // Ждем активации
-            await navigator.serviceWorker.ready;
-            console.log('✅ Service Worker активен');
-            
-            // Инициализируем messaging
-            this.messaging = firebase.messaging();
-            
-            // Слушаем уведомления когда приложение ОТКРЫТО
-            this.messaging.onMessage((payload) => {
-                console.log('📩 Уведомление (приложение открыто):', payload);
-                
-                const { title, body } = payload.notification;
-                
-                // Показываем тост
-                App.toast(`${title}: ${body}`);
-                
-                // И браузерное уведомление
-                if (Notification.permission === 'granted') {
-                    new Notification(title, {
-                        body: body,
-                        icon: '/icon-192.png',
-                        badge: '/icon-192.png'
-                    });
-                }
-            });
-            
-            // Запрашиваем разрешение
-            await this.requestPermission();
-            
-        } catch (error) {
-            console.error('Ошибка инициализации FCM:', error);
-        }
-    },
-    
-    async requestPermission() {
-        try {
-            // Проверяем текущее разрешение
-            if (Notification.permission === 'granted') {
-                console.log('✅ Разрешение уже есть');
-                await this.getToken();
-                return;
-            }
-            
-            if (Notification.permission === 'denied') {
-                console.warn('❌ Разрешение отклонено пользователем');
-                return;
-            }
-            
-            // Запрашиваем разрешение
-            console.log('📱 Запрашиваем разрешение...');
-            const permission = await Notification.requestPermission();
-            
-            if (permission === 'granted') {
-                console.log('✅ Разрешение получено!');
-                await this.getToken();
-            } else {
-                console.warn('❌ Пользователь отклонил разрешение');
-            }
-            
-        } catch (error) {
-            console.error('Ошибка запроса разрешения:', error);
-        }
-    },
-    
-    async getToken() {
-        try {
-            if (!this.vapidKey || this.vapidKey === 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw') {
-                console.error('❌ VAPID ключ не установлен! Получите его в Firebase Console.');
-                return null;
-            }
-            
-            const token = await this.messaging.getToken({
-                vapidKey: this.vapidKey,
-                serviceWorkerRegistration: await navigator.serviceWorker.ready
-            });
-            
-            if (token) {
-                console.log('✅ FCM Token получен:', token);
-                localStorage.setItem('fcm_token', token);
-                
-                // Сохраняем токен в профиль пользователя
-                if (DB.user && Auth.currentUser) {
-                    DB.user.fcmToken = token;
-                    await Data.save();
-                    console.log('✅ Токен сохранен в профиль');
-                }
-                
-                return token;
-            } else {
-                console.warn('⚠️ Не удалось получить токен');
-                return null;
-            }
-            
-        } catch (error) {
-            console.error('Ошибка получения токена:', error);
-            return null;
-        }
-    },
-    
-    async refreshToken() {
-        try {
-            await this.messaging.deleteToken();
-            localStorage.removeItem('fcm_token');
-            console.log('🔄 Токен удален, получаем новый...');
-            await this.getToken();
-        } catch (error) {
-            console.error('Ошибка обновления токена:', error);
-        }
-    }
-};
 
 // === FIREBASE CLOUD MESSAGING (ЕДИНСТВЕННЫЙ БЛОК!) ===
 
@@ -330,9 +194,6 @@ window.addEventListener('load', () => {
         }
     }, 3000);
 });
-
-// Глобальный доступ
-window.FCM = FCM;
 
         </script>
         
@@ -857,6 +718,508 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
     .delete-user-btn:active {
         transform: scale(0.9);
     } 
+
+    /* === РОДИТЕЛЬСКИЙ ДАШБОРД === */
+    #parent-screen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(160deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, var(--primary)) 100%);
+        z-index: 5000;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 20px; overflow-y: auto;
+        padding-top: calc(var(--safe-top) + 10px);
+        padding-bottom: calc(20px + var(--safe-bottom));
+        transition: 0.4s;
+    }
+    /* Subtle floating orbs on background */
+    #parent-screen::before {
+        content: '';
+        position: fixed; top: -20%; right: -10%;
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, rgba(var(--primary), 0.04) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none; z-index: 0;
+        animation: parentFloatOrb 20s ease-in-out infinite;
+    }
+    #parent-screen::after {
+        content: '';
+        position: fixed; bottom: -15%; left: -5%;
+        width: 350px; height: 350px;
+        background: radial-gradient(circle, rgba(46,204,113,0.04) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none; z-index: 0;
+        animation: parentFloatOrb 15s ease-in-out infinite reverse;
+    }
+    @keyframes parentFloatOrb {
+        0%, 100% { transform: translate(0, 0); }
+        50% { transform: translate(30px, -40px); }
+    }
+    #parent-screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.05); }
+
+    /* ============================================ */
+    /* 🎨 РОДИТЕЛЬСКИЙ ДАШБОРД — ПРЕМИУМ ДИЗАЙН    */
+    /* ============================================ */
+
+    /* === АНИМАЦИИ === */
+    @keyframes parentFadeInUp {
+        from { opacity: 0; transform: translateY(25px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes parentPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+    }
+    @keyframes parentStatusGlow {
+        0%, 100% { box-shadow: 0 0 20px rgba(46,204,113,0.2), 0 8px 32px rgba(0,0,0,0.08); }
+        50% { box-shadow: 0 0 40px rgba(46,204,113,0.4), 0 8px 32px rgba(0,0,0,0.08); }
+    }
+    @keyframes parentTimerPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    @keyframes parentShimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
+    @keyframes parentGradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    @keyframes parentBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+    }
+    @keyframes parentRing {
+        0% { transform: scale(0.9); opacity: 1; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* === ЗАДЕРЖКИ АНИМАЦИИ (stagger) === */
+    .parent-header       { animation: parentFadeInUp 0.5s ease backwards; animation-delay: 0s; position: relative; z-index: 1; }
+    .parent-status-card  { animation: parentFadeInUp 0.5s ease backwards; animation-delay: 0.1s; position: relative; z-index: 1; }
+    .parent-grid         { animation: parentFadeInUp 0.5s ease backwards; animation-delay: 0.2s; position: relative; z-index: 1; }
+    .parent-section-card { animation: parentFadeInUp 0.5s ease backwards; animation-delay: 0.3s; position: relative; z-index: 1; }
+
+    /* === ШАПКА === */
+    .parent-header {
+        background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--primary)) 100%);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+        width: 100%; max-width: 500px;
+        padding: 20px; margin: 0 auto 15px auto;
+        display: flex; justify-content: space-between; align-items: center;
+        border: 1px solid rgba(255,255,255,0.6);
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+    .parent-header::before {
+        content: '';
+        position: absolute; top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at 30% 20%, rgba(var(--primary), 0.06) 0%, transparent 60%);
+        pointer-events: none;
+    }
+    .parent-header-avatar {
+        width: 52px; height: 52px; min-width: 52px;
+        background: linear-gradient(135deg, var(--bg), color-mix(in srgb, var(--bg) 70%, var(--primary)));
+        border-radius: 50%;
+        border: 3px solid var(--primary);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 0 20px rgba(var(--primary), 0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    .parent-header-avatar::after {
+        content: '';
+        position: absolute; top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+        animation: parentAvatarShine 4s ease-in-out infinite;
+    }
+    @keyframes parentAvatarShine {
+        0%, 100% { transform: translateX(-100%) rotate(45deg); }
+        50% { transform: translateX(100%) rotate(45deg); }
+    }
+    .parent-header .child-name { font-size: 18px; font-weight: 800; color: var(--text); position: relative; }
+    .parent-header .mode-label { font-size: 11px; color: var(--text-light); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+    .parent-exit-btn {
+        background: linear-gradient(135deg, #ff4757, #ff6b81);
+        color: white; border: none;
+        padding: 10px 20px; border-radius: 14px;
+        font-weight: 700; font-size: 13px; cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 4px 15px rgba(255,71,87,0.3);
+        position: relative; overflow: hidden;
+    }
+    .parent-exit-btn::after {
+        content: '';
+        position: absolute; top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: 0.5s;
+    }
+    .parent-exit-btn:hover::after { left: 100%; }
+    .parent-exit-btn:active { transform: scale(0.95); box-shadow: 0 2px 8px rgba(255,71,87,0.4); }
+
+    /* === КАРТОЧКА СТАТУСА === */
+    .parent-status-card {
+        background: linear-gradient(145deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 85%, var(--primary)) 100%);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+        width: 100%; max-width: 500px;
+        padding: 35px 20px; margin: 0 auto 15px auto;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.5);
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+    .parent-status-card::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, var(--primary), #2ECC71, var(--primary));
+        background-size: 200% 100%;
+        animation: parentGradientFlow 4s ease infinite;
+    }
+    .parent-status-icon {
+        font-size: 72px; margin-bottom: 12px;
+        animation: parentPulse 2.5s ease-in-out infinite;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    }
+    .parent-status-text {
+        font-size: 24px; font-weight: 900; margin-bottom: 5px;
+        background: linear-gradient(135deg, var(--text) 0%, var(--primary) 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .parent-status-sub {
+        font-size: 14px; color: var(--text-light); font-weight: 500;
+    }
+    .parent-status-time {
+        font-size: 40px; font-weight: 900; color: var(--primary);
+        margin-top: 12px; font-variant-numeric: tabular-nums;
+        font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+        text-shadow: 0 2px 10px rgba(var(--primary), 0.2);
+        animation: parentTimerPulse 3s ease-in-out infinite;
+    }
+
+    /* Бейдж онлайн/офлайн */
+    .parent-online-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 18px; border-radius: 24px;
+        font-size: 13px; font-weight: 700;
+        margin-top: 12px;
+        transition: all 0.4s ease;
+        position: relative;
+    }
+    .parent-online-badge.online {
+        background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(46,204,113,0.06));
+        color: #2ECC71;
+        box-shadow: 0 0 20px rgba(46,204,113,0.15);
+    }
+    .parent-online-badge.online::before {
+        content: '';
+        position: absolute; width: 10px; height: 10px;
+        background: #2ECC71; border-radius: 50%;
+        left: 14px;
+        animation: parentRing 1.5s ease-out infinite;
+    }
+    .parent-online-badge.offline {
+        background: linear-gradient(135deg, rgba(231,76,60,0.12), rgba(231,76,60,0.06));
+        color: #E74C3C;
+    }
+
+    /* === МИНИ-КАРТОЧКИ (сетка 2×2) === */
+    .parent-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        width: 100%; max-width: 500px; margin: 0 auto 15px auto;
+    }
+    .parent-mini-card {
+        background: linear-gradient(145deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 90%, var(--bg)) 100%);
+        border-radius: 20px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03);
+        padding: 18px 14px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.6);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+    .parent-mini-card::before {
+        content: '';
+        position: absolute; top: -30px; right: -30px;
+        width: 60px; height: 60px;
+        background: radial-gradient(circle, rgba(var(--primary), 0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .parent-mini-card:active { transform: scale(0.97); }
+    .parent-mini-card .pmc-icon {
+        font-size: 30px; margin-bottom: 8px;
+        animation: parentBounce 3s ease-in-out infinite;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+    .parent-mini-card:nth-child(2) .pmc-icon { animation-delay: 0.5s; }
+    .parent-mini-card:nth-child(3) .pmc-icon { animation-delay: 1s; }
+    .parent-mini-card:nth-child(4) .pmc-icon { animation-delay: 1.5s; }
+    .parent-mini-card .pmc-val {
+        font-size: 22px; font-weight: 900; color: var(--primary);
+        background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #fff));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .parent-mini-card .pmc-label {
+        font-size: 10px; color: var(--text-light); text-transform: uppercase;
+        letter-spacing: 0.8px; margin-top: 4px; font-weight: 600;
+    }
+
+    /* === СЕКЦИОННЫЕ КАРТОЧКИ === */
+    .parent-section-card {
+        background: linear-gradient(145deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--bg)) 100%);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03);
+        width: 100%; max-width: 500px;
+        padding: 22px; margin: 0 auto 15px auto;
+        border: 1px solid rgba(255,255,255,0.5);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        transition: box-shadow 0.3s;
+    }
+    .parent-section-card:active { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .parent-section-card h3 {
+        font-size: 16px; margin-bottom: 14px; color: var(--text);
+        font-weight: 800;
+        position: relative;
+        padding-left: 0;
+    }
+    .parent-section-card h3::after {
+        content: '';
+        display: block;
+        width: 40px; height: 3px;
+        background: linear-gradient(90deg, var(--primary), transparent);
+        border-radius: 2px;
+        margin-top: 6px;
+    }
+
+    /* === ПРОГРЕСС-БАР === */
+    .parent-progress-bar {
+        width: 100%; height: 12px; background: var(--bg);
+        border-radius: 6px; overflow: hidden; margin-top: 10px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .parent-progress-fill {
+        height: 100%; border-radius: 6px;
+        background: linear-gradient(90deg, var(--primary), #2ECC71, #00d26a);
+        background-size: 200% 100%;
+        animation: parentShimmer 3s linear infinite;
+        transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    .parent-progress-fill::after {
+        content: '';
+        position: absolute; top: 0; right: 0;
+        width: 20px; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+        border-radius: 0 6px 6px 0;
+    }
+
+    /* === НЕДЕЛЯ === */
+    .parent-week-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
+        transition: background 0.2s;
+        border-radius: 8px;
+        padding-left: 6px; padding-right: 6px;
+    }
+    .parent-week-row:hover { background: rgba(0,0,0,0.02); }
+    .parent-week-row:last-child { border-bottom: none; }
+    .parent-week-day {
+        font-size: 13px; font-weight: 700; width: 32px; color: var(--text-light);
+        transition: color 0.2s;
+    }
+    .parent-week-row.active .parent-week-day { color: var(--primary); font-weight: 900; }
+    .parent-week-bar-bg {
+        flex: 1; height: 10px; background: var(--bg);
+        border-radius: 5px; overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .parent-week-bar-fill {
+        height: 100%; border-radius: 5px;
+        background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #fff));
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .parent-week-row.active .parent-week-bar-fill {
+        background: linear-gradient(90deg, var(--primary), #2ECC71);
+        box-shadow: 0 0 8px rgba(var(--primary), 0.3);
+    }
+    .parent-week-min {
+        font-size: 12px; font-weight: 700; color: var(--text-light);
+        width: 50px; text-align: right; font-variant-numeric: tabular-nums;
+    }
+
+    /* === ПРЕДМЕТЫ === */
+    .parent-subject-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 6px; border-bottom: 1px solid rgba(0,0,0,0.04);
+        border-radius: 10px;
+        transition: background 0.2s;
+    }
+    .parent-subject-row:hover { background: rgba(0,0,0,0.02); }
+    .parent-subject-row:last-child { border-bottom: none; }
+    .parent-subject-icon {
+        font-size: 22px; width: 32px; text-align: center;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+    }
+    .parent-subject-name { font-size: 13px; font-weight: 600; flex: 1; color: var(--text); }
+    .parent-subject-bar-bg {
+        width: 80px; height: 7px; background: var(--bg);
+        border-radius: 4px; overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .parent-subject-bar-fill {
+        height: 100%; border-radius: 4px;
+        background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #fff));
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .parent-subject-pct {
+        font-size: 12px; font-weight: 800; color: var(--primary); width: 35px; text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* === ИСТОРИЯ ЗАНЯТИЙ === */
+    .parent-history-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 8px;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+    .parent-history-item:hover { background: rgba(0,0,0,0.02); transform: translateX(4px); }
+    .parent-history-item:last-child { border-bottom: none; }
+    .parent-history-icon {
+        font-size: 26px; width: 42px; text-align: center;
+        background: linear-gradient(135deg, var(--bg), color-mix(in srgb, var(--bg) 80%, var(--primary)));
+        border-radius: 12px; padding: 8px 0;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.08));
+    }
+    .parent-history-info { flex: 1; }
+    .parent-history-name { font-weight: 700; font-size: 14px; color: var(--text); }
+    .parent-history-date { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    .parent-history-time {
+        font-weight: 800; font-size: 15px; color: var(--primary); text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .parent-history-coins {
+        font-size: 11px; color: #FFD700; font-weight: 700;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    /* === ГРАФИКИ ПРОГРЕССА === */
+    .parent-chart-wrap {
+        position: relative;
+        width: 100%;
+        height: 180px;
+        margin-top: 12px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--bg);
+        padding: 10px;
+    }
+    .parent-chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .parent-month-summary {
+        display: flex; gap: 10px; margin-top: 14px;
+    }
+    .parent-month-card {
+        flex: 1; background: var(--bg); border-radius: 14px;
+        padding: 14px; text-align: center;
+        border: 1px solid rgba(255,255,255,0.4);
+        transition: transform 0.2s;
+    }
+    .parent-month-card:active { transform: scale(0.97); }
+    .parent-month-val {
+        font-size: 22px; font-weight: 800; color: var(--primary);
+        background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #fff));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .parent-month-label { font-size: 11px; color: var(--text-light); margin-top: 4px; font-weight: 600; }
+    .parent-month-trend { font-size: 13px; font-weight: 800; margin-top: 6px; }
+    .parent-month-trend.up { color: #2ECC71; }
+    .parent-month-trend.down { color: #E74C3C; }
+    .parent-month-trend.flat { color: var(--text-light); }
+
+    /* === ТЕПЛОВАЯ КАРТА === */
+    .heatmap-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        margin-top: 12px;
+    }
+    .heatmap-cell {
+        aspect-ratio: 1;
+        border-radius: 6px;
+        position: relative;
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: default;
+    }
+    .heatmap-cell:hover {
+        transform: scale(1.35);
+        z-index: 5;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .heatmap-cell[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 115%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--text);
+        color: var(--surface);
+        font-size: 10px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 8px;
+        white-space: nowrap;
+        z-index: 100;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .heatmap-cell.today {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+        border-radius: 8px;
+    }
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        justify-content: flex-end;
+        margin-top: 10px;
+        font-size: 10px;
+        color: var(--text-light);
+    }
+    .heatmap-legend-cell {
+        width: 13px;
+        height: 13px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .heatmap-days-labels {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        margin-bottom: 4px;
+    }
+    .heatmap-day-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-light);
+        text-align: center;
+    }
+
             * { 
                 box-sizing: border-box; 
                 margin: 0; 
@@ -1297,7 +1660,9 @@ body.theme-bw.dark-mode .shop-price-tag {
 }
 
 /* Фикс текста для светлой Платины и Бумаги, если кнопка активна */
-body.theme-platinum:not(.dark-mode) .shop-price-tag.affordable,
+body.theme-platinum:not(.dark-mode) .shop-price-tag.affordable {
+    color: #000000 !important;
+}
 
 /* Эффект при наведении на карточку */
 .shop-item:hover .shop-price-tag {
@@ -2652,17 +3017,21 @@ body.dark-mode .tier-name { color: #f7eecf; }
             <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
             <div id="user-list"></div>
             <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
-    <button class="btn" onclick="Transfer.transferByID()" style="margin-top: 15px; background: white; border: 2px dashed var(--primary); color: var(--primary); font-weight: bold; width: 100%; padding: 15px; animation: pulse-btn 2s infinite;">
-        📥 У меня есть код восстановления
-    </button>
 
-    <style>
-    @keyframes pulse-btn {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
-    }
-    </style>
+            <div style="display:flex; align-items:center; gap:12px; margin:20px 0 12px;">
+                <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
+                <span style="font-size:11px; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">или</span>
+                <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button class="btn" onclick="Transfer.transferByID()" style="background:var(--surface); border:2px solid var(--primary); color:var(--primary); font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px;">
+                    📥 Код восстановления
+                </button>
+                <button class="btn" onclick="Auth.parentLoginPrompt()" style="background:var(--surface); border:2px solid #2ECC71; color:#2ECC71; font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px;">
+                    👨‍👩‍👧 Родитель
+                </button>
+            </div>
         </div>
 
         <div class="auth-card" id="register-view" style="display: none;">
@@ -2684,6 +3053,109 @@ body.dark-mode .tier-name { color: #f7eecf; }
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-outline" onclick="Auth.showLogin()">Назад</button>
                 <button class="btn btn-primary" onclick="Auth.createAccount()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PARENT DASHBOARD SCREEN -->
+    <div id="parent-screen" style="display:none;">
+        <div class="parent-header">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div class="parent-header-avatar" id="parent-header-avatar">😎</div>
+                <div>
+                    <div class="mode-label">👨‍👩‍👧 Родительский режим</div>
+                    <div class="child-name" id="parent-child-name">Загрузка...</div>
+                </div>
+            </div>
+            <button class="parent-exit-btn" onclick="App.exitParentMode()">❌ Выйти</button>
+        </div>
+
+        <!-- ГЛАВНЫЙ СТАТУС -->
+        <div class="parent-status-card">
+            <div class="parent-status-icon" id="parent-status-icon">😴</div>
+            <div class="parent-status-text" id="parent-status-text" style="color:var(--text-light);">Загрузка...</div>
+            <div class="parent-status-sub" id="parent-status-sub">Подключение к серверу...</div>
+            <div class="parent-status-time" id="parent-timer-display" style="display:none;">00:00:00</div>
+            <div class="parent-online-badge offline" id="parent-online-badge">
+                <span id="parent-online-dot">🔴</span> <span id="parent-online-text">ВНЕ СЕТИ</span>
+            </div>
+        </div>
+
+        <!-- МИНИ КАРТОЧКИ -->
+        <div class="parent-grid">
+            <div class="parent-mini-card">
+                <div class="pmc-icon">⏱️</div>
+                <div class="pmc-val" id="parent-today-time">0 мин</div>
+                <div class="pmc-label">Сегодня</div>
+            </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">🔥</div>
+                <div class="pmc-val" id="parent-streak">0</div>
+                <div class="pmc-label">Дней подряд</div>
+ </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">🏆</div>
+                <div class="pmc-val" id="parent-level">1</div>
+                <div class="pmc-label">Уровень</div>
+            </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">💰</div>
+                <div class="pmc-val" id="parent-coins">0</div>
+                <div class="pmc-label">Монет</div>
+            </div>
+        </div>
+
+        <!-- ПРОГРЕСС-БАР ДНЯ -->
+        <div class="parent-section-card">
+            <h3>📅 Прогресс дня</h3>
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-light); margin-bottom:4px;">
+                <span id="parent-progress-label">0 мин из 60 мин</span>
+                <span id="parent-progress-pct">0%</span>
+            </div>
+            <div class="parent-progress-bar">
+                <div class="parent-progress-fill" id="parent-progress-fill" style="width:0%;"></div>
+            </div>
+        </div>
+
+        <!-- НЕДЕЛЯ -->
+        <div class="parent-section-card">
+            <h3>📊 За неделю</h3>
+            <div id="parent-week-chart">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ТЕПЛОВАЯ КАРТА -->
+        <div class="parent-section-card">
+            <h3>🗓️ Тепловая карта (30 дней)</h3>
+            <div id="parent-heatmap"></div>
+        </div>
+
+        <!-- ПРЕДМЕТЫ -->
+        <div class="parent-section-card">
+            <h3>🎓 Предметы</h3>
+            <div id="parent-subjects">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ИСТОРИЯ ЗАНЯТИЙ -->
+        <div class="parent-section-card">
+            <h3>📜 История занятий</h3>
+            <div id="parent-history">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ПРОГРЕСС -->
+        <div class="parent-section-card">
+            <h3>📈 Прогресс</h3>
+            <div class="parent-month-summary" id="parent-month-summary"></div>
+            <div class="parent-chart-wrap">
+                <canvas id="parent-week-canvas"></canvas>
+            </div>
+            <div class="parent-chart-wrap" style="margin-top:15px;">
+                <canvas id="parent-month-canvas"></canvas>
             </div>
         </div>
     </div>
@@ -3388,6 +3860,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
             <button class="btn" onclick="App.copyRescueCode()" style="background: #2B3674; color: white; width: 100%;">
                 📋 Скопировать и сохранить
+            </button>
+
+            <button class="btn" onclick="App.regenerateRescueCode()" style="background: var(--surface); border: 2px solid #FF4757; color: #FF4757; font-weight: 600; font-size: 13px; width: 100%; margin-top: 8px;">
+                🔄 Создать новый код
             </button>
             
             <p style="font-size: 11px; color: var(--text-light); margin-top: 10px; text-align: center;">
@@ -4286,14 +4762,16 @@ body.dark-mode .tier-name { color: #f7eecf; }
     ];
 
 
-    // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ
+    // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ (UTC+5 Ташкент)
     const getUZDate = (dateObj = null) => {
-    // Если передали конкретную дату (например, для стриков), используем её.
-    // Если нет — берем честное время Ташкента из TimeGuard.
+    // Если передали конкретную дату — используем её, иначе серверное время
     const timestamp = dateObj ? dateObj.getTime() : TimeGuard.getTrueTime();
     
-    const date = new Date(timestamp);
-    // Возвращаем ГГГГ-ММ-ДД
+    // Добавляем смещение UTC+5 (Ташкент)
+    const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const date = new Date(timestamp + UZ_OFFSET_MS);
+    
+    // Возвращаем ГГГГ-ММ-ДД (UTC формат, но с учётом смещения)
     return date.toISOString().slice(0, 10);
 };
 
@@ -4333,6 +4811,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
     };
     
     let DB = null; 
+    let isParentMode = false;
 
     const Data = {
         currentKey: null,
@@ -4536,6 +5015,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
         async save() {
         if (!DB || !Auth.currentUser || !Auth.currentUser.id) return;
+        if (isParentMode) return; // Родитель не может сохранять данные
 
         // 1. Сохраняем полный профиль локально
         localStorage.setItem(this.currentKey, JSON.stringify(DB));
@@ -5058,6 +5538,32 @@ body.dark-mode .tier-name { color: #f7eecf; }
         if (this.users.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Все профили повреждены. Создайте новый!</div>';
         }
+
+        // 2. ОТРИСОВКА СПИСКА ДЛЯ РОДИТЕЛЕЙ (Наблюдение)
+        const parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+        if (parentLinks.length > 0) {
+            const parentTitle = document.createElement('h3');
+            parentTitle.style.cssText = "margin-top:25px; margin-bottom:10px; font-size:12px; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; text-align:center;";
+            parentTitle.innerText = "🔎 Профили детей (Наблюдение)";
+            list.appendChild(parentTitle);
+
+            parentLinks.forEach(link => {
+                const pDiv = document.createElement('div');
+                pDiv.className = 'user-list-item';
+                pDiv.style.borderLeft = "4px solid #2ECC71";
+                
+                pDiv.innerHTML = `
+                    <div class="user-avatar">${link.avatar || '👦'}</div>
+                    <div style="flex-grow:1;" onclick="Auth.loginAsParent('${link.code}')">
+                        <div style="font-weight:bold">${link.name}</div>
+                        <div style="font-size:11px; color:#2ECC71">Режим просмотра (Online)</div>
+                    </div>
+                    <button class="delete-user-btn" style="background:#f39c12; margin-right:5px; font-size:12px;" onclick="Auth.updateParentCode('${link.id}', event)">🔄</button>
+                    <button class="delete-user-btn" onclick="Auth.removeParentLink('${link.id}', event)">✕</button>
+                `;
+                list.appendChild(pDiv);
+            });
+        }
     },
         deleteUser(id, event) {
             event.stopPropagation();
@@ -5224,6 +5730,160 @@ body.dark-mode .tier-name { color: #f7eecf; }
             } 
         },
 
+        parentLoginPrompt() {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.zIndex = '15000';
+            modal.innerHTML = `
+                <div class="modal-content" style="text-align:center; max-width:340px;">
+                    <div style="font-size:48px; margin-bottom:10px;">👨‍👩‍👧</div>
+                    <h3 style="margin-bottom:5px;">Режим родителя</h3>
+                    <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Введи код восстановления ребенка<br>для просмотра его прогресса</p>
+                    <input type="text" id="parent-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="8" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
+                    <button class="btn btn-primary" id="parent-code-btn" style="margin-top:15px; width:100%;" onclick="Auth.parentLoginSubmit()">📡 Подключиться</button>
+                    <button class="btn btn-outline" style="margin-top:8px; width:100%;" onclick="this.closest('.modal').remove()">Отмена</button>
+                </div>`;
+            document.body.appendChild(modal);
+            setTimeout(() => { const inp = document.getElementById('parent-code-input'); if(inp) inp.focus(); }, 100);
+        },
+
+        parentLoginSubmit() {
+            const inp = document.getElementById('parent-code-input');
+            if (!inp) return;
+            const cleanID = inp.value.trim().toUpperCase();
+            if (cleanID.length < 4) return App.toast("❌ Слишком короткий код");
+            document.querySelector('.modal.show')?.remove();
+            // Сохраняем связь в список родителя
+            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+            if (!parentLinks.find(l => l.code === cleanID)) {
+                parentLinks.push({
+                    id: 'p' + Date.now(),
+                    code: cleanID,
+                    name: 'Ребенок (' + cleanID.slice(0,4) + ')',
+                    avatar: '👦',
+                    addedAt: Date.now()
+                });
+                localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
+            }
+            this.loginAsParent(cleanID);
+        },
+
+        async loginAsParent(code) {
+            App.toast("📡 Подключение к профилю ребенка...");
+            try {
+                let attempts = 0;
+                while (!window.DB_Online && attempts < 10) {
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
+                if (!window.DB_Online) {
+                    App.toast("❌ Сервер недоступен");
+                    return;
+                }
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
+                const docSnap = await window.DB_Online.getDoc(docRef);
+                if (docSnap.exists()) {
+                    isParentMode = true;
+                    DB = docSnap.data().data;
+                    Auth.currentUser = { 
+                        id: DB.user.id, 
+                        name: DB.user.name, 
+                        avatar: DB.user.avatar 
+                    };
+                    // Обновляем имя в parentLinks
+                    let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+                    const link = parentLinks.find(l => l.code === code);
+                    if (link) {
+                        link.name = DB.user.name;
+                        link.avatar = DB.user.avatar || '👦';
+                        localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
+                    }
+                    App.initParentView();
+                    // Сохраняем FCM-токен родителя в Firebase (для серверных push-уведомлений)
+                    this._saveParentFcmToken(DB.user.id, DB.user.name);
+                } else {
+                    App.toast("❌ Код не найден или истёк");
+                }
+            } catch (e) {
+                console.error("Parent Login Error:", e);
+                App.toast("❌ Ошибка подключения");
+            }
+        },
+
+        // Сохраняем FCM-токен родителя в Firebase (для push-уведомлений)
+        // Храним по коду ребёнка: parentTokens/{childCode}/tokens/{fcmToken}
+        async _saveParentFcmToken(childUserId, childName) {
+            try {
+                let attempts = 0;
+                while (!window.DB_Online && attempts < 10) {
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
+                if (!window.DB_Online) return;
+
+                // Получаем FCM-токен родителя
+                let token = localStorage.getItem('fcm_token');
+                if (!token && window.DB_Online.messaging) {
+                    try {
+                        const { getToken } = window.DB_Online;
+                        token = await getToken(window.DB_Online.messaging, {
+                            vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw'
+                        });
+                        if (token) localStorage.setItem('fcm_token', token);
+                    } catch(e) { console.warn('FCM token error:', e); }
+                }
+                if (!token) return;
+
+                // Определяем код ребёнка из parentLinks
+                let childCode = '';
+                try {
+                    const parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+                    const link = parentLinks.find(l => l.name?.includes(childName) || true);
+                    if (link) childCode = link.code;
+                } catch(e) {}
+                if (!childCode) { console.warn('Нет кода ребёнка для сохранения FCM-токена'); return; }
+
+                // Сохраняем в parentTokens/{childCode}/tokens/{fcmToken}
+                const { doc, setDoc, db } = window.DB_Online;
+                const tokenDoc = doc(db, 'parentTokens', childCode, 'tokens', token);
+                await setDoc(tokenDoc, {
+                    token: token,
+                    parentName: (() => { try { return JSON.parse(localStorage.getItem('MathUsers') || '[]').find(u => u.id === Auth.currentUser?.id)?.name || 'Родитель'; } catch(e) { return 'Родитель'; } })(),
+                    childName: childName || 'Ребёнок',
+                    childUserId: childUserId || '',
+                    createdAt: Date.now(),
+                    lastSeen: Date.now(),
+                    userAgent: navigator.userAgent.substring(0, 100)
+                });
+                console.log('✅ FCM-токен родителя сохранён в Firebase для push-уведомлений');
+            } catch(e) {
+                console.error('Ошибка сохранения parent FCM token:', e);
+            }
+        },
+
+        removeParentLink(id, event) {
+            event.stopPropagation();
+            if(!confirm("Прекратить наблюдение за этим профилем?")) return;
+            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+            parentLinks = parentLinks.filter(link => link.id !== id);
+            localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
+            this.renderUserList();
+        },
+
+        updateParentCode(id, event) {
+            event.stopPropagation();
+            const newCode = window.prompt("Ребенок обновил код? Введите новый:");
+            if (!newCode) return;
+            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
+            const index = parentLinks.findIndex(l => l.id === id);
+            if (index !== -1) {
+                parentLinks[index].code = newCode.trim().toUpperCase();
+                localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
+                this.renderUserList();
+                App.toast("✅ Код обновлен");
+            }
+        },
+
         resetData() {
             if(confirm("ВЫ УВЕРЕНЫ? Всё будет удалено навсегда!")) {
                 Data.initNewData(this.currentUser.id);
@@ -5311,6 +5971,7 @@ const Timer = {
     interval: null,
     checkInterval: null,
     lastCheckTime: 0,
+    checkShown: false,
     hardcoreTimeout: null, 
     hardcoreListenerAdded: false, // Флаг, чтобы не дублировать слушателя
 
@@ -5327,6 +5988,27 @@ const Timer = {
                 console.warn('Wake Lock не поддерживается');
             }
         }
+        // При возвращении экрана — перехватываем visibilitychange
+        if (!this._visHandler) {
+            this._visHandler = async () => {
+                if (!document.hidden && this.active && !this.isPaused) {
+                    // Экран вернулся — перезапрашиваем WakeLock
+                    await this.requestWakeLock();
+                    // Восстанавливаем время из памяти (восстанавливаем пропущенные секунды)
+
+                    const now = this.getTrueTime();
+                    const elapsed = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+                    if (elapsed > this.realSec + 5) {
+                        // Была пауза/сворачивание > 5 сек — восстанавливаем
+                        this.realSec = elapsed;
+                        this.visualSec = elapsed;
+                        this.updateDisplay();
+                        console.log('⏱️ Таймер восстановлен из фонового режима:', elapsed, 'сек');
+                    }
+                }
+            };
+            document.addEventListener('visibilitychange', this._visHandler);
+        }
     },
     
     releaseWakeLock() {
@@ -5338,6 +6020,69 @@ const Timer = {
 
     getTrueTime() {
         return TimeGuard.getTrueTime();
+    },
+
+    // === PUSH-УВЕДОМЛЕНИЕ: отправляем когда пора проходить проверку ===
+    async _sendCheckPush() {
+        try {
+            // 1. Браузерное уведомление (если приложение открыто)
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification('🚨 Время проверки!', {
+                        body: 'Прошёл час! Решите пример чтобы продолжить.',
+                        icon: 'icon-192.png',
+                        badge: 'icon-192.png',
+                        tag: 'afk-check',
+                        requireInteraction: true,
+                        vibrate: [300, 100, 300, 100, 300]
+                    });
+                } catch(e) {}
+            }
+            // 2. Звук "двойной ding" ( Web Audio API)
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [660, 880, 1100]; // Три нарастающие ноты
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.4, ctx.currentTime + i * 0.2);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.2 + 0.5);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.2);
+                    osc.stop(ctx.currentTime + i * 0.2 + 0.6);
+                });
+            } catch(e) {}
+            // 3. Vibration на телефоне
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+        } catch(e) { console.warn('Push check notification error:', e); }
+    },
+
+    // === Восстановление таймера из фонового режима ===
+    restoreFromBackground() {
+        try {
+            const saved = localStorage.getItem('MathTimerState');
+            if (!saved) return;
+            const state = JSON.parse(saved);
+            if (!state.active) return;
+
+            const now = Date.now();
+            const elapsedSinceSave = Math.floor((now - state.lastSave) / 1000);
+
+            // Если прошло < 5 минут — восстанавливаем таймер
+            if (elapsedSinceSave < 300 && this.active) {
+                const serverElapsed = Math.floor((this.getTrueTime() - state.startTime - state.pausedDuration) / 1000);
+                // Берём максимум из локального и серверного (защита от манипуляций)
+                this.realSec = Math.max(state.realSec, serverElapsed);
+                this.visualSec = this.realSec;
+                this.updateDisplay();
+                console.log('⏱️ Таймер восстановлен из фона. Прошло секунд:', this.realSec);
+            }
+            // Очищаем сохранённое состояние
+            localStorage.removeItem('MathTimerState');
+        } catch(e) { console.warn('Restore from background error:', e); }
     },
 
     initHardcoreWatch() {
@@ -5359,10 +6104,17 @@ const Timer = {
                         this.releaseWakeLock();
                         
                         if (window.DB_Online && Auth.currentUser) {
+                            // Обновляем локально чтобы Data.save() не перезаписал старыми
+                            if (DB && DB.user) {
+                                DB.user.activeSessionStart = null;
+                                DB.user.lastPing = null;
+                                DB.user.pausedAt = null;
+                            }
                             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
                             window.DB_Online.updateDoc(docRef, {
                                 "user.activeSessionStart": null,
-                                "user.lastPing": null
+                                "user.lastPing": null,
+                                "user.pausedAt": null
                             });
                         }
                         
@@ -5392,6 +6144,12 @@ const Timer = {
     preStart() {
         if (!navigator.onLine) return App.toast("❌ Нужен интернет для работы таймера");
         if (this.active) return App.toast("Таймер уже запущен");
+        // 🛡️ COOLDOWN: минимум 60 сек между сессиями (защита от накрутки)
+        const lastStop = Number(localStorage.getItem('MathTimerLastStop') || 0);
+        if (lastStop && Date.now() - lastStop <= 60000) {
+            const waitSec = Math.ceil((60000 - (Date.now() - lastStop)) / 1000);
+            return App.toast(`⏳ Подождите ${waitSec} сек перед следующей сессией`);
+        }
 
         const options = [
             { label: '🎯 Обычный', value: 'normal', reward: '5-20 💰', desc: 'Можно ставить на паузу' },
@@ -5428,8 +6186,10 @@ const Timer = {
     },
 
     async start() {
-        if (!navigator.onLine) return App.toast("❌ Нужен интернет!");
+        if (!navigator.onLine) return App.toast("❌ Нужен интернет! Включите Wi-Fi или мобильные данные.");
         if (this.active) return;
+        // Проверяем что Firebase подключён
+        if (!window.DB_Online) return App.toast("❌ Сервер недоступен. Попробуйте позже.");
 
         await TimeGuard.sync();
 
@@ -5442,15 +6202,32 @@ const Timer = {
         this.sessionCoins = 0;
         this.lastPaidBlock = 0;
         this.lastCheckTime = 0;
+        this.checkShown = false;
 
         await this.requestWakeLock(); 
 
         if (window.DB_Online && Auth.currentUser) {
+            // Обновляем локально, чтобы Data.save() не перезаписал старыми значениями
+            if (DB && DB.user) {
+                DB.user.activeSessionStart = Number(this.startTime);
+                DB.user.lastPing = Number(this.startTime);
+            }
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             await window.DB_Online.updateDoc(docRef, {
                 "user.activeSessionStart": Number(this.startTime),
                 "user.lastPing": Number(this.startTime)
             });
+            // Записываем таймер AFK-проверки в Firebase (для push-уведомления)
+            const checkAt = Number(this.startTime) + this.CHECK_AFTER_SECONDS * 1000;
+            const fcmToken = localStorage.getItem('fcm_token') || '';
+            const checkDoc = window.DB_Online.doc(window.DB_Online.db, 'timerChecks', Auth.currentUser.id);
+            window.DB_Online.setDoc(checkDoc, {
+                userId: Auth.currentUser.id,
+                checkAt: checkAt,
+                fcmToken: fcmToken,
+                sent: false,
+                createdAt: Date.now()
+            }).catch(e => console.warn('timerCheck save error:', e));
         }
 
         // --- ЛОГИКА ЦВЕТА И АНИМАЦИИ ---
@@ -5498,43 +6275,90 @@ const Timer = {
         this.interval = setInterval(async () => {
             if (!this.isRunning || this.isPaused) return;
 
-            if (!navigator.onLine) { this.stop(true); return; }
-
             const now = this.getTrueTime();
-            this.realSec = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+            const calculatedSec = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+
+            // 🛡️ ДЕТЕКТОР ПРЫЖКОВ (АНТИ-ЧИТ)
+            // Если время прыгнуло вперёд более чем на 3 секунды за 1 секунду реальности —
+            // значит подменяли часы или сбился офсет
+            if (this.realSec > 0 && calculatedSec - this.realSec > 3) {
+                console.warn('⚠️ Обнаружен скачок времени! Перепроверка...');
+                await TimeGuard.sync();
+                // Пересчитываем с новым офсетом
+                const fixedSec = Math.floor((this.getTrueTime() - this.startTime - this.totalPausedDuration) / 1000);
+                if (fixedSec - this.realSec > 3) {
+                    // Скачок подтверждён — блокируем сессию
+                    App.toast('🚫 Обнаружена манипуляция временем! Сессия остановлена.');
+                    this.stop(false);
+                    return;
+                }
+                this.realSec = fixedSec;
+            } else {
+                this.realSec = calculatedSec;
+            }
             this.visualSec = this.realSec;
 
-            // --- ОПТИМИЗАЦИЯ ECO MODE ---
+            // === ФОНОВЫЙ РЕЖИМ: сохраняем состояние каждые 10 сек ===
+            if (this.realSec % 10 === 0) {
+                try {
+                    localStorage.setItem('MathTimerState', JSON.stringify({
+                        startTime: this.startTime,
+                        pausedDuration: this.totalPausedDuration,
+                        realSec: this.realSec,
+                        active: true,
+                        lastSave: Date.now()
+                    }));
+                } catch(e) {}
+            }
+
+            // === ОТОБРАЖЕНИЕ ===
             const ecoOverlay = document.getElementById('eco-overlay');
             const isEcoActive = ecoOverlay && ecoOverlay.classList.contains('active');
 
             if (!isEcoActive) {
-                // Если обычный режим: обновляем всё и крутим анимации
                 this.updateDisplay();
-                document.getElementById('timer').classList.add('timer-active-anim');
+                if (!document.hidden) {
+                    document.getElementById('timer').classList.add('timer-active-anim');
+                }
             } else {
-                // Если ЭКО-РЕЖИМ:
-                // 1. Обновляем ТОЛЬКО цифры на черном экране
                 const h = Math.floor(this.visualSec / 3600);
                 const m = Math.floor((this.visualSec % 3600) / 60);
                 const s = this.visualSec % 60;
                 const str = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                
                 const ecoDisplay = document.getElementById('eco-timer-display');
                 if (ecoDisplay) ecoDisplay.innerText = str;
-
-                // 2. Выключаем анимацию "дыхания" у главного таймера (её не видно, незачем тратить CPU)
                 document.getElementById('timer').classList.remove('timer-active-anim');
             }
-            // ----------------------------
 
-            if (this.realSec % 30 === 0) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-                window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(this.getTrueTime()) });
+            // === HEARTBEAT каждые 30 сек (экономим батарею) ===
+            if (this.realSec % 30 === 0 && navigator.onLine && window.DB_Online && Auth.currentUser) {
+                const ping = Number(this.getTrueTime());
+                if (DB && DB.user) DB.user.lastPing = ping;
+                try {
+                    const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                    window.DB_Online.updateDoc(docRef, { "user.lastPing": ping });
+                } catch(e) { console.warn('Heartbeat ping failed:', e); }
             }
 
-            if (this.realSec > 0 && this.realSec - this.lastCheckTime >= this.CHECK_AFTER_SECONDS) {
-                this.lastCheckTime = this.realSec;
+            // 🛡️ ПЕРЕСИНХРОНИЗАЦИЯ TimeGuard каждые 5 минут (защита от дрифта)
+            if (this.realSec > 0 && this.realSec % 300 === 0 && navigator.onLine) {
+                await TimeGuard.sync();
+            }
+
+            // === ПОТЕРЯ СВЯЗИ: не останавливаем, а ждём реконнекта ===
+            if (!navigator.onLine) {
+                App.toast("⚠️ Нет интернета. Таймер продолжает работать.");
+                // Не останавливаем — таймер продолжает в памяти
+                // Когда интернет вернётся — синхронизируем
+                return;
+            }
+
+            // === АНТИ-AFK: строго после 1 часа, ОДНОРАЗОВО ===
+            // ПUSH УВЕДОМЛЕНИЕ: отправляем push когда пора проверять
+            if (this.realSec >= this.CHECK_AFTER_SECONDS && !this.checkShown) {
+                this.checkShown = true;
+                // Отправляем push-уведомление (если разрешено)
+                this._sendCheckPush();
                 this.showMathCheck();
             }
 
@@ -5587,9 +6411,9 @@ const Timer = {
 
         if (userAnswer === correct) {
             SoundSys.play('success');
-            App.toast("✅ Продолжаем!");
+            App.toast("✅ Проверка пройдена! Сессия завершена.");
             modal.remove();
-            this.resume();
+            this.stop(true);
         } else {
             this.failCheck(modal);
         }
@@ -5597,9 +6421,11 @@ const Timer = {
 
     failCheck(modal) {
         SoundSys.play('error');
-        App.toast("⏰ Проверка провалена.");
+        App.toast("⏰ Проверка провалена. Сессия аннулирована.");
         modal.remove();
-        this.stop(true);
+        // 🛡️ Удвоенный cooldown при провале проверки (120 сек)
+        try { localStorage.setItem('MathTimerLastStop', String(Date.now() - 60000)); } catch(e) {}
+        this.stop(false);
     },
 
     pause(isCheckPause = false) {
@@ -5619,6 +6445,12 @@ const Timer = {
             btn.style.fontSize = '12px';
             btn.onclick = () => this.resume();
         }
+        // Сообщаем Firebase что на паузе (чтобы родитель видел сразу)
+        if (DB && DB.user) DB.user.pausedAt = Number(this.getTrueTime());
+        if (window.DB_Online && Auth.currentUser) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, 'users', Auth.currentUser.id);
+            window.DB_Online.updateDoc(docRef, { 'user.pausedAt': Number(this.getTrueTime()) }).catch(() => {});
+        }
         App.toast("⏸ Пауза");
     },
 
@@ -5631,6 +6463,15 @@ const Timer = {
 
         this.isPaused = false;
         this.isRunning = true;
+        // Убираем паузу из Firebase
+        if (DB && DB.user) {
+            DB.user.pausedAt = null;
+            DB.user.lastPing = Number(this.getTrueTime());
+        }
+        if (window.DB_Online && Auth.currentUser) {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, 'users', Auth.currentUser.id);
+            window.DB_Online.updateDoc(docRef, { 'user.pausedAt': null, 'user.lastPing': Number(this.getTrueTime()) }).catch(() => {});
+        }
 
         const btn = document.getElementById('btn-start');
         if (btn) {
@@ -5649,7 +6490,9 @@ const Timer = {
         clearInterval(this.interval);
         this.active = false;
         this.isRunning = false;
-        this.releaseWakeLock(); 
+        this.releaseWakeLock();
+        // 🛡️ Запоминаем время остановки для cooldown
+        try { localStorage.setItem('MathTimerLastStop', String(Date.now())); } catch(e) {}
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
         const snap = await window.DB_Online.getDoc(docRef);
@@ -5659,8 +6502,14 @@ const Timer = {
         const serverLastPing = Number(data.user.lastPing || serverStart);
         const stopTime = this.getTrueTime();
 
-        const endPoint = Math.min(stopTime, serverLastPing + 40000);
-        const verifiedSec = Math.floor((endPoint - serverStart - this.totalPausedDuration) / 1000);
+        // 🛡️ СТРОЖЕ: endPoint не более чем lastPing + 30 сек (вместо 40)
+        const endPoint = Math.min(stopTime, serverLastPing + 30000);
+        // Доп. проверка: сессия не может длиться дольше чем реальное время с сервера
+        const maxAllowed = Math.floor((stopTime - serverStart) / 1000) + 5; // +5 сек на задержку сети
+        const verifiedSec = Math.min(
+            Math.floor((endPoint - serverStart - this.totalPausedDuration) / 1000),
+            maxAllowed
+        );
 
         if (saveSession && verifiedSec >= 60) {
             this.realSec = verifiedSec;
@@ -5670,7 +6519,13 @@ const Timer = {
             App.toast(cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)]);
         }
 
-        await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null });
+        // Обновляем локально чтобы Data.save() не перезаписал старыми
+        if (DB && DB.user) {
+            DB.user.activeSessionStart = null;
+            DB.user.lastPing = null;
+            DB.user.pausedAt = null;
+        }
+        await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null, "user.pausedAt": null });
         this.resetTimerUI();
     },
 
@@ -5679,7 +6534,17 @@ const Timer = {
         this.visualSec = 0;
         this.isPaused = false;
         this.isRunning = false;
-        this.isStrict = false; 
+        this.isStrict = false;
+        this.active = false;
+        // Очищаем сохранённое состояние фонового таймера
+        try { localStorage.removeItem('MathTimerState'); } catch(e) {}
+        // Удаляем таймер AFK-проверки из Firebase
+        if (window.DB_Online && Auth.currentUser) {
+            try {
+                const checkRef = window.DB_Online.doc(window.DB_Online.db, 'timerChecks', Auth.currentUser.id);
+                window.DB_Online.deleteDoc(checkRef).catch(() => {});
+            } catch(e) {}
+        }
         this.updateDisplay();
         
         const timerEl = document.getElementById('timer');
@@ -7508,16 +8373,27 @@ else if (this.mode === 'fractions') {
             TimeGuard.verify();
 
             // Слушаем изменение состояния сети в реальном времени
-            window.addEventListener('online', () => location.reload());
+            // (первый online-listener выше уже показывает тост, дублировать не нужно)
             window.addEventListener('offline', () => {
                 App.toast("❌ Связь потеряна. Приложение требует онлайн-режим.");
-                setTimeout(() => location.reload(), 2000);
             });
 
             // Синхронизация при возврате во вкладку
             document.addEventListener("visibilitychange", () => {
                 if (!document.hidden && Auth.currentUser) {
-                    Data.syncWithCloud(); // Принудительно забираем данные из облака
+                    try {
+                        if (window.DB_Online && Auth.currentUser && Data.currentKey) {
+                            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+                            window.DB_Online.getDoc(docRef).then(docSnap => {
+                                if (docSnap.exists()) {
+                                    DB = docSnap.data();
+                                    Data.cleanSubjects();
+                                    localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+                                    App.updateUI();
+                                }
+                            }).catch(() => {}); // Молча игнорируем сетевые ошибки
+                        }
+                    } catch(e) { console.warn('visibility sync error:', e); }
                 }
             });
 
@@ -7872,25 +8748,24 @@ setTimeout(() => {
             const rescueEl = document.getElementById('rescue-code-display');
             
             if (rescueEl && DB.user) {
-                // 1. Если кода еще нет — создаем его один раз и навсегда
+                // 1. Если кода еще нет — создаем
                 if (!DB.user.rescueCode) {
                     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
                     let code = '';
                     for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-                    
                     DB.user.rescueCode = code;
                     Data.save();
+                }
 
-                    // 2. Резервируем его в Firebase (чтобы он там лежал вечно)
-                    if(window.DB_Online) {
-                        const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                        window.DB_Online.setDoc(docRef, {
-                            userId: Auth.currentUser.id,
-                            data: DB,
-                            isPermanent: true, // Метка, что это вечный код
-                            updatedAt: new Date().toISOString()
-                        }, { merge: true });
-                    }
+                // 2. ВСЕГДА пересохраняем код в Firebase (если был удалён)
+                if (window.DB_Online && DB.user.rescueCode) {
+                    const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
+                    window.DB_Online.setDoc(docRef, {
+                        userId: Auth.currentUser.id,
+                        data: DB,
+                        isPermanent: true,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true }).catch(e => console.warn('rescueCode save:', e));
                 }
 
                 // 3. Показываем код на экране
@@ -8203,9 +9078,43 @@ setTimeout(() => {
                 window.DB_Online.setDoc(docRef, {
                     userId: Auth.currentUser.id,
                     data: DB,
+                    isPermanent: true,
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
             }
+        },
+
+        regenerateRescueCode() {
+            if (!confirm("Создать НОВЫЙ код?\n\nСтарый код перестанет работать.\nУбедись, что родитель получил новый код.")) return;
+            
+            // 1. Удаляем старый код из Firebase
+            if (window.DB_Online && DB.user.rescueCode) {
+                const oldRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
+                window.DB_Online.deleteDoc(oldRef).catch(() => {});
+            }
+            
+            // 2. Создаём новый код
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let newCode = '';
+            for (let i = 0; i < 8; i++) newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            DB.user.rescueCode = newCode;
+            Data.save();
+            
+            // 3. Сохраняем в Firebase
+            if (window.DB_Online) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", newCode);
+                window.DB_Online.setDoc(docRef, {
+                    userId: Auth.currentUser.id,
+                    data: DB,
+                    isPermanent: true,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
+            
+            // 4. Обновляем экран
+            const rescueEl = document.getElementById('rescue-code-display');
+            if (rescueEl) rescueEl.innerText = newCode;
+            App.toast("✅ Новый код создан! " + newCode);
         },
         // МАГАЗИН (Отрисовка)
         renderShop() {
@@ -8487,9 +9396,9 @@ setTimeout(() => {
             const isBoosterActive = Date.now() < (DB.user.boosterExpiry || 0);
             let finalXP = isBoosterActive ? n * 2 : n;        
             
-            DB.user.xp += n; 
+            DB.user.xp += finalXP; 
             if (!DB.user.lifetimeXP) DB.user.lifetimeXP = 0;
-            DB.user.lifetimeXP += n;
+            DB.user.lifetimeXP += finalXP;
 
             if(DB.user.xp >= DB.user.nextXp){
                 DB.user.level++; 
@@ -8973,7 +9882,486 @@ renderCharts(weekSec) {
         // Секретный счетчик кликов
         adminClicks: 0,
 
-        
+    // === РЕЖИМ РОДИТЕЛЯ (Дашборд) ===
+    initParentView() {
+        if (!DB || !DB.user) return;
+        // Скрываем всё, показываем дашборд
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('app-container').style.display = 'none';
+        const ps = document.getElementById('parent-screen');
+        if (ps) ps.style.display = 'block';
+        // Применяем тему ребёнка
+        if (DB.user.theme) {
+            const themeClass = `theme-${DB.user.theme}${DB.user.darkMode ? ' dark-mode' : ''}`;
+            document.body.className = themeClass;
+        }
+        // Заполняем базовые данные
+        document.getElementById('parent-child-name').innerText = DB.user.name || 'Ребёнок';
+        const parentAvatar = document.getElementById('parent-header-avatar');
+        if (parentAvatar) parentAvatar.textContent = DB.user.avatar || '😎';
+        document.getElementById('parent-level').innerText = DB.user.level || 1;
+        document.getElementById('parent-coins').innerText = DB.user.coins || 0;
+        document.getElementById('parent-streak').innerText = DB.user.streak || 0;
+        // Сегодняшнее время (из subjects)
+        let todaySec = 0;
+        if (DB.subjects) {
+            const today = getUZDate();
+            Object.values(DB.subjects).forEach(s => {
+                if (s && s.daily && s.daily[today]) todaySec += s.daily[today];
+            });
+        }
+        const todayMin = Math.round(todaySec / 60);
+        document.getElementById('parent-today-time').innerText = todayMin + ' мин';
+        document.getElementById('parent-progress-label').innerText = todayMin + ' мин из 60 мин';
+        document.getElementById('parent-progress-pct').innerText = Math.min(100, Math.round(todayMin / 60 * 100)) + '%';
+        document.getElementById('parent-progress-fill').style.width = Math.min(100, Math.round(todayMin / 60 * 100)) + '%';
+        // Предметы
+        this.renderParentSubjects();
+        // Неделя
+        this.renderParentWeek();
+        // Тепловая карта
+        this.renderParentHeatmap();
+        // История занятий
+        this.renderParentHistory();
+        // Графики прогресса
+        setTimeout(() => this.renderParentProgress(), 300);
+        // Запрашиваем разрешение на уведомления (для оповещений о статусе)
+        if ('Notification' in window && Notification.permission === 'default') {
+            // Запрашиваем через 2 секунды чтобы не мешать загрузке
+            setTimeout(() => Notification.requestPermission().catch(() => {}), 2000);
+        }
+        // Запускаем мониторинг в реальном времени
+        this.startParentMonitoring();
+    },
+    renderParentSubjects() {
+        const el = document.getElementById('parent-subjects');
+        if (!el || !DB.subjects) { if(el) el.innerHTML = '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:10px;">Нет данных</div>'; return; }
+        const total = Object.values(DB.subjects).reduce((s, sub) => s + (sub && sub.sec ? sub.sec : 0), 0);
+        if (total === 0) { el.innerHTML = '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:10px;">Пока нет занятий</div>'; return; }
+        el.innerHTML = Object.entries(DB.subjects)
+            .filter(([,s]) => s && s.sec > 0)
+            .sort((a, b) => (b[1].sec || 0) - (a[1].sec || 0))
+            .map(([id, s]) => {
+                const pct = Math.round((s.sec / total) * 100);
+                // Берём эмодзи и русское имя из DB.subjects (как у ученика)
+                // Если в DB нет — ищем в ALL_SUBJECTS по id
+                const template = (typeof ALL_SUBJECTS !== 'undefined') ? ALL_SUBJECTS.find(a => a.id === id) : null;
+                const icon = s.icon || (template ? template.icon : '📚');
+                const name = s.name || (template ? template.name : id);
+                return `<div class="parent-subject-row">
+                    <div class="parent-subject-icon">${icon}</div>
+                    <div class="parent-subject-name">${name}</div>
+                    <div class="parent-subject-bar-bg"><div class="parent-subject-bar-fill" style="width:${pct}%"></div></div>
+                    <div class="parent-subject-pct">${pct}%</div>
+                </div>`;
+            }).join('');
+    },
+    renderParentWeek() {
+        const el = document.getElementById('parent-week-chart');
+        if (!el) return;
+        const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+        const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+        const dayOfWeek = (now.getDay() + 6) % 7; // Пн=0
+        let maxMin = 1;
+        const weekData = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - dayOfWeek + i);
+            const dateKey = d.toISOString().slice(0, 10);
+            let sec = 0;
+            if (DB.subjects) {
+                Object.values(DB.subjects).forEach(s => {
+                    if (s && s.daily && s.daily[dateKey]) sec += s.daily[dateKey];
+                });
+            }
+            const min = Math.round(sec / 60);
+            if (min > maxMin) maxMin = min;
+            weekData.push({ day: days[i], min, isToday: i === dayOfWeek });
+        }
+        el.innerHTML = weekData.map(d => {
+            const pct = Math.round((d.min / maxMin) * 100);
+            const bold = d.isToday ? 'font-weight:900;color:var(--primary);' : '';
+            const barColor = d.isToday ? 'var(--primary)' : 'var(--text-light)';
+            return `<div class="parent-week-row" style="${bold}">
+                <div class="parent-week-day">${d.day}</div>
+                <div class="parent-week-bar-bg"><div class="parent-week-bar-fill" style="width:${pct}%;background:${barColor};"></div></div>
+                <div class="parent-week-min">${d.min} мин</div>
+            </div>`;            }).join('');
+    },
+    renderParentHeatmap() {
+        const el = document.getElementById('parent-heatmap');
+        if (!el || !DB) return;
+        const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+        const todayKey = now.toISOString().slice(0, 10);
+        // Цвета: 0мин = светлый, больше = темнее
+        const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
+        const levels = [0, 15, 30, 45, 60]; // Пороги в минутах
+        // Дни недели
+        const dayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+        const todayDOW = (now.getDay() + 6) % 7; // Пн=0
+        // Собираем 30 дней
+        const cells = [];
+        let totalMin = 0;
+        let activeDays = 0;
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            let sec = 0;
+            if (DB.subjects) {
+                Object.values(DB.subjects).forEach(s => {
+                    if (s && s.daily && s.daily[key]) sec += s.daily[key];
+                });
+            }
+            const min = Math.round(sec / 60);
+            totalMin += min;
+            if (min > 0) activeDays++;
+            // Определяем уровень цвета
+            let colorIdx = 0;
+            for (let l = levels.length - 1; l >= 0; l--) {
+                if (min >= levels[l]) { colorIdx = l; break; }
+            }
+            const isToday = key === todayKey;
+            const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            cells.push({
+                color: colors[colorIdx],
+                title: `${dateStr}: ${min} мин`,
+                isToday
+            });
+        }
+        // Рисуем сетку
+        let html = '<div class="heatmap-days-labels">';
+        dayLabels.forEach(l => { html += `<div class="heatmap-day-label">${l}</div>`; });
+        html += '</div><div class="heatmap-grid">';
+        cells.forEach(c => {
+            html += `<div class="heatmap-cell${c.isToday ? ' today' : ''}" style="background:${c.color}" title="${c.title}"></div>`;
+        });
+        html += '</div>';
+        // Легенда
+        html += '<div class="heatmap-legend"><span>Меньше</span>';
+        colors.forEach(c => { html += `<div class="heatmap-legend-cell" style="background:${c}"></div>`; });
+        html += '<span>Больше</span></div>';
+        // Итого
+        html += `<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text-light);">
+            <b style="color:var(--primary);">${totalMin}</b> мин за 30 дней · 
+            <b style="color:var(--primary);">${activeDays}</b> активных дней
+        </div>`;
+        el.innerHTML = html;
+    },
+    renderParentHistory() {
+        const el = document.getElementById('parent-history');
+        if (!el || !DB) { return; }
+        // Собираем данные из daily по всем предметам за последние 5 дней
+        const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+        const days = [];
+        for (let i = 0; i < 5; i++) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const dateKey = d.toISOString().slice(0, 10);
+            const dayEntries = [];
+            if (DB.subjects) {
+                Object.entries(DB.subjects).forEach(([id, s]) => {
+                    if (s && s.daily && s.daily[dateKey] && s.daily[dateKey] > 0) {
+                        const template = (typeof ALL_SUBJECTS !== 'undefined') ? ALL_SUBJECTS.find(a => a.id === id) : null;
+                        dayEntries.push({
+                            icon: s.icon || (template ? template.icon : '📚'),
+                            name: s.name || (template ? template.name : id),
+                            sec: s.daily[dateKey]
+                        });
+                    }
+                });
+            }
+            if (dayEntries.length > 0) {
+                days.push({ date: d, dateKey, entries: dayEntries });
+            }
+        }
+        if (days.length === 0) {
+            el.innerHTML = '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:15px;">Пока нет записей</div>';
+            return;
+        }
+        const userTZ = (DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+        el.innerHTML = days.map(day => {
+            const dateStr = day.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: userTZ });
+            const totalMin = Math.round(day.entries.reduce((s, e) => s + e.sec, 0) / 60);
+            const entriesHtml = day.entries.map(e => {
+                const min = Math.round(e.sec / 60);
+                return `<div class="parent-history-item">
+                    <div class="parent-history-icon">${e.icon}</div>
+                    <div class="parent-history-info">
+                        <div class="parent-history-name">${e.name}</div>
+                        <div class="parent-history-date">${min} мин</div>
+                    </div>
+                </div>`;
+            }).join('');
+            return `<div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-weight:700;font-size:13px;color:var(--text);">${dateStr}</span>
+                    <span style="font-weight:800;font-size:13px;color:var(--primary);">${totalMin} мин</span>
+                </div>
+                ${entriesHtml}
+            </div>`;
+        }).join('');
+    },
+    renderParentProgress() {
+        if (typeof Chart === 'undefined') return;
+        // === Месячная сводка ===
+        const summaryEl = document.getElementById('parent-month-summary');
+        if (summaryEl && DB.subjects) {
+            const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+            let thisMonthSec = 0, lastMonthSec = 0;
+            for (let i = 0; i < 60; i++) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                const month = d.getMonth();
+                const thisMonth = now.getMonth();
+                Object.values(DB.subjects).forEach(s => {
+                    if (s && s.daily && s.daily[key]) {
+                        if (month === thisMonth) thisMonthSec += s.daily[key];
+                        else if (i < 60) lastMonthSec += s.daily[key];
+                    }
+                });
+            }
+            const thisMin = Math.round(thisMonthSec / 60);
+            const lastMin = Math.round(lastMonthSec / 60);
+            const trend = lastMin > 0 ? Math.round(((thisMin - lastMin) / lastMin) * 100) : 0;
+            const trendColor = trend > 0 ? '#2ECC71' : trend < 0 ? '#FF7675' : 'var(--text-light)';
+            const trendIcon = trend > 0 ? '📈' : trend < 0 ? '📉' : '➡️';
+            summaryEl.innerHTML = `
+                <div class="parent-month-card">
+                    <div class="parent-month-val">${thisMin}</div>
+                    <div class="parent-month-label">мин в этом месяце</div>
+                </div>
+                <div class="parent-month-card">
+                    <div class="parent-month-val">${lastMin}</div>
+                    <div class="parent-month-label">мин в прошлом</div>
+                </div>
+                <div class="parent-month-card">
+                    <div class="parent-month-trend" style="color:${trendColor}">${trendIcon} ${trend > 0 ? '+' : ''}${trend}%</div>
+                    <div class="parent-month-label">динамика</div>
+                </div>`;
+        }
+        // === Недельный график (Chart.js) ===
+        const weekCanvas = document.getElementById('parent-week-canvas');
+        if (weekCanvas && DB.subjects) {
+            if (window._parentWeekChart) window._parentWeekChart.destroy();
+            const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+            const labels = [];
+            const data = [];
+            const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+            const dayOfWeek = (now.getDay() + 6) % 7;
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - dayOfWeek + i);
+                const key = d.toISOString().slice(0, 10);
+                let sec = 0;
+                Object.values(DB.subjects).forEach(s => {
+                    if (s && s.daily && s.daily[key]) sec += s.daily[key];
+                });
+                labels.push(dayNames[i]);
+                data.push(Math.round(sec / 60));
+            }
+            window._parentWeekChart = new Chart(weekCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Минуты',
+                        data: data,
+                        backgroundColor: data.map((_, i) => i === dayOfWeek ? getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() : 'rgba(108,99,255,0.2)'),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+        // === Месячный график (30 дней) ===
+        const monthCanvas = document.getElementById('parent-month-canvas');
+        if (monthCanvas && DB.subjects) {
+            if (window._parentMonthChart) window._parentMonthChart.destroy();
+            const now = new Date(TimeGuard.getTrueTime() + 5 * 3600000);
+            const labels = [];
+            const data = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                let sec = 0;
+                Object.values(DB.subjects).forEach(s => {
+                    if (s && s.daily && s.daily[key]) sec += s.daily[key];
+                });
+                labels.push(d.getDate() + '.' + (d.getMonth() + 1));
+                data.push(Math.round(sec / 60));
+            }
+            window._parentMonthChart = new Chart(monthCanvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Минуты',
+                        data: data,
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6C63FF',
+                        backgroundColor: 'rgba(108,99,255,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { ticks: { maxTicksLimit: 7, font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+    },
+    startParentMonitoring() {
+        if (!isParentMode || !DB.user.id || !window.DB_Online) return;
+        const dbRef = window.DB_Online;
+        const docRef = dbRef.doc(dbRef.db, 'users', DB.user.id);
+        const leaderRef = dbRef.doc(dbRef.db, 'leaderboard', DB.user.id);
+        const childName = DB.user.name || 'Ребёнок';
+        // Флаг для отслеживания первого снимка (чтобы не слать уведомление при подключении)
+        let firstSnapshot = true;
+        // Предыдущий статус: 'idle' | 'studying' | 'paused'
+        this._parentLastStatus = 'idle';
+        // === ЗВУК (Web Audio API — без внешних файлов) ===
+        const playDing = () => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [880, 1100]; // Две ноты — мелодичный "ding"
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.15);
+                    osc.stop(ctx.currentTime + i * 0.15 + 0.5);
+                });
+            } catch(e) {}
+        };
+        // === УВЕДОМЛЕНИЕ (тост + звук + браузерное) ===
+        const notifyParent = (icon, title, body) => {
+            // 1. Звук "ding"
+            playDing();
+            // 2. Toast в приложении
+            App.toast(icon + ' ' + title);
+            // 3. Браузерное уведомление (если разрешено)
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(title, { body: body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'parent-status' });
+                } catch(e) {}
+            }
+        };
+        // Слушаем изменения данных пользователя
+        this.parentUnsub1 = dbRef.onSnapshot(docRef, (snap) => {
+            if (!snap.exists()) return;
+            const u = snap.data().user || {};
+            const iconEl = document.getElementById('parent-status-icon');
+            const textEl = document.getElementById('parent-status-text');
+            const subEl = document.getElementById('parent-status-sub');
+            const timerEl = document.getElementById('parent-timer-display');
+            if (this.parentTimerInterval) clearInterval(this.parentTimerInterval);
+            const isPaused = !!u.pausedAt;
+            const isOnline = u.activeSessionStart && (TimeGuard.getTrueTime() - Number(u.lastPing || 0)) < 45000;
+            const isActive = isOnline && !isPaused;
+            // Определяем текущий статус
+            let currentStatus = 'idle';
+            if (isActive) currentStatus = 'studying';
+            else if (isPaused) currentStatus = 'paused';
+            // === Оповещаем родителя при смене статуса (пропускаем первый снимок) ===
+            if (!firstSnapshot && currentStatus !== this._parentLastStatus) {
+                if (currentStatus === 'studying') {
+                    notifyParent('✍️', childName + ' начал(а) заниматься!', 'Таймер запущен — ребёнок учится.');
+                } else if (currentStatus === 'paused') {
+                    notifyParent('⏸️', childName + ' поставил(а) паузу', 'Ребёнок приостановил занятие.');
+                } else if (currentStatus === 'idle' && this._parentLastStatus !== 'idle') {
+                    notifyParent('😴', childName + ' закончил(а) занятие', 'Таймер остановлен.');
+                }
+            }
+            this._parentLastStatus = currentStatus;
+            firstSnapshot = false;
+            // === UI обновление ===
+            if (isActive) {
+                iconEl.innerText = '✍️';
+                textEl.innerText = 'УЧИТСЯ';
+                textEl.style.color = '#2ECC71';
+                subEl.innerText = 'Таймер запущен';
+                timerEl.style.display = 'block';
+                this.parentTimerInterval = setInterval(() => {
+                    const now = TimeGuard.getTrueTime();
+                    if (now - Number(u.lastPing || 0) > 45000 || u.pausedAt) {
+                        iconEl.innerText = u.pausedAt ? '⏸️' : '😴';
+                        textEl.innerText = u.pausedAt ? 'НА ПАУЗЕ' : 'ОТДЫХАЕТ';
+                        textEl.style.color = u.pausedAt ? '#F39C12' : 'var(--text-light)';
+                        subEl.innerText = u.pausedAt ? 'Ребёнок поставил паузу' : 'Таймер неактивен';
+                        timerEl.style.display = 'none'; clearInterval(this.parentTimerInterval); return;
+                    }
+                    const elapsed = Math.floor((now - Number(u.activeSessionStart)) / 1000);
+                    timerEl.innerText = new Date(Math.max(0, elapsed) * 1000).toISOString().substr(11, 8);
+                }, 1000);
+            } else if (isPaused) {
+                iconEl.innerText = '⏸️';
+                textEl.innerText = 'НА ПАУЗЕ';
+                textEl.style.color = '#F39C12';
+                subEl.innerText = 'Ребёнок поставил паузу';
+                timerEl.style.display = 'none';
+            } else {
+                iconEl.innerText = '😴';
+                textEl.innerText = 'ОТДЫХАЕТ';
+                textEl.style.color = 'var(--text-light)';
+                subEl.innerText = 'Таймер неактивен';
+                timerEl.style.display = 'none';
+            }
+            // Обновляем мини-карточки
+            if (u.level) document.getElementById('parent-level').innerText = u.level;
+            if (u.coins !== undefined) document.getElementById('parent-coins').innerText = u.coins;
+            if (u.streak !== undefined) document.getElementById('parent-streak').innerText = u.streak;
+        });
+        // Слушаем онлайн-статус
+        this.parentUnsub2 = dbRef.onSnapshot(leaderRef, (snap) => {
+            if (!snap.exists()) return;
+            const la = snap.data().lastActive || 0;
+            const isOn = la !== 0 && (TimeGuard.getTrueTime() - la) < 90000;
+            const badge = document.getElementById('parent-online-badge');
+            const dot = document.getElementById('parent-online-dot');
+            const txt = document.getElementById('parent-online-text');
+            if (badge) {
+                badge.className = 'parent-online-badge ' + (isOn ? 'online' : 'offline');
+                dot.innerText = isOn ? '🟢' : '🔴';
+                txt.innerText = isOn ? 'В СЕТИ' : 'ВНЕ СЕТИ';
+            }
+        });
+    },
+    exitParentMode() {
+        // Отписываемся от Firebase
+        if (this.parentUnsub1) { this.parentUnsub1(); this.parentUnsub1 = null; }
+        if (this.parentUnsub2) { this.parentUnsub2(); this.parentUnsub2 = null; }
+        if (this.parentTimerInterval) { clearInterval(this.parentTimerInterval); this.parentTimerInterval = null; }
+        isParentMode = false;
+        DB = null;
+        Auth.currentUser = null;
+        // Скрываем дашборд, показываем экран входа
+        const ps = document.getElementById('parent-screen');
+        if (ps) ps.style.display = 'none';
+        document.getElementById('app-container').style.display = 'none';
+        const auth = document.getElementById('auth-screen');
+        auth.classList.remove('hidden');
+        Auth.init();
+    },
 
         
     };
@@ -9007,7 +10395,8 @@ renderCharts(weekSec) {
                     userId: Auth.currentUser.id,
                     data: DB,
                     createdAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
+                    expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString(),
+                    isPermanent: true
                 });
 
                 // Успех
