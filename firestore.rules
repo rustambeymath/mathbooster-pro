@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // 📋 ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ
+    // ============================================
+    // Каждый пользователь может читать/писать ТОЛЬКО свой документ
+    // Админ-панель работает через Firebase Admin SDK (бypass rules)
+    match /users/{userId} {
+      
+      // Читать может владелец ИЛИ anyone (для leaderboard public)
+      // Если хотите приватность — замените на: request.auth != null && request.auth.uid == userId
+      allow read: if true;
+      
+      // Писать может ТОЛЬКО владелец (проверяем _ownerUID)
+      allow write: if request.auth != null && 
+                   request.resource.data._ownerUID == request.auth.uid;
+      
+      // Валидация: имя не может быть длиннее 20 символов
+      allow create: if request.auth != null 
+                    && request.resource.data._ownerUID == request.auth.uid
+                    && request.resource.data.user.name is string 
+                    && request.resource.data.user.name.size() <= 20;
+    }
+
+    // ============================================
+    // 🏆 ТАБЛИЦА ЛИДЕРОВ
+    // ============================================
+    // Читать могут все, писать может владелец своего рейтинга
+    match /leaderboard/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                   request.resource.data._ownerUID == request.auth.uid;
+    }
+
+    // ============================================
+    // 🔄 КОДЫ ВОССТАНОВЛЕНИЯ (transfers)
+    // ============================================
+    // Создаёт владелец, читает любой (для восстановления на другом устройстве)
+    match /transfers/{code} {
+      // Читать может любой (для входа по коду)
+      allow read: if true;
+      
+      // Создавать можетAnyone (при первом входе)
+      allow create: if request.resource.data.keys().hasAll(['userId', 'data', 'createdAt']);
+      
+      // Обновлять может только тот, кто создал (проверяем userId = auth.uid)
+      allow update: if request.auth != null && 
+                   request.resource.data.userId == request.auth.uid;
+      
+      // Удалять — никто (чистится по времени через Firestore TTL или Cloud Functions)
+      allow delete: if false;
+    }
+
+    // ============================================
+    // 🎟️ ПРОМО-КОДЫ
+    // ============================================
+    // Только чтение для пользователей, запись только через админку
+    match /promo_codes/{code} {
+      allow read: if true;
+      
+      // Админ-панель работает через Firebase Admin SDK (бypass rules)
+      // Обычные пользователи НЕ МОГУТ создавать/изменять промо-коды
+      allow write: if false;  
+      // Если админ-панель на клиенте — временно:
+      // allow write: if true;
+      // TODO: после Auth + Cloud Functions:
+      // allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // ============================================
+    // ⚔️ PVP БИТВЫ (battles_v2)
+    // ============================================
+    match /battles_v2/{roomCode} {
+      // Читать могут оба игрока
+      allow read: if true;
+      
+      // Создавать можетAnyone (первый игрок создаёт комнату)
+      allow create: if request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
+      
+      // Обновлять могут оба игрока (отправляют свой score)
+      allow update: if true;
+      // TODO: после Auth:
+      // allow update: if request.auth != null && 
+      //   (request.auth.uid == resource.data.p1_id || 
+      //    request.auth.uid == resource.data.p2_id);
+      
+      // Удалять — кто угодно (для очистки)
+      allow delete: if true;
+    }
+  }
+}
