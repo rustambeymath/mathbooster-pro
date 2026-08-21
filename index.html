@@ -517,6 +517,63 @@ window.addEventListener('load', () => {
                 text-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
             }
 
+/* 🌠 ТЕМА AURORA (Аврора — Северное сияние) */
+            body.theme-aurora {
+                --primary: #00e5a0;   /* Изумрудно-зелёный ( 主色 ) */
+                --bg: #0a0e1a;        /* Глубокий тёмно-синий (ночное небо) */
+                --surface: #111827;   /* Тёмно-серые карточки */
+                --text: #e0f2e9;      /* Светло-зелёно-белый текст */
+                --text-light: #5eead4; /* Бирюзовый приглушённый */
+                --shadow: 0 0 30px rgba(0, 229, 160, 0.15); 
+            }
+
+            /* Кнопки: animated aurora gradient */
+            body.theme-aurora .btn-primary,
+            body.theme-aurora .nav-btn.active,
+            body.theme-aurora .daily-day.active,
+            body.theme-aurora .shop-item.active {
+                background: linear-gradient(270deg, #00e5a0, #06b6d4, #8b5cf6, #00e5a0);
+                background-size: 600% 600%;
+                animation: aurora-move 8s ease infinite;
+                color: #0a0e1a !important;
+                font-weight: 800;
+                border: none;
+                box-shadow: 0 0 20px rgba(0, 229, 160, 0.35);
+            }
+
+            /* Timer и цифры светятся */
+            body.theme-aurora .timer-display,
+            body.theme-aurora .stat-val,
+            body.theme-aurora .trainer-problem {
+                text-shadow: 0 0 20px rgba(0, 229, 160, 0.6);
+                font-weight: 900;
+            }
+
+            /* Карточки с зелёным свечением */
+            body.theme-aurora .card {
+                border: 1px solid rgba(0, 229, 160, 0.15);
+            }
+
+            /* Анимация плывущего градиента */
+            @keyframes aurora-move {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+
+            /* Тёмный режим Авроры (ещё глубже) */
+            body.dark-mode.theme-aurora {
+                --bg: #050810;
+                --surface: #0c1220;
+                --primary: #34d399;
+                --text: #d1fae5;
+                --text-light: #6ee7b7;
+            }
+
+            body.dark-mode.theme-aurora .card {
+                border: 1px solid rgba(52, 211, 153, 0.2);
+            }
+
             /* Фиксируем цвета для темного режима (она и так темная) */
             body.dark-mode.theme-cyber {
                 --bg: #020202;
@@ -1292,6 +1349,105 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
             .user-list-item:hover { transform: translateX(5px); border: 1px solid var(--primary); }
             .user-avatar { font-size: 24px; width: 40px; height: 40px; background: var(--surface); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
+            /* Кнопка «Назад» на экранах входа */
+            .auth-back-btn {
+                position: absolute; top: 15px; left: 15px;
+                background: var(--bg); border: 2px solid var(--text-light);
+                color: var(--text); font-weight: 700; font-size: 13px;
+                padding: 8px 16px; border-radius: 12px; cursor: pointer;
+                transition: 0.2s; z-index: 10;
+            }
+            .auth-back-btn:hover { border-color: var(--primary); color: var(--primary); }
+            .auth-card { position: relative; }
+
+            /* Кнопки выбора роли — ПРЕМИУМ */
+            @keyframes roleFloat {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+            }
+            @keyframes roleGlow {
+                0%, 100% { box-shadow: 0 5px 20px rgba(108, 99, 255, 0.15); }
+                50% { box-shadow: 0 5px 30px rgba(108, 99, 255, 0.35); }
+            }
+            @keyframes roleGlowGreen {
+                0%, 100% { box-shadow: 0 5px 20px rgba(46, 204, 113, 0.15); }
+                50% { box-shadow: 0 5px 30px rgba(46, 204, 113, 0.35); }
+            }
+            @keyframes roleShine {
+                0% { left: -100%; }
+                100% { left: 200%; }
+            }
+            @keyframes roleIconPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+
+            .role-btn {
+                position: relative;
+                display: flex; flex-direction: column; align-items: center;
+                justify-content: center; gap: 10px;
+                background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+                border: 3px solid var(--primary);
+                border-radius: 24px; padding: 32px 20px;
+                cursor: pointer; overflow: hidden;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                animation: roleGlow 3s ease-in-out infinite;
+            }
+            .role-btn::before {
+                content: '';
+                position: absolute; top: 0; left: -100%;
+                width: 60%; height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(108, 99, 255, 0.18), rgba(255,255,255,0.4), rgba(108, 99, 255, 0.18), transparent);
+                transform: skewX(-20deg);
+                animation: roleShine 4s ease-in-out infinite;
+            }
+            .role-btn:hover {
+                transform: translateY(-8px) scale(1.03);
+                border-color: var(--primary);
+                box-shadow: 0 15px 40px rgba(108, 99, 255, 0.3);
+                background: linear-gradient(135deg, var(--surface) 0%, rgba(108,99,255,0.08) 100%);
+            }
+            .role-btn:hover .role-btn-icon {
+                animation: roleIconPulse 0.8s ease-in-out infinite;
+            }
+            .role-btn:active {
+                transform: translateY(-2px) scale(0.97);
+                transition-duration: 0.1s;
+            }
+
+            .role-btn-icon {
+                font-size: 48px; line-height: 1;
+                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+                transition: 0.3s;
+            }
+            .role-btn-title {
+                font-size: 18px; font-weight: 900; color: var(--text);
+                letter-spacing: 0.5px;
+            }
+            .role-btn-sub {
+                font-size: 12px; color: var(--text-light); line-height: 1.3;
+            }
+
+            /* Ученик — фиолетовый градиент */
+            .role-btn:not(.role-btn-parent) {
+                border-color: var(--primary);
+            }
+
+            /* Родитель — зелёный градиент */
+            .role-btn-parent {
+                border-color: #2ECC71;
+                background: linear-gradient(135deg, var(--surface) 0%, rgba(46,204,113,0.06) 100%);
+                animation: roleGlowGreen 3s ease-in-out infinite;
+            }
+            .role-btn-parent:hover {
+                border-color: #2ECC71;
+                box-shadow: 0 15px 40px rgba(46, 204, 113, 0.3);
+                background: linear-gradient(135deg, var(--surface) 0%, rgba(46,204,113,0.12) 100%);
+            }
+            .role-btn-parent::before {
+                background: linear-gradient(90deg, transparent, rgba(46,204,113,0.18), rgba(255,255,255,0.4), rgba(46,204,113,0.18), transparent);
+            }
+
             .header-card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
             .profile-mini { display: flex; align-items: center; gap: 12px; cursor: pointer; }
     /* АВАТАРКА (Маленькая в шапке) */
@@ -1945,6 +2101,132 @@ body.dark-mode .subject-item-fixed {
             .gender-switch { display: flex; gap: 10px; }
             .gender-btn { flex: 1; padding: 10px; border: 2px solid var(--bg); background: var(--bg); border-radius: 12px; cursor: pointer; font-weight: bold; color: var(--text-light); }
             .gender-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(108, 99, 255, 0.05); }
+
+            /* === РЕГИСТРАЦИЯ — ПРЕМИУМ ДИЗАЙН === */
+            @keyframes regFadeIn {
+                from { opacity: 0; transform: translateY(15px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes regPulseAvatar {
+                0%, 100% { box-shadow: 0 8px 25px rgba(108,99,255,0.2); }
+                50% { box-shadow: 0 8px 35px rgba(108,99,255,0.4); }
+            }
+
+            .reg-step {
+                animation: regFadeIn 0.4s ease-out both;
+                margin-bottom: 18px;
+            }
+            .reg-step:nth-child(1) { animation-delay: 0.05s; }
+            .reg-step:nth-child(2) { animation-delay: 0.12s; }
+            .reg-step:nth-child(3) { animation-delay: 0.19s; }
+
+            .reg-step-label {
+                display: flex; align-items: center; gap: 8px;
+                font-size: 13px; font-weight: 700; color: var(--text);
+                margin-bottom: 10px; text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .reg-step-num {
+                width: 22px; height: 22px; border-radius: 50%;
+                background: var(--primary); color: white;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 11px; font-weight: 900;
+            }
+
+            /* Аватар-сетка: компактная, 5 колонок */
+            .reg-step .avatar-grid {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 8px;
+            }
+            .reg-step .avatar-option {
+                font-size: 28px; padding: 10px 0;
+                border-radius: 14px; border: 2.5px solid transparent;
+                background: var(--bg); transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative; overflow: hidden;
+            }
+            .reg-step .avatar-option:hover {
+                transform: scale(1.1);
+                border-color: var(--primary);
+                box-shadow: 0 4px 15px rgba(108,99,255,0.15);
+            }
+            .reg-step .avatar-option.selected {
+                border-color: var(--primary);
+                background: rgba(108,99,255,0.08);
+                transform: scale(1.1);
+                box-shadow: 0 4px 15px rgba(108,99,255,0.2);
+            }
+            .reg-step .avatar-option.selected::after {
+                content: '✓';
+                position: absolute; bottom: 1px; right: 3px;
+                font-size: 9px; color: var(--primary); font-weight: 900;
+                background: white; border-radius: 50%; width: 14px; height: 14px;
+                display: flex; align-items: center; justify-content: center;
+            }
+
+            /* Тогл пола — современный */
+            .gender-toggle {
+                display: flex; position: relative;
+                background: var(--bg); border-radius: 14px;
+                padding: 4px; gap: 0;
+            }
+            .gender-toggle-btn {
+                flex: 1; display: flex; align-items: center; justify-content: center;
+                gap: 8px; padding: 12px 8px; border: none; border-radius: 12px;
+                background: transparent; cursor: pointer; font-weight: 700;
+                color: var(--text-light); font-size: 14px; z-index: 2;
+                transition: color 0.3s;
+            }
+            .gender-toggle-btn.active { color: var(--primary); }
+            .gt-icon { font-size: 22px; }
+            .gt-text { font-size: 13px; }
+            .gender-toggle-slider {
+                position: absolute; top: 4px; left: 4px;
+                width: calc(50% - 4px); height: calc(100% - 8px);
+                background: var(--surface); border-radius: 11px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                z-index: 1;
+            }
+            #gender-female.active ~ .gender-toggle-slider {
+                transform: translateX(100%);
+            }
+
+            /* Кнопка «Создать» — градиент + блеск */
+            @keyframes regBtnShine {
+                0% { left: -100%; }
+                100% { left: 200%; }
+            }
+            .reg-create-btn {
+                width: 100%; margin-top: 8px; padding: 16px;
+                border: none; border-radius: 16px; cursor: pointer;
+                background: linear-gradient(135deg, var(--primary), rgba(108,99,255,0.8));
+                color: white; font-size: 16px; font-weight: 800;
+                display: flex; align-items: center; justify-content: center; gap: 10px;
+                position: relative; overflow: hidden;
+                box-shadow: 0 6px 20px rgba(108,99,255,0.3);
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .reg-create-btn::before {
+                content: '';
+                position: absolute; top: 0; left: -100%;
+                width: 60%; height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transform: skewX(-20deg);
+                animation: regBtnShine 3s ease-in-out infinite;
+            }
+            .reg-create-btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 30px rgba(108,99,255,0.4);
+            }
+            .reg-create-btn:active {
+                transform: scale(0.97);
+            }
+
+            /* Превью аватарки — пульс при смене */
+            #reg-preview-avatar.pulse {
+                animation: regPulseAvatar 0.6s ease;
+            }
 
             /* DIFFICULTY BUTTONS */
             .diff-switch { display: flex; gap: 5px; justify-content: center; margin-bottom: 20px; }
@@ -3010,13 +3292,35 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
     <!-- AUTH SCREEN -->
     <div id="auth-screen">
-        <div class="auth-card" id="login-view">
 
-        <img src="logo.png" alt="Logo" class="app-logo" onclick="SecretSys.handleLogoClick()">
-            <h2 style="margin-bottom: 5px; color: var(--primary);">MathBooster PRO</h2>
-            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Твой путь к знаниям</p>
+        <!-- 1. ВЫБОР РОЛИ: Ученик или Родитель -->
+        <div class="auth-card" id="role-select-view" style="text-align:center;">
+            <img src="logo.png" alt="Logo" class="app-logo" onclick="SecretSys.handleLogoClick()">
+            <h2 style="margin-bottom:5px; color:var(--primary);">MathBooster PRO</h2>
+            <p style="color:var(--text-light); font-size:14px; margin-bottom:30px;">Твой путь к знаниям</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <button class="role-btn" onclick="Auth.showLogin()">
+                    <div class="role-btn-icon">🎓</div>
+                    <div class="role-btn-title">Ученик</div>
+                    <div class="role-btn-sub">Учись и побеждай</div>
+                </button>
+                <button class="role-btn role-btn-parent" onclick="Auth.showParentLogin()">
+                    <div class="role-btn-icon">👨‍👩‍👧</div>
+                    <div class="role-btn-title">Родитель</div>
+                    <div class="role-btn-sub">Наблюдай за прогрессом</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. ВХОД УЧЕНИКА -->
+        <div class="auth-card" id="login-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showRoleSelect()">← Назад</button>
+            <img src="logo.png" alt="Logo" class="app-logo" onclick="SecretSys.handleLogoClick()">
+            <h2 style="margin-bottom:5px; color:var(--primary);">Ученик</h2>
+            <p style="color:var(--text-light); font-size:14px; margin-bottom:20px;">Выбери профиль</p>
             <div id="user-list"></div>
-            <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top: 10px;">+ Создать профиль</button>
+            <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top:10px;">+ Создать профиль</button>
 
             <div style="display:flex; align-items:center; gap:12px; margin:20px 0 12px;">
                 <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
@@ -3024,36 +3328,76 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <button class="btn" onclick="Transfer.transferByID()" style="background:var(--surface); border:2px solid var(--primary); color:var(--primary); font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px;">
-                    📥 Код восстановления
-                </button>
-                <button class="btn" onclick="Auth.parentLoginPrompt()" style="background:var(--surface); border:2px solid #2ECC71; color:#2ECC71; font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px;">
-                    👨‍👩‍👧 Родитель
-                </button>
-            </div>
+            <button class="btn" onclick="Auth.showTransfer()" style="background:var(--surface); border:2px solid var(--primary); color:var(--primary); font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px; width:100%;">
+                📥 Код восстановления
+            </button>
         </div>
 
-        <div class="auth-card" id="register-view" style="display: none;">
-            <h2>Новый профиль</h2>
-            <div class="avatar-grid" id="avatar-selector"></div>
-            
-            <!-- ВОТ САМАЯ ВАЖНАЯ СТРОКА. БЕЗ ID="reg-name" НИЧЕГО НЕ РАБОТАЕТ -->
-    <!-- Простое поле ввода (без кнопок) -->
-            <input type="text" id="reg-name" class="input-field" placeholder="Ваше имя..." maxlength="12" style="margin-bottom: 15px;">        <!-- ----------------------------------------------------------- -->
+        <!-- 3. РЕГИСТРАЦИЯ — ПРЕМИУМ -->
+        <div class="auth-card" id="register-view" style="display:none; padding:30px 24px;">
+            <button class="auth-back-btn" onclick="Auth.showLogin()">← Назад</button>
 
-            <div class="reg-group" style="margin:15px 0;">
-                <div style="font-size:12px; color:var(--text-light); margin-bottom:5px;">Пол</div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn gender-btn active" onclick="Auth.setGender('male')" style="border:2px solid var(--bg);">👨 Парень</button>
-                    <button class="btn gender-btn" onclick="Auth.setGender('female')" style="border:2px solid var(--bg);">👩 Девушка</button>
+            <!-- Превью аватарки -->
+            <div id="reg-preview-avatar" style="width:80px; height:80px; border-radius:50%; background:var(--bg); border:4px solid var(--primary); margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:44px; position:relative; overflow:hidden; box-shadow:0 8px 25px rgba(108,99,255,0.2); transition:0.3s;">😎</div>
+            <h2 style="margin-bottom:2px; font-size:20px;">Новый профиль</h2>
+            <p style="color:var(--text-light); font-size:12px; margin-bottom:20px;">Выбери аватар и введи имя</p>
+
+            <!-- Шаг 1: Аватар -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">1</span> Аватар</div>
+                <div class="avatar-grid" id="avatar-selector" style="grid-template-columns: repeat(5, 1fr); gap:8px;"></div>
+            </div>
+
+            <!-- Шаг 2: Имя -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">2</span> Имя</div>
+                <div style="position:relative;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:18px; opacity:0.5;">✏️</span>
+                    <input type="text" id="reg-name" class="input-field" placeholder="Как тебя зовут?" maxlength="12" style="padding-left:42px; margin-bottom:0; font-size:15px; border-radius:14px;">
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-outline" onclick="Auth.showLogin()">Назад</button>
-                <button class="btn btn-primary" onclick="Auth.createAccount()">Создать</button>
+            <!-- Шаг 3: Пол -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">3</span> Пол</div>
+                <div class="gender-toggle">
+                    <button class="gender-toggle-btn active" id="gender-male" onclick="Auth.setGender('male')">
+                        <span class="gt-icon">👨</span>
+                        <span class="gt-text">Парень</span>
+                    </button>
+                    <button class="gender-toggle-btn" id="gender-female" onclick="Auth.setGender('female')">
+                        <span class="gt-icon">👩</span>
+                        <span class="gt-text">Девушка</span>
+                    </button>
+                    <div class="gender-toggle-slider"></div>
+                </div>
             </div>
+
+            <!-- Кнопка создать -->
+            <button class="btn reg-create-btn" onclick="Auth.createAccount()">
+                <span>Создать профиль</span>
+                <span style="font-size:18px;">🚀</span>
+            </button>
+        </div>
+
+        <!-- 4. ВХОД РОДИТЕЛЯ -->
+        <div class="auth-card" id="parent-login-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showRoleSelect()">← Назад</button>
+            <div style="font-size:48px; margin-bottom:10px;">👨‍👩‍👧</div>
+            <h2 style="margin-bottom:5px; color:#2ECC71;">Родитель</h2>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:20px;">Введи код восстановления ребенка<br>для просмотра его прогресса</p>
+            <input type="text" id="parent-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="8" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
+            <button class="btn" onclick="Auth.parentLoginSubmit()" style="margin-top:15px; width:100%; background:#2ECC71; color:white; font-weight:700; font-size:15px; padding:15px; border-radius:15px;">📡 Подключиться</button>
+        </div>
+
+        <!-- 5. КОД ВОССТАНОВЛЕНИЯ -->
+        <div class="auth-card" id="transfer-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showLogin()">← Назад</button>
+            <div style="font-size:48px; margin-bottom:10px;">📥</div>
+            <h2 style="margin-bottom:5px;">Код восстановления</h2>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:20px;">Введи код восстановления профиля<br>чтобы войти на другом устройстве</p>
+            <input type="text" id="transfer-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="20" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
+            <button class="btn" onclick="Auth.transferSubmit()" style="margin-top:15px; width:100%; background:var(--primary); color:white; font-weight:700; font-size:15px; padding:15px; border-radius:15px;">🔄 Восстановить</button>
         </div>
     </div>
 
@@ -4513,11 +4857,32 @@ body.dark-mode .tier-name { color: #f7eecf; }
         // --- Категория: УРОВНИ ---
         add("Новичок", "Достигни 5 уровня", 5, "🐣", "lvl", "bronze");
         add("Мастер", "Достигни 25 уровня", 25, "🎖️", "lvl", "silver");
-        add("Абсолют", "Достигни 50 уровня", 50, "👑", "lvl", "gold");
+        add("Абсолют", "Достигни 50 уровня", 50, "👑", "lvl", "gold");        // --- Категория: ХАРДКОР ---
+        add("Без пощады", "1 сессия в хардкоре", 1, "💪", "strict_sessions", "bronze");
+        add("Безжалостный", "10 сессий в хардкоре", 10, "🔱", "strict_sessions", "silver");
+        add("Бог смерти", "50 сессий в хардкоре", 50, "💀", "strict_sessions", "gold");
+
+        // --- Категория: КВЕСТЫ ---
+        add("Исполнитель", "Заверши 1 квест", 1, "✅", "quests_done", "bronze");
+        add("Мастер квестов", "Заверши 50 квестов", 50, "📜", "quests_done", "silver");
+        add("Безупречный", "Выполни все квесты за день 7 раз", 7, "⭐", "perfect_days", "gold");
+
+        // --- Категория: ДИСЦИПЛИНА (исправленные) ---
+        add("Ежедневник", "Забирай награду 7 дней подряд", 7, "📅", "daily_claims", "bronze");
+        add("Регулярность", "Забирай награду 30 дней подряд", 30, "🗓️", "daily_claims", "silver");
 
         // --- Категория: СЕКРЕТНЫЕ ---
-        add("Ранняя пташка", "Учись в 6-8 утра", 1, "☀️", "morning_study", "silver");
+        add("Ранняя пташка", "Учись в 6-8 утра", 1, "☀️", "morning_study", "silver"); 
         add("Ночная сова", "Учись после 23:00", 1, "🦉", "night_study", "silver");
+        add("Обеденный перерыв", "Учись ровно в 14:00", 1, "🍱", "lunch_study", "bronze");
+        add("Полночный мудрец", "Учись ровно в 00:00", 1, "🌙", "midnight_study", "silver");
+        add("Родитель", "Подключись в режиме родителя", 1, "👨‍👩‍👧", "parent_mode", "bronze");
+        add("Полиглот", "Учись 3+ предмета за сессию", 1, "🌐", "multi_subject", "silver");
+        add("Тысячник", "Заработай 10,000 монет", 10000, "🪙", "coins_max", "gold");
+
+        // --- Категория: МАРАФОН ---
+        add("1000 минут", "1000 минут за месяц", 60000, "⏱️", "month_minutes", "silver");
+        add("Учёный semestre", "50 часов за месяц", 180000, "📚", "month_minutes", "gold");
 
         return list;
     };
@@ -4542,6 +4907,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
             lastSaveTime: 0,
             lifetimeStrictSec: 0,
             lifetimeCoinsSpent: 0,
+            lifetimeStrictSessions: 0,
+            lifetimeQuestsDone: 0,
+            lifetimePerfectDays: 0,
+            lifetimeDailyClaims: 0,
+            visitedParentMode: false,
+            multiSubjectSession: false,
+            currentMonthSec: 0,
             ownedFrames: [],      // Купленные рамки
             currentFrame: null,   // Текущая рамка
             ownedSounds: ['standard'], // Купленные звуки
@@ -4616,6 +4988,9 @@ body.dark-mode .tier-name { color: #f7eecf; }
         // КОСМИЧЕСКАЯ ТЕМА
         { id: 'galaxy', name: 'Галактика', icon: '🌌', price: 5000 },
 
+        // 🌠 СЕВЕРНОЕ СИЯНИЕ
+        { id: 'aurora', name: 'Аврора', icon: '🌠', price: 6000 },
+
         //    СЕКРЕТНАЯ ТЕМА
         { id: 'cyber', name: 'Матрица', icon: '💻', price: 8000 }
 
@@ -4628,6 +5003,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'hamster', icon: '🐹', name: 'Хомяк', price: 50 },
         { id: 'panda', icon: '🐼', name: 'Панда', price: 200 },
         { id: 'robot', icon: '🤖', name: 'Робот', price: 200 },
+        { id: 'fox', icon: '🦊', name: 'Лисичка', price: 75 },
+        { id: 'frog', icon: '🐸', name: 'Лягушка', price: 75 },
+        { id: 'octopus', icon: '🐙', name: 'Осьминог', price: 100 },
+        { id: 'lion', icon: '🦁', name: 'Лев', price: 100 },
 
         // 👩‍🎓 ЖЕНСКИЕ (Только для девушек)
         { id: 'girl_student', icon: '👩‍🎓', name: 'Студентка', price: 100, gender: 'female' },
@@ -4635,6 +5014,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'artist', icon: '👩‍🎨', name: 'Художница', price: 250, gender: 'female' },
         { id: 'supergirl', icon: '🦸‍♀️', name: 'Супергёрл', price: 350, gender: 'female' },
         { id: 'queen', icon: '👸', name: 'Королева', price: 1000, gender: 'female' },
+        { id: 'vampire_f', icon: '🧛‍♀️', name: 'Вампирша', price: 300, gender: 'female' },
 
         // 👨‍🎓 МУЖСКИЕ (Только для парней)
         { id: 'boy_student', icon: '👨‍🎓', name: 'Студент', price: 100, gender: 'male' },
@@ -4642,6 +5022,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'gamer', icon: '🎧', name: 'Геймер', price: 100, gender: 'male' },
         { id: 'superman', icon: '🦸‍♂️', name: 'Супермен', price: 350, gender: 'male' },
         { id: 'wizard', icon: '🧙‍♂️', name: 'Волшебник', price: 450, gender: 'male' },
+        { id: 'vampire_m', icon: '🧛', name: 'Вампир', price: 300, gender: 'male' },
+        { id: 'gentleman', icon: '🤵', name: 'Джентльмен', price: 400, gender: 'male' },
 
         // 🔥 ЭПИЧЕСКИЕ (Нейтральные — видят все)
         { id: 'alien', icon: '👽', name: 'Пришелец', price: 300 },
@@ -4651,7 +5033,15 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'unicorn', icon: '🦄', name: 'Единорог', price: 1200 },  
         { id: 'sigma', icon: '🗿', name: 'Сигма', price: 1500 },
         { id: 'diamond', icon: '💎', name: 'Магнат', price: 2000 },
+        { id: 'ghost', icon: '👾', name: 'Призрак', price: 800 },
+        { id: 'dragon2', icon: '🐉', name: 'Драконий', price: 1800 },
+        { id: 'masks', icon: '🎭', name: 'Театр', price: 700 },
+        { id: 'dna', icon: '🧬', name: 'ДНК', price: 1500 },
         { id: 'wolf', icon: '🐺', name: 'Альфа', price: 2500 },
+
+        // 💀 ЛЕГЕНДАРНЫЕ
+        { id: 'skeleton', icon: '☠️', name: 'Скелет', price: 3000 },
+        { id: 'oracle', icon: '🔮', name: 'Оракул', price: 4000 },
 
         // 🚀 LEGENDARY (Для миллионеров)
         { id: 'hacker', icon: '🕵️‍♂️', name: 'Анонимус', price: 5000 },
@@ -4665,7 +5055,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
     const SHOP_ITEMS = [
         { id: 'shield', name: 'Щит Стрика', icon: '🛡️', price: 300, desc: 'Спасет твой огонь при пропуске дня' },
-        { id: 'booster', name: 'XP Бустер', icon: '⚡', price: 500, desc: 'Двойной опыт (x2) на 30 минут' }
+        { id: 'booster', name: 'XP Бустер', icon: '⚡', price: 500, desc: 'Двойной опыт (x2) на 24 часа' }
     ];
 
     const SHOP_TITLES = [
@@ -4687,9 +5077,9 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'einstein', name: '👨‍🔬 Эйнштейн', price: 5000 },
         { id: 'immortal', name: '⚜️ Бессмертный', price: 8000 },
         
-        // ЭКСКЛЮЗИВНЫЙ СТАТУС
-        { id: 'vip', name: '💎 VIP', price: -1 },
-        { id: 'pro', name: '⭐ PRO', price: -1 },
+        // ЭКСКЛЮЗИВНЫЙ СТАТУС (уникальные id чтобы не дублировать обычные)
+        { id: 'vip_excl', name: '💎 VIP', price: -1 },
+        { id: 'pro_excl', name: '⭐ PRO', price: -1 },
         { id: 'legend', name: '👑 LEGEND', price: -1 }
     ];
 
@@ -4933,6 +5323,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
             if (DB.user.lifetimeCoinsSpent === undefined) DB.user.lifetimeCoinsSpent = 0;
             if (DB.user.lifetimeStrictSec === undefined) DB.user.lifetimeStrictSec = 0;
             if (DB.user.lifetimeXP === undefined) DB.user.lifetimeXP = DB.user.xp || 0;
+            if (DB.user.lifetimeStrictSessions === undefined) DB.user.lifetimeStrictSessions = 0;
+            if (DB.user.lifetimeQuestsDone === undefined) DB.user.lifetimeQuestsDone = 0;
+            if (DB.user.lifetimePerfectDays === undefined) DB.user.lifetimePerfectDays = 0;
+            if (DB.user.lifetimeDailyClaims === undefined) DB.user.lifetimeDailyClaims = 0;
+            if (DB.user.visitedParentMode === undefined) DB.user.visitedParentMode = false;
+            if (DB.user.multiSubjectSession === undefined) DB.user.multiSubjectSession = false;
+            if (DB.user.currentMonthSec === undefined) DB.user.currentMonthSec = 0;
             
             if (!DB.user.monthlyGoal) DB.user.monthlyGoal = 40;
             if (!DB.user.lastWeeklyReportDate) DB.user.lastWeeklyReportDate = ""; 
@@ -5130,7 +5527,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
     // --- DAILY REWARD SYSTEM ---
     const DailySys = {
+        // Цикл 1: первые 7 дней (минимальные награды)
+        // Цикл 2: после 7 дней (倍率 — награды растут)
         rewards: [10, 20, 30, 40, 50, 75, 100],
+        rewardsCycle2: [150, 200, 250, 300, 350, 400, 500],
 
         // ПРОВЕРКА ПРИ ВХОДЕ
         async check() {
@@ -5140,10 +5540,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
             // Если сегодня уже забирал - выходим
             if (last === today) return;
 
-            // ПРОВЕРКА НА СРЫВ СТРИКА
+            // ПРОВЕРКА НА СРЫВ СТРИКА (через TimeGuard — timezone-safe)
             if (last) {
-                const d = new Date(); d.setDate(d.getDate() - 1);
-                const yesterdayStr = getUZDate(d);
+                const yesterdayTs = TimeGuard.getTrueTime() - 86400000;
+                const yesterdayStr = getUZDate(new Date(yesterdayTs));
 
                 if (last !== yesterdayStr && last !== today) {
                     // Если есть щит — тратим его
@@ -5164,17 +5564,19 @@ body.dark-mode .tier-name { color: #f7eecf; }
         showModal() {
             const modal = document.getElementById('daily-modal'); 
             const grid = document.getElementById('daily-grid'); 
-            // Индекс награды (0..6)
+            // Определяем цикл: streak < 7 → cycle1, streak >= 7 → cycle2
+            const isCycle2 = (DB.user.dailyStreak || 0) >= 7;
+            const activeRewards = isCycle2 ? this.rewardsCycle2 : this.rewards;
             const currentDayIndex = DB.user.dailyStreak % 7;
             
-            grid.innerHTML = this.rewards.map((r, i) => { 
+            grid.innerHTML = activeRewards.map((r, i) => { 
                 let cls = 'daily-day'; 
-                if (i < currentDayIndex) cls += ' claimed'; // Прошлые дни
-                if (i === currentDayIndex) cls += ' active'; // Текущий день
+                if (i < currentDayIndex) cls += ' claimed';
+                if (i === currentDayIndex) cls += ' active';
                 return `<div class="${cls}"><div class="daily-coin">💰</div><div>${r}</div></div>`; 
             }).join('');
             
-            document.getElementById('daily-reward-amount').innerText = this.rewards[currentDayIndex]; 
+            document.getElementById('daily-reward-amount').innerText = activeRewards[currentDayIndex]; 
             modal.classList.add('show'); 
             FX.confetti(); 
             SoundSys.play('win');
@@ -5191,10 +5593,12 @@ body.dark-mode .tier-name { color: #f7eecf; }
         await TimeGuard.sync();
 
         const currentDayIndex = DB.user.dailyStreak % 7;
-        const reward = this.rewards[currentDayIndex];
+        const isCycle2 = (DB.user.dailyStreak || 0) >= 7;
+        const reward = isCycle2 ? this.rewardsCycle2[currentDayIndex] : this.rewards[currentDayIndex];
         
         DB.user.coins += reward;
         DB.user.dailyStreak++;
+        DB.user.lifetimeDailyClaims = (DB.user.lifetimeDailyClaims || 0) + 1;
         
         // Записываем ЧЕСТНУЮ дату получения
         DB.user.lastDailyClaim = getUZDate();
@@ -5606,6 +6010,14 @@ body.dark-mode .tier-name { color: #f7eecf; }
             if(el) el.innerHTML = this.avatars.map(a => 
                 `<div class="avatar-option ${a===this.selectedAvatar?'selected':''}" onclick="Auth.selectAvatar('${a}')">${a}</div>`
             ).join(''); 
+            // Обновляем превью-аватарку
+            const preview = document.getElementById('reg-preview-avatar');
+            if (preview) {
+                preview.innerText = this.selectedAvatar || '😎';
+                preview.classList.remove('pulse');
+                void preview.offsetWidth; // reflow
+                preview.classList.add('pulse');
+            }
         },
 
         selectAvatar(a) { 
@@ -5616,21 +6028,58 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
         setGender(g) {
             this.selectedGender = g;
+            // Обновляем тогл пола
+            document.getElementById('gender-male')?.classList.toggle('active', g === 'male');
+            document.getElementById('gender-female')?.classList.toggle('active', g === 'female');
+            // Обновляем классические кнопки (для совместимости)
             document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
             const btns = document.querySelectorAll('.gender-btn');
             if(btns.length > 1) btns[g==='male'?0:1].classList.add('active');
         },
 
+        _allAuthViews: ['role-select-view','login-view','register-view','parent-login-view','transfer-view'],
+
+        _hideAllAuth() {
+            this._allAuthViews.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        },
+
+        showRoleSelect() {
+            this._hideAllAuth();
+            document.getElementById('role-select-view').style.display = 'block';
+            SoundSys.play('click');
+        },
+
+        showParentLogin() {
+            this._hideAllAuth();
+            document.getElementById('parent-login-view').style.display = 'block';
+            setTimeout(() => { const inp = document.getElementById('parent-code-input'); if(inp) inp.focus(); }, 100);
+        },
+
         showRegister() { 
-            document.getElementById('login-view').style.display = 'none'; 
-            document.getElementById('register-view').style.display = 'block'; 
-            SoundSys.play('click'); 
+            this._hideAllAuth();
+            document.getElementById('register-view').style.display = 'block';
         },
 
         showLogin() { 
-            document.getElementById('login-view').style.display = 'block'; 
-            document.getElementById('register-view').style.display = 'none'; 
-            SoundSys.play('click'); 
+            this._hideAllAuth();
+            document.getElementById('login-view').style.display = 'block';
+        },
+
+        showTransfer() {
+            this._hideAllAuth();
+            document.getElementById('transfer-view').style.display = 'block';
+            setTimeout(() => { const inp = document.getElementById('transfer-code-input'); if(inp) inp.focus(); }, 100);
+        },
+
+        transferSubmit() {
+            const inp = document.getElementById('transfer-code-input');
+            if (!inp) return;
+            const cleanID = inp.value.trim().toUpperCase();
+            if (cleanID.length < 4) return App.toast('❌ Слишком короткий код');
+            Transfer.transferByIDCode(cleanID);
         },
 
         async createAccount() {
@@ -5799,6 +6248,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                         localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
                     }
                     App.initParentView();
+                    DB.user.visitedParentMode = true;
                     // Сохраняем FCM-токен родителя в Firebase (для серверных push-уведомлений)
                     this._saveParentFcmToken(DB.user.id, DB.user.name);
                 } else {
@@ -5995,7 +6445,6 @@ const Timer = {
                     // Экран вернулся — перезапрашиваем WakeLock
                     await this.requestWakeLock();
                     // Восстанавливаем время из памяти (восстанавливаем пропущенные секунды)
-
                     const now = this.getTrueTime();
                     const elapsed = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
                     if (elapsed > this.realSec + 5) {
@@ -6596,7 +7045,25 @@ const Timer = {
         DB.user.coins += earnedCoins;
         DB.user.totalSec += this.realSec;
         subject.sec += this.realSec;
-        
+
+        // Трекинг для достижений
+        if (this.isStrict) {
+            DB.user.lifetimeStrictSec = (DB.user.lifetimeStrictSec || 0) + this.realSec;
+            DB.user.lifetimeStrictSessions = (DB.user.lifetimeStrictSessions || 0) + 1;
+        }
+        // Накапливаем время за текущий месяц
+        const monthPrefix = getUZDate().slice(0, 7);
+        if (!DB.user._monthPrefix || DB.user._monthPrefix !== monthPrefix) {
+            DB.user.currentMonthSec = 0;
+            DB.user._monthPrefix = monthPrefix;
+        }        DB.user.currentMonthSec = (DB.user.currentMonthSec || 0) + this.realSec;
+
+        // Проверяем 3+ предмета за всё время (для достижения "Полиглот")
+        if (!DB.user.multiSubjectSession) {
+            const studiedCount = Object.values(DB.subjects).filter(s => (s.sec || 0) > 0).length;
+            if (studiedCount >= 3) DB.user.multiSubjectSession = true;
+        }
+
         const today = getUZDate();
         if (!DB.history[today]) DB.history[today] = 0;
         DB.history[today] += this.realSec;
@@ -6608,7 +7075,7 @@ const Timer = {
             date: this.sessionStartTime 
         });
 
-        if (DB.sessions.length > 100) DB.sessions.pop();
+        // Сессии хранятся БЕСКОНЕЧНО (показываем только последние 10 в журнале)
 
         App.addXP(Math.floor(this.realSec / 60) * 10);
         QuestSys.update('studyMin', Math.floor(this.realSec / 60));
@@ -6768,6 +7235,13 @@ const QuestSys = {
             if (current >= target) {
                 DB.user.dailyQuests.claimed.push(id);
                 DB.user.coins += q.reward;
+                DB.user.lifetimeQuestsDone = (DB.user.lifetimeQuestsDone || 0) + 1;
+
+                // Проверяем, все ли квесты за день забраны (для "Безупречный")
+                const allClaimed = this.list.every(x => DB.user.dailyQuests.claimed.includes(x.id));
+                if (allClaimed) {
+                    DB.user.lifetimePerfectDays = (DB.user.lifetimePerfectDays || 0) + 1;
+                }
                 
                 SoundSys.play('quest_done'); // Наш новый звук
                 FX.confetti();
@@ -6989,12 +7463,12 @@ const WeeklyQuestSys = {
             return alert(`🕒 Арена закрыта! \n\nСледующий бой через ${hours}ч ${mins}мин.`);
         }
 
-        // 2. Проверка монет
-        this.bet = 15;
-        if (DB.user.coins < this.bet) return App.toast("Нужно минимум 15 монет!");
+        // 2. Проверка монет (динамическая ставка по уровню)
+        this.bet = Math.max(15, Math.floor((DB.user.level || 1) * 10));
+        if (DB.user.coins < this.bet) return App.toast(`Нужно минимум ${this.bet} монет!`);
 
         // 🔒 СПИСЫВАЕМ МОНЕТЫ
-        DB.user.coins -= 15;
+        DB.user.coins -= this.bet;
         Data.save();
         App.updateUI();
 
@@ -7010,7 +7484,7 @@ const WeeklyQuestSys = {
             } else {
                 const data = snap.data();
                 if (data.p2) {
-                    DB.user.coins += 15;
+                    DB.user.coins += this.bet;
                     Data.save();
                     App.updateUI();
                     return alert("⛔️ Комната уже полная!");
@@ -7042,7 +7516,7 @@ const WeeklyQuestSys = {
             p2: null,
             p2_id: null,
             p2_score: -1,
-            bet: 15,
+            bet: this.bet,
             mode: this.selectedMode,
             diff: this.selectedDiff,
             status: 'waiting',
@@ -7784,10 +8258,10 @@ else if (this.mode === 'fractions') {
             document.getElementById('trainer-game').style.display = 'none'; 
             
             // Расчет награды
-            let mult = (this.difficulty === 'hard') ? 10 : (this.difficulty === 'medium' ? 5 : 2);
+            let mult = (this.difficulty === 'hard') ? 10 : (this.difficulty === 'medium' ? 7 : 4);
             const earnedXP = this.score * mult; 
 
-            let div = (this.difficulty === 'hard') ? 5 : 10;
+            let div = (this.difficulty === 'hard') ? 5 : (this.difficulty === 'medium' ? 7 : 5);
             const earnedCoins = Math.floor(this.score / div); 
             
             App.addXP(earnedXP);
@@ -7993,7 +8467,7 @@ else if (this.mode === 'fractions') {
                     case 'total':       currentVal = DB.user.totalSec; break;
                     case 'lvl':         currentVal = DB.user.level; break;
                     case 'xp':          currentVal = DB.user.lifetimeXP || DB.user.xp; break;
-                    case 'streak':      currentVal = DB.user.streak; break;
+                    case 'streak':      currentVal = DB.user.dailyStreak || 0; break;
                     case 'coins_max':   currentVal = DB.user.coins; break;
                     case 'coins_spent': currentVal = DB.user.lifetimeCoinsSpent || 0; break;
                     case 'strict_time': currentVal = DB.user.lifetimeStrictSec || 0; break;
@@ -8001,6 +8475,13 @@ else if (this.mode === 'fractions') {
                     case 'math_total':  currentVal = DB.user.lifetimeMathSolved || 0; break;
                     case 'themes_count':  currentVal = DB.user.ownedThemes ? DB.user.ownedThemes.length : 0; break;
                     case 'avatars_count': currentVal = DB.user.ownedAvatars ? DB.user.ownedAvatars.length : 0; break;
+                    case 'strict_sessions': currentVal = DB.user.lifetimeStrictSessions || 0; break;
+                    case 'quests_done':  currentVal = DB.user.lifetimeQuestsDone || 0; break;
+                    case 'perfect_days': currentVal = DB.user.lifetimePerfectDays || 0; break;
+                    case 'daily_claims': currentVal = DB.user.lifetimeDailyClaims || 0; break;
+                    case 'parent_mode':  currentVal = DB.user.visitedParentMode ? 1 : 0; break;
+                    case 'multi_subject': currentVal = DB.user.multiSubjectSession ? 1 : 0; break;
+                    case 'month_minutes': currentVal = DB.user.currentMonthSec || 0; break;
                     
                     // Проверки по времени суток (если таймер активен)
                     case 'night_study': 
@@ -8009,6 +8490,8 @@ else if (this.mode === 'fractions') {
                         if (Timer.active && (hour >= 5 && hour <= 8)) currentVal = 1; break;
                     case 'lunch_study': 
                         if (Timer.active && hour === 14) currentVal = 1; break;
+                    case 'midnight_study':
+                        if (Timer.active && hour === 0) currentVal = 1; break;
                 }
 
                 if (currentVal >= a.max) {
@@ -8483,21 +8966,28 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
     const MAX_ALLOWED_SEC = 36000; // 10 часов в секундах
     const initialCount = DB.sessions.length;
 
+    // Считаем, сколько секунд реально выбрасываем
+    let removedSec = 0;
+    DB.sessions.forEach(session => {
+        const s = Number(session.sec) || 0;
+        if (s > MAX_ALLOWED_SEC) removedSec += s;
+    });
+
     // Оставляем в журнале только те записи, которые меньше или равны 10 часам
     DB.sessions = DB.sessions.filter(session => {
         return (Number(session.sec) || 0) <= MAX_ALLOWED_SEC;
     });
 
-    // Если мы что-то удалили — нужно пересчитать общее время и сохранить
     if (DB.sessions.length < initialCount) {
-        let newTotal = 0;
-        DB.sessions.forEach(s => { newTotal += (Number(s.sec) || 0); });
-        
-        DB.user.totalSec = newTotal; // Обновляем общий счетчик
-        
-        Data.save(); // Сохраняем чистые данные в облако
-        App.updateUI(); // Обновляем экран
-        console.log(`⚠️ Удалено подозрительных сессий: ${initialCount - DB.sessions.length}`);
+        // ВАЖНО: вычитаем только удалённое время, а НЕ приравниваем totalSec
+        // к сумме журнала. Журнал хранит максимум 50 последних записей,
+        // поэтому прежний код обнулял месяцы учёбы у любого,
+        // у кого нашлась одна аномальная запись.
+        DB.user.totalSec = Math.max(0, (Number(DB.user.totalSec) || 0) - removedSec);
+
+        Data.save();
+        App.updateUI();
+        console.log(`⚠️ Удалено подозрительных сессий: ${initialCount - DB.sessions.length} (${removedSec} сек.)`);
     }
 }
 // ------------------------------------------------
@@ -8507,30 +8997,24 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
-// --- ВОССТАНОВЛЕНИЕ ВРЕМЕНИ ИЗ ЖУРНАЛА (SESSIONS) ---
-if (DB && DB.sessions && DB.sessions.length > 0) {
+// --- ВОССТАНОВЛЕНИЕ ОБЩЕГО ВРЕМЕНИ ---
+// Берём максимум из всех источников: журнал (≤50 записей), предметы и история.
+if (DB && DB.user) {
     let sessionSum = 0;
+    if (DB.sessions) DB.sessions.forEach(s => { sessionSum += (Number(s.sec) || 0); });
 
-    // Считаем сумму секунд только из Журнала занятий
-    DB.sessions.forEach(session => {
-        if (session.sec && typeof session.sec === 'number') {
-            sessionSum += session.sec;
-        }
-    });
+    let subjectSum = 0;
+    if (DB.subjects) Object.values(DB.subjects).forEach(s => { subjectSum += (Number(s.sec) || 0); });
 
-    // Если в Журнале времени больше, чем сейчас на счетчике — исправляем
-    if (sessionSum > (DB.user.totalSec || 0)) {
-        DB.user.totalSec = sessionSum;
-        
-        // Сохраняем результат
-        localStorage.setItem(Data.currentKey, JSON.stringify(DB));
-        Data.save(); 
-        
-        // Обновляем цифры на экране
-        App.updateUI(); 
-        
-        console.log("✅ Время восстановлено из Журнала: " + sessionSum + " сек.");
-        App.toast("✅ Время восстановлено из Журнала занятий!");
+    let historySum = 0;
+    if (DB.history) Object.values(DB.history).forEach(v => { historySum += (Number(v) || 0); });
+
+    const best = Math.max(sessionSum, subjectSum, historySum);
+    if (best > (Number(DB.user.totalSec) || 0)) {
+        DB.user.totalSec = best;
+        Data.save();
+        App.updateUI();
+        console.log("✅ Общее время восстановлено: " + best + " сек.");
     }
 }
             setTimeout(() => {
@@ -8694,17 +9178,14 @@ setTimeout(() => {
         },
         renderMonthlyWidget() {
             const goalHours = DB.user.monthlyGoal || 40;
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth(); // 0-11
+            // Берём текущий месяц ПО ТАШКЕНТУ — строковым сравнением ключей YYYY-MM
+            const monthPrefix = getUZDate().slice(0, 7); // 'YYYY-MM'
 
             let totalMonthSec = 0;
 
-            // Считаем сумму всех секунд в DB.history за текущий месяц
             for (let key in DB.history) {
-                const date = new Date(key);
-                if (date.getFullYear() === year && date.getMonth() === month) {
-                    totalMonthSec += DB.history[key];
+                if (String(key).slice(0, 7) === monthPrefix) {
+                    totalMonthSec += (Number(DB.history[key]) || 0);
                 }
             }
 
@@ -9484,6 +9965,7 @@ setTimeout(() => {
                     if (id === 'stats') { this.renderHistory(); this.renderStats(); }
                     if (id === 'shop') this.renderShop();
                     if (id === 'profile') this.updateUI();
+                    if (id === 'settings') { if (typeof updateSubjectLists === 'function') updateSubjectLists(); }
                 });
 
                 // Аналитика
@@ -9494,33 +9976,25 @@ setTimeout(() => {
         const statsSection = document.getElementById('stats');
         if (!statsSection || !statsSection.classList.contains('active')) return;
 
-        // 1. СЧИТАЕМ ТОЛЬКО НЕДЕЛЮ И МЕСЯЦ
+        // 1. СЧИТАЕМ ТОЛЬКО НЕДЕЛЮ И МЕСЯЦ (timezone-safe)
         let monthSec = 0;
         let weekSec = 0;
 
-        const now = new Date();
-        now.setHours(0,0,0,0); 
-        const currentTimestamp = now.getTime();
+        const todayKey = getUZDate(); // 'YYYY-MM-DD' по Ташкенту
 
         if (DB.history) {
             for (let dateKey in DB.history) {
                 const seconds = DB.history[dateKey] || 0;
-                
-                const recordDate = new Date(dateKey);
-                recordDate.setHours(0,0,0,0);
-                
-                const diffTime = currentTimestamp - recordDate.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (!seconds) continue;
 
-                // Месяц (30 дней)
-                if (diffDays >= 0 && diffDays < 30) {
-                    monthSec += seconds;
-                }
-                
-                // Неделя (7 дней)
-                if (diffDays >= 0 && diffDays < 7) {
-                    weekSec += seconds;
-                }
+                // Считаем разницу дней напрямую из строк YYYY-MM-DD
+                // (без new Date — timezone-safe)
+                const diffDays = Math.floor(
+                    (new Date(todayKey + 'T00:00:00Z') - new Date(dateKey + 'T00:00:00Z')) / 86400000
+                );
+
+                if (diffDays >= 0 && diffDays < 30) monthSec += seconds;
+                if (diffDays >= 0 && diffDays < 7) weekSec += seconds;
             }
         }
 
@@ -9589,52 +10063,35 @@ setTimeout(() => {
         const heatmapEl = document.getElementById('heatmap');
         if (!heatmapEl) return;
 
-        let html = '';
-        const now = new Date();
         const daysHtml =[];
+        const nowMs = Date.now();
 
-        // Генерируем 30 дней (от 29 дней назад до сегодня)
+        // Генерируем 30 дней (от 29 дней назад до сегодня) — timezone-safe
         for (let i = 29; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(now.getDate() - i);
+            // Вычисляем timestamp для дня i дней назад, используя getUZDate для ключа
+            const dayMs = nowMs - (i * 86400000);
+            const dateStr = getUZDate(new Date(dayMs));
             
-            // Получаем правильную дату по Ташкенту для поиска в истории
-            const dateStr = getUZDate(d);
-            
-            // Ищем сколько секунд учились в этот день
             const seconds = (DB && DB.history && DB.history[dateStr]) ? DB.history[dateStr] : 0;
             const minutes = Math.floor(seconds / 60);
             
-            // Определяем яркость кубика в зависимости от времени
-            let opacity = 0.1; // Пустой день (бледный)
-            let color = 'var(--text-light)'; // Серый цвет
+            let opacity = 0.1;
+            let color = 'var(--text-light)';
             
             if (minutes > 0) {
-                color = 'var(--primary)'; // Красим в главный цвет темы
-                if (minutes <= 15) opacity = 0.3;       // До 15 мин - полупрозрачный
-                else if (minutes <= 60) opacity = 0.6;  // До 1 часа - средний
-                else opacity = 1.0;                     // Больше 1 часа - яркий
+                color = 'var(--primary)';
+                if (minutes <= 15) opacity = 0.3;
+                else if (minutes <= 60) opacity = 0.6;
+                else opacity = 1.0;
             }
             
-            // Форматируем дату для подсказки при наведении
-            const displayDate = d.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'});
+            // Форматируем дату из ключа YYYY-MM-DD (timezone-safe)
+            const [y, m, d2] = dateStr.split('-');
+            const monthNames = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+            const displayDate = parseInt(d2) + ' ' + monthNames[parseInt(m) - 1];
             const tooltip = `${displayDate}: ${minutes > 0 ? minutes + ' мин' : 'Нет активности'}`;
             
-            // Добавляем HTML кубика (с анимацией при наведении)
-            // Добавляем HTML кубика (с обработкой клика для телефона)
-            daysHtml.push(`
-                <div title="${tooltip}" 
-                    onclick="document.getElementById('heatmap-info').innerText = '${tooltip}'; SoundSys.play('click');" 
-                    style="
-                    aspect-ratio: 1; 
-                    border-radius: 6px; 
-                    background: ${color}; 
-                    opacity: ${opacity}; 
-                    cursor: pointer;
-                    transition: transform 0.2s ease, opacity 0.2s;
-                    border: ${i === 29 ? '2px solid var(--primary)' : 'none'};
-                " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>
-            `);
+            daysHtml.push(`<div title="${tooltip}" onclick="document.getElementById('heatmap-info').innerText = '${tooltip}'; SoundSys.play('click');" style="aspect-ratio:1; border-radius:6px; background:${color}; opacity:${opacity}; cursor:pointer; transition:transform 0.2s ease, opacity 0.2s; border:${i===29?'2px solid var(--primary)':'none'};" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`);
         }
         
         heatmapEl.innerHTML = daysHtml.join('');
@@ -9643,19 +10100,21 @@ setTimeout(() => {
 renderCharts(weekSec) {
         if (typeof Chart === 'undefined') return;
 
-        // 1. График истории за неделю
+        // 1. График истории за неделю (timezone-safe)
         const weekCtx = document.getElementById('weekChart');
         if (weekCtx) {
             const labels = [];
             const data =[];
-            // Собираем данные за последние 7 дней
+            const nowMs = Date.now();
+            const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
             for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const key = getUZDate(d);
+                const key = getUZDate(new Date(nowMs - (i * 86400000)));
                 const sec = (DB.history && DB.history[key]) ? DB.history[key] : 0;
-                labels.push(d.toLocaleDateString('ru-RU', { weekday: 'short' }));
-                data.push((sec / 60).toFixed(1)); // Перевод в минуты
+                // Определяем день недели ИЗ КЛЮЧА (timezone-safe)
+                const keyDate = new Date(key + 'T00:00:00Z');
+                labels.push(dayNames[keyDate.getUTCDay()]);
+                data.push((sec / 60).toFixed(1));
             }
 
             // Удаляем старый график, если он был (чтобы не дублировался)
@@ -9799,7 +10258,11 @@ renderCharts(weekSec) {
                 return;
             }
 
-            logContainer.innerHTML = DB.sessions.map(s => {
+            // Показываем только последние 10 сессий (все хранятся в памяти)
+            const recentSessions = DB.sessions.slice(0, 10);
+            const totalSessions = DB.sessions.length;
+
+            logContainer.innerHTML = recentSessions.map(s => {
                 let minutes = Math.floor(s.sec / 60);
                 if (minutes < 1) minutes = "< 1";
 
@@ -9852,6 +10315,11 @@ renderCharts(weekSec) {
                     </div>
                 </div>`;
             }).join('');
+
+            // Счётчик если сессий больше 10
+            if (totalSessions > 10) {
+                logContainer.innerHTML += `<div style="text-align:center; padding:10px; color:var(--text-light); font-size:11px;">Показано 10 из ${totalSessions} сессий</div>`;
+            }
         },
 
         shareApp() {
@@ -10496,6 +10964,64 @@ renderCharts(weekSec) {
                 console.error(e);
                 alert("❌ Ошибка соединения.");
             });
+        },
+
+        // Восстановление по коду из нового экрана (inline, без prompt)
+        transferByIDCode(cleanID) {
+            App.toast("⏳ Поиск данных...");
+
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
+
+            window.DB_Online.getDoc(docRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const transferData = docSnap.data();
+                    
+                    if (!transferData.isPermanent && transferData.expiresAt) {
+                        if (new Date() > new Date(transferData.expiresAt)) {
+                            App.toast("❌ Срок действия кода истек.");
+                            return;
+                        }
+                    }
+
+                    const shouldDelete = !transferData.isPermanent;
+                    DB = transferData.data;
+
+                    if (!DB.user.name || DB.user.name === "Восстановленный") {
+                        DB.user.name = "Игрок";
+                    }
+                    
+                    let usersList = [];
+                    try {
+                        let stored = localStorage.getItem('MathUsers');
+                        if (stored) usersList = JSON.parse(stored);
+                    } catch (e) { usersList = []; }
+
+                    usersList = usersList.filter(u => u.id !== DB.user.id);
+                    usersList.unshift({ 
+                        id: DB.user.id, 
+                        name: DB.user.name, 
+                        avatar: DB.user.avatar || "😎", 
+                        gender: DB.user.gender || 'male' 
+                    });
+
+                    localStorage.setItem('MathUsers', JSON.stringify(usersList));
+                    Data.currentKey = 'MathData_' + DB.user.id; 
+                    localStorage.setItem(Data.currentKey, JSON.stringify(DB));
+
+                    if (shouldDelete) {
+                        window.DB_Online.deleteDoc(docRef).catch(() => {});
+                    }
+
+                    App.toast("✅ Успешно! Профиль восстановлен.");
+                    setTimeout(() => location.reload(), 800);
+
+                } else {
+                    App.toast("❌ Код не найден.");
+                }
+            }).catch(e => {
+                console.error(e);
+                App.toast("❌ Ошибка соединения.");
+            });
         }
     };
         const InstallSys = {
@@ -10914,40 +11440,7 @@ function cleanSubjects() {
 
     
 
-    // 2. ПЕРЕМЕЩЕНИЕ ПРЕДМЕТА (ДОБАВИТЬ / УДАЛИТЬ)
-    // 1. Функция перемещения (Добавить/Удалить)
-    function moveSubject(id, isAlreadyAdded) {
-        if (Timer.active) return App.toast("⛔️ Сначала остановите таймер!");
-
-        // 1. Работаем со структурой
-        if (isAlreadyAdded) {
-            if (Object.keys(DB.subjects).length <= 1) return App.toast("Минимум 1 предмет!");
-            delete DB.subjects[id]; // Удаляем ключ полностью
-            if (DB.user.subject === id) DB.user.subject = Object.keys(DB.subjects)[0];
-        } else {
-            const template = ALL_SUBJECTS.find(s => s.id === id);
-            if (template) {
-                // Добавляем строго по ID из эталона
-                DB.subjects[id] = { name: template.name, icon: template.icon, sec: 0 };
-            }
-        }
-
-        // 2. Фиксируем время изменения, чтобы блокировать Snapshot (из Шага 1)
-        DB.user.lastSaveTime = Date.now();
-
-        // 3. Сохраняем и обновляем
-        Data.save();
-        updateSubjectLists();
-        App.renderSubjects();
-        App.updateUI();
-    }
-
-    
-
-    // 2. Функция отрисовки списков в Настройках
-    
-    // 3. Функция очистки (Запускается при загрузке)
-    // Она удалит все старые "кривые" ID и оставит только чистые из ALL_SUBJECTS
+    // (Дублирующая функция moveSubject удалена — используется основная выше)
    
 
     
@@ -11336,7 +11829,10 @@ document.addEventListener('click', (e) => {
         document.querySelectorAll('input, textarea, select').forEach(input => {
             if (!input.dataset.soundAttached) {
                 input.addEventListener('focus', () => {
-                    SoundSys.play('click');
+                    // Не играем звук для input на экране входа (дублирует глобальный клик)
+                    if (!input.closest('#auth-screen')) {
+                        SoundSys.play('click');
+                    }
                 });
                 input.dataset.soundAttached = 'true';
             }
