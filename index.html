@@ -5976,8 +5976,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 gain.gain.setValueAtTime(0.15, t);
                 gain.gain.linearRampToValueAtTime(0.01, t+0.1);
                 osc.start(t); osc.stop(t+0.12);
-                const osc2 = ctx.createOscillator(); const g2 = ctx.createGain();
-                osc2.connect(g2); g2.connect(ctx.destination);
+                const osc2 = this.ctx.createOscillator(); const g2 = this.ctx.createGain();
+                osc2.connect(g2); g2.connect(this.ctx.destination);
                 osc2.type = 'triangle'; osc2.frequency.setValueAtTime(350, t);
                 osc2.frequency.linearRampToValueAtTime(100, t+0.12);
                 g2.gain.setValueAtTime(0.08, t);
@@ -5993,10 +5993,12 @@ body.dark-mode .tier-name { color: #f7eecf; }
             }
             else if (type === 'success') {
                 [400, 500, 700, 1000].forEach((f, i) => {
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(f, t+i*0.12);
-                    gain.gain.setValueAtTime(0.1, t+i*0.12);
-                    gain.gain.linearRampToValueAtTime(0.01, t+i*0.12+0.15);
-                    osc.start(t+i*0.12); osc.stop(t+i*0.12+0.15);
+                    const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                    o.connect(g); g.connect(this.ctx.destination);
+                    o.type = 'sine'; o.frequency.setValueAtTime(f, t+i*0.12);
+                    g.gain.setValueAtTime(0.1, t+i*0.12);
+                    g.gain.linearRampToValueAtTime(0.01, t+i*0.12+0.15);
+                    o.start(t+i*0.12); o.stop(t+i*0.12+0.15);
                 });
             }
             else if (type === 'error') {
@@ -6008,10 +6010,12 @@ body.dark-mode .tier-name { color: #f7eecf; }
             }
             else if (type === 'win') {
                 [300, 400, 500, 600, 800].forEach((f, i) => {
-                    osc.type = 'square'; osc.frequency.setValueAtTime(f, t+i*0.12);
-                    gain.gain.setValueAtTime(0.06, t+i*0.12);
-                    gain.gain.linearRampToValueAtTime(0.01, t+i*0.12+0.2);
-                    osc.start(t+i*0.12); osc.stop(t+i*0.12+0.2);
+                    const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                    o.connect(g); g.connect(this.ctx.destination);
+                    o.type = 'square'; o.frequency.setValueAtTime(f, t+i*0.12);
+                    g.gain.setValueAtTime(0.06, t+i*0.12);
+                    g.gain.linearRampToValueAtTime(0.01, t+i*0.12+0.2);
+                    o.start(t+i*0.12); o.stop(t+i*0.12+0.2);
                 });
             }
             else if (type === 'sword') {
@@ -6791,7 +6795,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 // 2. Отправляем ПОЛНЫЙ профиль в папку users
                 const userDoc = dbRef.doc(dbRef.db, "users", userId);
                 // 🔐 Добавляем ownerUID для проверки Firestore Rules
-                DB._ownerUID = dbRef.auth?.currentUser?.uid || null;
+                DB._ownerUID = window._firebaseUID || null;
                 await dbRef.setDoc(userDoc, DB);
 
                 // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard
@@ -6807,7 +6811,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     isVip: DB.user.isVip || false,
                     isKing: DB.user.isKing || false,
                     isTitan: DB.user.isTitan || false,
-                    _ownerUID: dbRef.auth?.currentUser?.uid || null,
+                    _ownerUID: window._firebaseUID || null,
                     lastActive: Date.now(),
                     fcmToken: DB.user.fcmToken || null
                 });
@@ -6818,6 +6822,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                                     userId: userId,
                                     data: DB,
                                     isPermanent: true,
+                                    createdAt: new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 }, { merge: true }); // merge: true — не перезаписывает, а обновляет
                             }
@@ -11137,6 +11142,7 @@ setTimeout(() => {
                         userId: Auth.currentUser.id,
                         data: DB,
                         isPermanent: true,
+                        createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
                     }, { merge: true }).catch(e => console.warn('rescueCode save:', e));
                 }
