@@ -2997,7 +2997,7 @@ body.dark-mode .subject-item-fixed {
         100% { left: 120%; }
     }
 
-n    /* === ВХОДЯЩИЙ ВЫЗОВ (Пульс) === */
+    /* === ВХОДЯЩИЙ ВЫЗОВ (Пульс) === */
     @keyframes challenge-pulse {
         0% { box-shadow: 0 0 0 0 rgba(255, 65, 108, 0.6); }
         70% { box-shadow: 0 0 0 15px rgba(255, 65, 108, 0); }
@@ -5800,8 +5800,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
         // 🌌 MYTHIC (Секретный уровень роскоши)
         { id: 'god', icon: '👁️', name: 'Абсолют', price: 15000 },
-
-    ]; = [
+    ];  
+    [
         { id: 'shield', name: 'Щит Стрика', icon: '🛡️', price: 300, desc: 'Спасет твой огонь при пропуске дня' },
         { id: 'booster', name: 'XP Бустер', icon: '⚡', price: 500, desc: 'Двойной опыт (x2) на 24 часа' }
     ];
@@ -5851,9 +5851,15 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'retro', name: '8-Bit (Денди)', price: 500 },
         { id: 'bubble', name: 'Бульк (Bubble)', price: 500 },
         { id: 'sci-fi', name: 'Космос', price: 1000 },
-        { id: 'mechanical', name: 'Механика ⚙️', price: 1200 } 
-    ,
-
+        { id: 'mechanical', name: 'Механика ⚙️', price: 1200 }
+    ];
+    // РАДИО
+    const SHOP_RADIOS = [
+        { id: 'lofi', name: 'Lo-Fi Chill', icon: '🎧', price: 100, url: 'https://lofi.stream.laut.fm/lofi' },
+        { id: 'classic', name: 'Классика IQ', icon: '🎻', price: 300, url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' },
+        { id: 'jazz', name: 'Smooth Jazz 24/7', icon: '🎷', price: 250, url: 'https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3' },
+        { id: 'nature', name: 'Nature Sounds', icon: '🌿', price: 200, url: 'https://stream.zeno.fm/0r0xa792kwzuv' },
+        { id: 'electronic', name: 'Deep Focus', icon: '⚡', price: 400, url: 'https://ice1.somafm.com/deepspaceone-128-mp3' }
     ];
     // ЛИГИ 
     const LEAGUES = [
