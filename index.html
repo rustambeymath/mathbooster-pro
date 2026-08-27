@@ -37,6 +37,10 @@
         k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
         (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
+        
+
+        
+
         ym(105919372, "init", { // <-- ВСТАВЬ СВОЙ ID СЧЕТЧИКА
                 clickmap:true,
                 trackLinks:true,
@@ -591,12 +595,6 @@ window.addEventListener('load', () => {
 
             body.dark-mode.theme-aurora .card {
                 border: 1px solid rgba(52, 211, 153, 0.2);
-            }
-
-            /* Фиксируем цвета для темного режима (она и так темная) */
-            body.dark-mode.theme-cyber {
-                --bg: #020202;
-                --surface: #050a05;
             }
 
             /* === ТЕМНЫЙ РЕЖИМ === */
@@ -1446,8 +1444,6 @@ body.theme-platinum.dark-mode a[href*="t.me"] .card {
         padding-bottom: calc(90px + var(--safe-bottom)); 
     }
 
-
-
             .container { 
                 max-width: 1000px; 
                 margin: 0 auto; 
@@ -1952,7 +1948,6 @@ body.theme-bw.dark-mode .shop-price-tag {
 
 /* 📝 СПЕЦ-ФИКС ДЛЯ ТЕМЫ PAPER (Ночной вариант) */
 
-
 /* 🔥 КОГДА ДЕНЕГ ХВАТАЕТ (Affordable) */
 .shop-price-tag.affordable {
     background: var(--primary) !important;
@@ -2001,6 +1996,127 @@ body.theme-platinum:not(.dark-mode) .shop-price-tag.affordable {
             .modal.show { display: flex; animation: popIn 0.3s; }
             @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
             .modal-content { background: var(--surface); padding: 30px; border-radius: 25px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); max-height: 80vh; overflow-y: auto; }
+            /* DUEL CHALLENGE MODAL */
+            #duel-challenge-modal .modal-content {
+                background: var(--surface);
+                border: 3px solid var(--primary);
+                max-width: 360px;
+                position: relative;
+                overflow: hidden;
+            }
+            #duel-challenge-modal .duel-header {
+                background: linear-gradient(135deg, var(--primary), #FF4757);
+                padding: 25px 20px 20px 20px;
+                color: white;
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-header .duel-icon {
+                font-size: 50px;
+                margin-bottom: 5px;
+                animation: duelPulse 1.5s infinite;
+            }
+            @keyframes duelPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.15); }
+            }
+            #duel-challenge-modal .duel-players {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 15px;
+                padding: 20px;
+                background: var(--bg);
+            }
+            #duel-challenge-modal .duel-player {
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-player .avatar {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: var(--surface);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                margin: 0 auto 5px auto;
+                border: 2px solid var(--primary);
+            }
+            #duel-challenge-modal .duel-player .name {
+                font-size: 13px;
+                font-weight: 800;
+                color: var(--text);
+                max-width: 90px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #duel-challenge-modal .duel-vs {
+                font-size: 22px;
+                font-weight: 900;
+                color: var(--primary);
+                text-shadow: 0 0 10px var(--primary);
+            }
+            #duel-challenge-modal .duel-info {
+                padding: 0 20px 15px 20px;
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-info .info-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 6px 0;
+                font-size: 13px;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            #duel-challenge-modal .duel-info .info-label {
+                color: var(--text-light);
+            }
+            #duel-challenge-modal .duel-info .info-value {
+                font-weight: 700;
+                color: var(--text);
+            }
+            #duel-challenge-modal .duel-buttons {
+                display: flex;
+                gap: 10px;
+                padding: 0 20px 20px 20px;
+            }
+            #duel-challenge-modal .duel-btn {
+                flex: 1;
+                padding: 14px;
+                border-radius: 15px;
+                border: none;
+                font-size: 15px;
+                font-weight: 800;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            #duel-challenge-modal .duel-btn:active {
+                transform: scale(0.95);
+            }
+            #duel-challenge-modal .duel-btn-accept {
+                background: linear-gradient(135deg, #00b894, #00cec9);
+                color: white;
+                box-shadow: 0 4px 15px rgba(0, 206, 201, 0.4);
+            }
+            #duel-challenge-modal .duel-btn-decline {
+                background: var(--bg);
+                color: var(--text-light);
+                border: 2px solid rgba(0,0,0,0.1);
+            }
+            #duel-challenge-modal .duel-timer {
+                text-align: center;
+                font-size: 11px;
+                color: var(--text-light);
+                padding: 0 20px 10px 20px;
+            }
+            #duel-challenge-modal .duel-timer span {
+                color: #FF4757;
+                font-weight: 800;
+                font-size: 18px;
+            }
+
             
             #toast-container { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; width: max-content; }
             .toast { background: var(--surface); color: var(--text); padding: 12px 25px; border-radius: 50px; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-top: 10px; opacity: 0; transform: translateY(20px); transition: 0.4s; border: 2px solid var(--primary); text-align: center; }
@@ -2092,7 +2208,6 @@ body.dark-mode .subject-item-fixed {
     }
 
     /* Убираем любое выделение — теперь ВСЁ одинаково */
-
 
     .subject-item .icon {
         font-size: 28px;
@@ -2249,7 +2364,6 @@ body.dark-mode .subject-item-fixed {
                 white-space: nowrap; 
                 overflow: hidden;
             }
-
 
             .ach-row.unlocked .ach-icon {
                 background: #FFD700;
@@ -2686,8 +2800,6 @@ body.dark-mode .subject-item-fixed {
     text-shadow: 0 0 10px rgba(255,255,255,0.05);
 }
 
-
-
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     * {
@@ -3107,7 +3219,6 @@ body.dark-mode .subject-item-fixed {
 }
     
 
-
     /* Элитное свечение для ветеранов (14+ дней) */
     @keyframes veteran-glow {
         0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); border-color: #FFD700; }
@@ -3251,7 +3362,6 @@ body.dark-mode .subject-item-fixed {
                 font-size: 48px;
                 opacity: 0.3;
             }
-
 
             /* Карточки выбора режимов */
             .mode-grid {
@@ -3843,7 +3953,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
     border: 2px solid #FF416C;
     background: linear-gradient(90deg, rgba(255, 65, 108, 0.1), transparent);
 }
-
 
 /* Универсальный класс скрытия */
 .hidden { display: none !important; }
@@ -4520,7 +4629,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
         <button class="btn btn-primary" onclick="Trainer.init()" style="width: 100%; padding: 15px; border-radius: 15px;">В меню</button>
     </div>
 </section>
-
 
         <!-- 3. STATS -->
         <section id="stats" class="section">
@@ -5240,6 +5348,92 @@ body.dark-mode .tier-name { color: #f7eecf; }
             </div>
         </div>
     </div>
+    
+    <!-- DUEL CHALLENGE MODAL -->
+    <div id="duel-challenge-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="padding: 0;">
+            <div class="duel-header">
+                <div class="duel-icon">⚔️</div>
+                <div style="font-size: 18px; font-weight: 900;">ВЫЗОВ НА ДУЭЛЬ!</div>
+            </div>
+            <div class="duel-players">
+                <div class="duel-player">
+                    <div class="avatar" id="dc-from-avatar">😎</div>
+                    <div class="name" id="dc-from-name">Игрок</div>
+                </div>
+                <div class="duel-vs">⚡VS⚡</div>
+                <div class="duel-player">
+                    <div class="avatar" id="dc-my-avatar">😎</div>
+                    <div class="name" id="dc-my-name">Ты</div>
+                </div>
+            </div>
+            <div class="duel-info">
+                <div class="info-row">
+                    <span class="info-label">🎮 Режим</span>
+                    <span class="info-value" id="dc-mode">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value" id="dc-diff">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Ставка</span>
+                    <span class="info-value">15 монет</span>
+                </div>
+            </div>
+            <div class="duel-timer">
+                Авто-отказ через: <span id="dc-countdown">30</span>с
+            </div>
+            <div class="duel-buttons">
+                <button class="duel-btn duel-btn-decline" id="dc-decline-btn">🚫 Отказ</button>
+                <button class="duel-btn duel-btn-accept" id="dc-accept-btn">⚔️ Принять!</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- DUEL CHALLENGE MODAL -->
+    <div id="duel-challenge-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="padding: 0;">
+            <div class="duel-header">
+                <div class="duel-icon">⚔️</div>
+                <div style="font-size: 18px; font-weight: 900;">ВЫЗОВ НА ДУЭЛЬ!</div>
+            </div>
+            <div class="duel-players">
+                <div class="duel-player">
+                    <div class="avatar" id="dc-from-avatar">😎</div>
+                    <div class="name" id="dc-from-name">Игрок</div>
+                </div>
+                <div class="duel-vs">⚡VS⚡</div>
+                <div class="duel-player">
+                    <div class="avatar" id="dc-my-avatar">😎</div>
+                    <div class="name" id="dc-my-name">Ты</div>
+                </div>
+            </div>
+            <div class="duel-info">
+                <div class="info-row">
+                    <span class="info-label">🎮 Режим</span>
+                    <span class="info-value" id="dc-mode">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value" id="dc-diff">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Ставка</span>
+                    <span class="info-value">15 монет</span>
+                </div>
+            </div>
+            <div class="duel-timer">
+                Авто-отказ через: <span id="dc-countdown">30</span>с
+            </div>
+            <div class="duel-buttons">
+                <button class="duel-btn duel-btn-decline" id="dc-decline-btn">🚫 Отказ</button>
+                <button class="duel-btn duel-btn-accept" id="dc-accept-btn">⚔️ Принять!</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
     <script>
     /* ==========================================
@@ -5721,7 +5915,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
         history:{}, sessions:[], achievements:[] 
     };
 
-
     
 
     const THEMES = [
@@ -5813,7 +6006,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'astronaut', icon: '👨‍🚀', name: 'Космонавт', price: 12000 },
 
         // 🌌 MYTHIC (Секретный уровень роскоши)
-        { id: 'god', icon: '👁️', name: 'Абсолют', price: 15000 }
+        { id: 'god', icon: '👁️', name: 'Абсолют', price: 15000 },
     ];
 
     const SHOP_ITEMS = [
@@ -5844,6 +6037,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'vip_excl', name: '💎 VIP', price: -1 },
         { id: 'pro_excl', name: '⭐ PRO', price: -1 },
         { id: 'legend', name: '👑 LEGEND', price: -1 }
+    ,
+
+        
+
     ];
 
     // 🖼️ РАМКИ
@@ -5854,46 +6051,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'fire', name: 'Огонь 🔥', price: 4000, css: 'frame-fire' },
         { id: 'royal', name: 'Корона', price: 5000, css: 'frame-royal' },
         { id: 'titan', name: 'Титан 🌌', price: 10000, css: 'frame-titan' }
-
-    ];
-
-    // РАДИО
-    const SHOP_RADIOS = [
-        { 
-            id: 'lofi', 
-            name: 'Lo-Fi Chill', 
-            icon: '🎧', 
-            price: 100, 
-            url: 'https://lofi.stream.laut.fm/lofi' 
-        },
-        { 
-            id: 'classic', 
-            name: 'Классика IQ', 
-            icon: '🎻', 
-            price: 300, 
-            url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' 
-        },
-        { 
-            id: 'jazz', 
-            name: 'Smooth Jazz 24/7', 
-            icon: '🎷', 
-            price: 250, 
-            url: 'https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3' // Swiss Jazz Radio (стабильный!)
-        },
-        { 
-            id: 'nature', 
-            name: 'Nature Sounds', 
-            icon: '🌿', 
-            price: 200, 
-            url: 'https://stream.zeno.fm/0r0xa792kwzuv'
-        },
-        { 
-            id: 'electronic', 
-            name: 'Deep Focus', 
-            icon: '⚡', 
-            price: 400, 
-            url: 'https://ice1.somafm.com/deepspaceone-128-mp3' // SomaFM Deep Space One
-        }
     ];
 
     // 🔊 ЗВУКИ (Синтезатор)
@@ -5902,7 +6059,15 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { id: 'retro', name: '8-Bit (Денди)', price: 500 },
         { id: 'bubble', name: 'Бульк (Bubble)', price: 500 },
         { id: 'sci-fi', name: 'Космос', price: 1000 },
-        { id: 'mechanical', name: 'Механика ⚙️', price: 1200 } 
+        { id: 'mechanical', name: 'Механика ⚙️', price: 1200 }
+    ];
+    // РАДИО
+    const SHOP_RADIOS = [
+        { id: 'lofi', name: 'Lo-Fi Chill', icon: '🎧', price: 100, url: 'https://lofi.stream.laut.fm/lofi' },
+        { id: 'classic', name: 'Классика IQ', icon: '🎻', price: 300, url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128' },
+        { id: 'jazz', name: 'Smooth Jazz 24/7', icon: '🎷', price: 250, url: 'https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3' },
+        { id: 'nature', name: 'Nature Sounds', icon: '🌿', price: 200, url: 'https://stream.zeno.fm/0r0xa792kwzuv' },
+        { id: 'electronic', name: 'Deep Focus', icon: '⚡', price: 400, url: 'https://ice1.somafm.com/deepspaceone-128-mp3' }
     ];
     // ЛИГИ 
     const LEAGUES = [
@@ -5913,7 +6078,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
         { min: 35, name: "💎 Алмазная Лига", color: "league-diamond" },
         { min: 50, name: "👑 Легендарная Лига", color: "league-legend" }
     ];
-
 
     // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ (UTC+5 Ташкент)
     const getUZDate = (dateObj = null) => {
@@ -5927,10 +6091,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
     // Возвращаем ГГГГ-ММ-ДД (UTC формат, но с учётом смещения)
     return date.toISOString().slice(0, 10);
 };
-
-
-
-
 
     const NameGuard = {
         // Список запрещенных корней (RU, UZ, EN)
@@ -6192,7 +6352,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
             }
         },
 
-
         async save() {
         if (!DB || !Auth.currentUser || !Auth.currentUser.id) return;
         if (isParentMode) return; // Родитель не может сохранять данные
@@ -6208,7 +6367,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 // 2. Отправляем ПОЛНЫЙ профиль в папку users
                 const userDoc = dbRef.doc(dbRef.db, "users", userId);
                 // 🔐 Добавляем ownerUID для проверки Firestore Rules
-                DB._ownerUID = dbRef.auth?.currentUser?.uid || null;
+                DB._ownerUID = window._firebaseUID || null;
                 await dbRef.setDoc(userDoc, DB);
 
                 // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard
@@ -6224,7 +6383,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     isVip: DB.user.isVip || false,
                     isKing: DB.user.isKing || false,
                     isTitan: DB.user.isTitan || false,
-                    _ownerUID: dbRef.auth?.currentUser?.uid || null,
+                    _ownerUID: window._firebaseUID || null,
                     lastActive: Date.now(),
                     fcmToken: DB.user.fcmToken || null
                 });
@@ -6235,6 +6394,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                                     userId: userId,
                                     data: DB,
                                     isPermanent: true,
+                                    createdAt: new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 }, { merge: true }); // merge: true — не перезаписывает, а обновляет
                             }
@@ -7683,7 +7843,6 @@ const Timer = {
             }
         }
 
-
         this.tick();
 
         const startPhrases = [
@@ -8667,10 +8826,49 @@ const WeeklyQuestSys = {
             const data = snap.data();
             if (!data || !data.battleCode) return;
             
-            // Показываем окно вызова
-            const accept = confirm(`⚔️ ${data.fromName} (${data.fromAvatar}) вызвал тебя на дуэль!\n\nРежим: ${this.getModeLabel(data.mode)}\nСложность: ${this.getDiffLabel(data.diff)}\n\nПринять?`);
+            // === КРАСИВОЕ МОДАЛЬНОЕ ОКНО ===
+            const modal = document.getElementById('duel-challenge-modal');
+            if (!modal) { console.error('Duel modal not found'); return; }
             
-            if (accept) {
+            // Заполняем данные
+            document.getElementById('dc-from-avatar').textContent = data.fromAvatar || '😎';
+            document.getElementById('dc-from-name').textContent = data.fromName;
+            document.getElementById('dc-my-avatar').textContent = DB.user.avatar || '😎';
+            document.getElementById('dc-my-name').textContent = DB.user.name;
+            document.getElementById('dc-mode').textContent = this.getModeLabel(data.mode);
+            document.getElementById('dc-diff').textContent = this.getDiffLabel(data.diff);
+            
+            // Звук при получении вызова
+            SoundSys.play('win');
+            
+            // Таймер обратного отсчёта (30 сек)
+            let countdown = 30;
+            const countdownEl = document.getElementById('dc-countdown');
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdownEl) countdownEl.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    modal.classList.remove('show');
+                    window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                    App.toast('⏰ Время вызова истекло');
+                }
+            }, 1000);
+            
+            // Кнопки
+            const acceptBtn = document.getElementById('dc-accept-btn');
+            const declineBtn = document.getElementById('dc-decline-btn');
+            
+            const cleanup = () => {
+                clearInterval(interval);
+                modal.classList.remove('show');
+                acceptBtn.onclick = null;
+                declineBtn.onclick = null;
+            };
+            
+            acceptBtn.onclick = () => {
+                cleanup();
+                
                 // Принимаем вызов
                 this.currentCode = data.battleCode;
                 this.bet = 15;
@@ -8692,13 +8890,19 @@ const WeeklyQuestSys = {
                 this.startListening(docRef);
                 SoundSys.play('success');
                 App.toast('⚔️ Дуэль начинается!');
-            } else {
-                // Отказываемся — возвращаем монеты отправителю
-                App.toast('❌ Вызов отклонён');
-            }
+                
+                // Удаляем документ вызова
+                window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            };
             
-            // Удаляем документ вызова
-            window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            declineBtn.onclick = () => {
+                cleanup();
+                App.toast('❌ Вызов отклонён');
+                window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            };
+            
+            // Показываем модалку
+            modal.classList.add('show');
         });
     },
     stopChallengeListener() {
@@ -9539,7 +9743,6 @@ r
         pvpCode: null,
         pvpListener: null,
 
-
         startPVP(role, code, bet, mode, diff) {
             this.pvpRole = role;
             this.pvpCode = code;
@@ -9625,7 +9828,6 @@ r
             
             this.start(); 
         },
-
 
         // Эта функция вызывается из end(), если isDuel = true
         async handleDuelEnd() {
@@ -10237,7 +10439,6 @@ r
             `;
         },
 
-
         
         setText(id, text) {
             const el = document.getElementById(id);
@@ -10554,6 +10755,7 @@ setTimeout(() => {
                         userId: Auth.currentUser.id,
                         data: DB,
                         isPermanent: true,
+                        createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
                     }, { merge: true }).catch(e => console.warn('rescueCode save:', e));
                 }
@@ -11074,7 +11276,8 @@ setTimeout(() => {
             } else if(DB.user.coins >= t.price && confirm(`Купить за ${t.price}?`)) {
                 DB.user.coins -= t.price; 
                 DB.user.lifetimeCoinsSpent = (DB.user.lifetimeCoinsSpent || 0) + t.price;
-                DB.user.ownedThemes.push(id); DB.user.theme=id; Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('success'); FX.confetti();
+                DB.user.ownedThemes.push(id); DB.user.theme=id;
+                Data.save(); this.updateUI(); this.renderShop(); SoundSys.play('success'); FX.confetti();
             } else { App.toast("Недостаточно монет"); SoundSys.play('error'); }
         },
         buyAvatar(id) {
@@ -11594,7 +11797,6 @@ renderCharts(weekSec) {
                     minute: '2-digit', 
                     timeZone: userTZ 
                 });
-
 
                 // 3. Ищем иконку предмета по названию
                 let icon = '⏱️'; // Иконка по умолчанию
@@ -12755,7 +12957,6 @@ function cleanSubjects() {
 
     
 
-
     
     // Перемещение
     
@@ -12774,7 +12975,6 @@ function cleanSubjects() {
     
     
     
-
 
     // Ручной перенос по коду (запасной вариант)
     function manualQRTransfer() {
@@ -13162,29 +13362,33 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Звук при покупке темы
-const originalBuyTheme = App.buyTheme;
-App.buyTheme = function(id) {
-    const result = originalBuyTheme.call(this, id);
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-    return result;
-};
+// Звук при покупке темы, аватара, смене предмета
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        if (typeof App !== 'undefined' && App.buyTheme) {
+            const originalBuyTheme = App.buyTheme;
+            App.buyTheme = function(id) {
+                const result = originalBuyTheme.call(this, id);
+                if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                return result;
+            };
 
-// Звук при покупке аватара
-const originalBuyAvatar = App.buyAvatar;
-App.buyAvatar = function(id) {
-    const result = originalBuyAvatar.call(this, id);
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-    return result;
-};
+            const originalBuyAvatar = App.buyAvatar;
+            App.buyAvatar = function(id) {
+                const result = originalBuyAvatar.call(this, id);
+                if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                return result;
+            };
 
-// Звук при смене предмета
-const originalSelectSubject = App.selectSubject;
-App.selectSubject = function(key, event) {
-    const result = originalSelectSubject.call(this, key, event);
-    if (navigator.vibrate) navigator.vibrate(15);
-    return result;
-};
+            const originalSelectSubject = App.selectSubject;
+            App.selectSubject = function(key, event) {
+                const result = originalSelectSubject.call(this, key, event);
+                if (navigator.vibrate) navigator.vibrate(15);
+                return result;
+            };
+        }
+    }, 3000);
+});
     </script>
     <!-- TRANSFER CODE MODAL (Окно переноса) -->
     <div id="transfer-modal" class="modal" style="z-index: 20000;">
