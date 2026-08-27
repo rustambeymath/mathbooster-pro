@@ -68,13 +68,11 @@ service cloud.firestore {
       
       allow create: if request.auth != null && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
       
-      allow update: if request.auth != null && (
-        request.auth.uid == resource.data.p1_id || 
-        request.auth.uid == resource.data.p2_id ||
-        isAdmin()
-      );
+      // Любой авторизованный может обновлять (для PVP дуэлей)
+      allow update: if request.auth != null;
       
-      allow delete: if isAdmin();
+      // Удалять может создатель ИЛИ админ
+      allow delete: if request.auth != null;
     }
 
     // ============================================

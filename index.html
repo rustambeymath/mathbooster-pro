@@ -8603,10 +8603,10 @@ const WeeklyQuestSys = {
 
         } catch (e) {
             console.error(e);
-            DB.user.coins += 15;
+            DB.user.coins += this.bet;
             Data.save();
             App.updateUI();
-            App.toast("Ошибка сети");
+            App.toast("Ошибка сети. Монеты возвращены.");
         }
     },
 
@@ -8738,39 +8738,48 @@ const WeeklyQuestSys = {
         Data.save();
         App.updateUI();
         
-        // Создаём боевую комнату
-        const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', code);
-        await window.DB_Online.setDoc(docRef, {
-            p1: DB.user.name,
-            p1_id: Auth.currentUser.id,
-            bet: 15,
-            mode: this.selectedMode || 'standard',
-            diff: this.selectedDiff || 'easy',
-            status: 'waiting',
-            createdAt: now,
-            expiresAt: now + 300000,
-            challengerName: DB.user.name,
-            targetId: targetId,
-            targetName: targetName
-        });
-        
-        // Создаём документ-вызов для пуша
-        const challengeRef = window.DB_Online.doc(window.DB_Online.db, 'pendingChallenges', targetId);
-        await window.DB_Online.setDoc(challengeRef, {
-            fromId: Auth.currentUser.id,
-            fromName: DB.user.name,
-            fromAvatar: DB.user.avatar || '😎',
-            battleCode: code,
-            mode: this.selectedMode || 'standard',
-            diff: this.selectedDiff || 'easy',
-            createdAt: now
-        });
-        
-        // Показываем лобби
-        this.showLobby();
-        this.startListening(docRef);
-        App.toast(`⚔️ Вызов отправлен ${targetName}!`);
-        SoundSys.play('sword');
+        try {
+            // Создаём боевую комнату
+            const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', code);
+            await window.DB_Online.setDoc(docRef, {
+                p1: DB.user.name,
+                p1_id: Auth.currentUser.id,
+                bet: 15,
+                mode: this.selectedMode || 'standard',
+                diff: this.selectedDiff || 'easy',
+                status: 'waiting',
+                createdAt: now,
+                expiresAt: now + 300000,
+                challengerName: DB.user.name,
+                targetId: targetId,
+                targetName: targetName
+            });
+            
+            // Создаём документ-вызов для пуша
+            const challengeRef = window.DB_Online.doc(window.DB_Online.db, 'pendingChallenges', targetId);
+            await window.DB_Online.setDoc(challengeRef, {
+                fromId: Auth.currentUser.id,
+                fromName: DB.user.name,
+                fromAvatar: DB.user.avatar || '\ud83d\ude0e',
+                battleCode: code,
+                mode: this.selectedMode || 'standard',
+                diff: this.selectedDiff || 'easy',
+                createdAt: now
+            });
+            
+            // Показываем лобби
+            this.showLobby();
+            this.startListening(docRef);
+            App.toast(`\u2694\ufe0f \u0412\u044b\u0437\u043e\u0432 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d ${targetName}!`);
+            SoundSys.play('sword');
+        } catch (e) {
+            console.error('Challenge error:', e);
+            // Возвращаем монеты при ошибке
+            DB.user.coins += 15;
+            Data.save();
+            App.updateUI();
+            App.toast('\u274c \u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u0434\u0443\u044d\u043b\u0438. \u041c\u043e\u043d\u0435\u0442\u044b \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0435\u043d\u044b.');
+        }
     },
 
     // === СЛУШАТЕЛЬ ВХОДЯЩИХ ВЫЗОВОВ ===
@@ -8783,6 +8792,10 @@ const WeeklyQuestSys = {
             if (!snap.exists()) return;
             const data = snap.data();
             if (!data || !data.battleCode) return;
+            // Защита от двойного показа модалки
+            if (this._challengeModalShown) return;
+            this._challengeModalShown = true;
+
             
             // === КРАСИВОЕ МОДАЛЬНОЕ ОКНО ===
             const modal = document.getElementById('duel-challenge-modal');
@@ -8822,6 +8835,7 @@ const WeeklyQuestSys = {
                 modal.classList.remove('show');
                 acceptBtn.onclick = null;
                 declineBtn.onclick = null;
+                this._challengeModalShown = false;
             };
             
             acceptBtn.onclick = () => {
@@ -8837,17 +8851,17 @@ const WeeklyQuestSys = {
                 App.updateUI();
                 
                 // Присоединяемся к комнате
-                const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', data.battleCode);
-                window.DB_Online.updateDoc(docRef, {
-                    p2: DB.user.name,
-                    p2_id: Auth.currentUser.id,
-                    status: 'ready'
-                });
-                
-                this.gameStarted = true;
-                this.startListening(docRef);
-                SoundSys.play('success');
-                App.toast('⚔️ Дуэль начинается!');
+                try { const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', data.battleCode);
+                    await window.DB_Online.updateDoc(docRef, {
+                        p2: DB.user.name,
+                        p2_id: Auth.currentUser.id,
+                        status: 'ready'
+                    });
+                    this.gameStarted = true;
+                    this.startListening(docRef);
+                    SoundSys.play('success');
+                    App.toast('⚔️ Дуэль начинается!');
+                } catch(e) { console.error('Accept error:', e); DB.user.coins += 15; Data.save(); App.updateUI(); App.toast('❌ Ошибка. Монеты возвращены.'); }
                 
                 // Удаляем документ вызова
                 window.DB_Online.deleteDoc(challengeRef).catch(() => {});
