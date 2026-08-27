@@ -1996,6 +1996,127 @@ body.theme-platinum:not(.dark-mode) .shop-price-tag.affordable {
             .modal.show { display: flex; animation: popIn 0.3s; }
             @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
             .modal-content { background: var(--surface); padding: 30px; border-radius: 25px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); max-height: 80vh; overflow-y: auto; }
+            /* DUEL CHALLENGE MODAL */
+            #duel-challenge-modal .modal-content {
+                background: var(--surface);
+                border: 3px solid var(--primary);
+                max-width: 360px;
+                position: relative;
+                overflow: hidden;
+            }
+            #duel-challenge-modal .duel-header {
+                background: linear-gradient(135deg, var(--primary), #FF4757);
+                padding: 25px 20px 20px 20px;
+                color: white;
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-header .duel-icon {
+                font-size: 50px;
+                margin-bottom: 5px;
+                animation: duelPulse 1.5s infinite;
+            }
+            @keyframes duelPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.15); }
+            }
+            #duel-challenge-modal .duel-players {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 15px;
+                padding: 20px;
+                background: var(--bg);
+            }
+            #duel-challenge-modal .duel-player {
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-player .avatar {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: var(--surface);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                margin: 0 auto 5px auto;
+                border: 2px solid var(--primary);
+            }
+            #duel-challenge-modal .duel-player .name {
+                font-size: 13px;
+                font-weight: 800;
+                color: var(--text);
+                max-width: 90px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #duel-challenge-modal .duel-vs {
+                font-size: 22px;
+                font-weight: 900;
+                color: var(--primary);
+                text-shadow: 0 0 10px var(--primary);
+            }
+            #duel-challenge-modal .duel-info {
+                padding: 0 20px 15px 20px;
+                text-align: center;
+            }
+            #duel-challenge-modal .duel-info .info-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 6px 0;
+                font-size: 13px;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            #duel-challenge-modal .duel-info .info-label {
+                color: var(--text-light);
+            }
+            #duel-challenge-modal .duel-info .info-value {
+                font-weight: 700;
+                color: var(--text);
+            }
+            #duel-challenge-modal .duel-buttons {
+                display: flex;
+                gap: 10px;
+                padding: 0 20px 20px 20px;
+            }
+            #duel-challenge-modal .duel-btn {
+                flex: 1;
+                padding: 14px;
+                border-radius: 15px;
+                border: none;
+                font-size: 15px;
+                font-weight: 800;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            #duel-challenge-modal .duel-btn:active {
+                transform: scale(0.95);
+            }
+            #duel-challenge-modal .duel-btn-accept {
+                background: linear-gradient(135deg, #00b894, #00cec9);
+                color: white;
+                box-shadow: 0 4px 15px rgba(0, 206, 201, 0.4);
+            }
+            #duel-challenge-modal .duel-btn-decline {
+                background: var(--bg);
+                color: var(--text-light);
+                border: 2px solid rgba(0,0,0,0.1);
+            }
+            #duel-challenge-modal .duel-timer {
+                text-align: center;
+                font-size: 11px;
+                color: var(--text-light);
+                padding: 0 20px 10px 20px;
+            }
+            #duel-challenge-modal .duel-timer span {
+                color: #FF4757;
+                font-weight: 800;
+                font-size: 18px;
+            }
+
             
             #toast-container { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; width: max-content; }
             .toast { background: var(--surface); color: var(--text); padding: 12px 25px; border-radius: 50px; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-top: 10px; opacity: 0; transform: translateY(20px); transition: 0.4s; border: 2px solid var(--primary); text-align: center; }
@@ -5227,6 +5348,92 @@ body.dark-mode .tier-name { color: #f7eecf; }
             </div>
         </div>
     </div>
+    
+    <!-- DUEL CHALLENGE MODAL -->
+    <div id="duel-challenge-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="padding: 0;">
+            <div class="duel-header">
+                <div class="duel-icon">⚔️</div>
+                <div style="font-size: 18px; font-weight: 900;">ВЫЗОВ НА ДУЭЛЬ!</div>
+            </div>
+            <div class="duel-players">
+                <div class="duel-player">
+                    <div class="avatar" id="dc-from-avatar">😎</div>
+                    <div class="name" id="dc-from-name">Игрок</div>
+                </div>
+                <div class="duel-vs">⚡VS⚡</div>
+                <div class="duel-player">
+                    <div class="avatar" id="dc-my-avatar">😎</div>
+                    <div class="name" id="dc-my-name">Ты</div>
+                </div>
+            </div>
+            <div class="duel-info">
+                <div class="info-row">
+                    <span class="info-label">🎮 Режим</span>
+                    <span class="info-value" id="dc-mode">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value" id="dc-diff">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Ставка</span>
+                    <span class="info-value">15 монет</span>
+                </div>
+            </div>
+            <div class="duel-timer">
+                Авто-отказ через: <span id="dc-countdown">30</span>с
+            </div>
+            <div class="duel-buttons">
+                <button class="duel-btn duel-btn-decline" id="dc-decline-btn">🚫 Отказ</button>
+                <button class="duel-btn duel-btn-accept" id="dc-accept-btn">⚔️ Принять!</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- DUEL CHALLENGE MODAL -->
+    <div id="duel-challenge-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="padding: 0;">
+            <div class="duel-header">
+                <div class="duel-icon">⚔️</div>
+                <div style="font-size: 18px; font-weight: 900;">ВЫЗОВ НА ДУЭЛЬ!</div>
+            </div>
+            <div class="duel-players">
+                <div class="duel-player">
+                    <div class="avatar" id="dc-from-avatar">😎</div>
+                    <div class="name" id="dc-from-name">Игрок</div>
+                </div>
+                <div class="duel-vs">⚡VS⚡</div>
+                <div class="duel-player">
+                    <div class="avatar" id="dc-my-avatar">😎</div>
+                    <div class="name" id="dc-my-name">Ты</div>
+                </div>
+            </div>
+            <div class="duel-info">
+                <div class="info-row">
+                    <span class="info-label">🎮 Режим</span>
+                    <span class="info-value" id="dc-mode">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value" id="dc-diff">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Ставка</span>
+                    <span class="info-value">15 монет</span>
+                </div>
+            </div>
+            <div class="duel-timer">
+                Авто-отказ через: <span id="dc-countdown">30</span>с
+            </div>
+            <div class="duel-buttons">
+                <button class="duel-btn duel-btn-decline" id="dc-decline-btn">🚫 Отказ</button>
+                <button class="duel-btn duel-btn-accept" id="dc-accept-btn">⚔️ Принять!</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
     <script>
     /* ==========================================
@@ -8619,10 +8826,49 @@ const WeeklyQuestSys = {
             const data = snap.data();
             if (!data || !data.battleCode) return;
             
-            // Показываем окно вызова
-            const accept = confirm(`⚔️ ${data.fromName} (${data.fromAvatar}) вызвал тебя на дуэль!\n\nРежим: ${this.getModeLabel(data.mode)}\nСложность: ${this.getDiffLabel(data.diff)}\n\nПринять?`);
+            // === КРАСИВОЕ МОДАЛЬНОЕ ОКНО ===
+            const modal = document.getElementById('duel-challenge-modal');
+            if (!modal) { console.error('Duel modal not found'); return; }
             
-            if (accept) {
+            // Заполняем данные
+            document.getElementById('dc-from-avatar').textContent = data.fromAvatar || '😎';
+            document.getElementById('dc-from-name').textContent = data.fromName;
+            document.getElementById('dc-my-avatar').textContent = DB.user.avatar || '😎';
+            document.getElementById('dc-my-name').textContent = DB.user.name;
+            document.getElementById('dc-mode').textContent = this.getModeLabel(data.mode);
+            document.getElementById('dc-diff').textContent = this.getDiffLabel(data.diff);
+            
+            // Звук при получении вызова
+            SoundSys.play('win');
+            
+            // Таймер обратного отсчёта (30 сек)
+            let countdown = 30;
+            const countdownEl = document.getElementById('dc-countdown');
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdownEl) countdownEl.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    modal.classList.remove('show');
+                    window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                    App.toast('⏰ Время вызова истекло');
+                }
+            }, 1000);
+            
+            // Кнопки
+            const acceptBtn = document.getElementById('dc-accept-btn');
+            const declineBtn = document.getElementById('dc-decline-btn');
+            
+            const cleanup = () => {
+                clearInterval(interval);
+                modal.classList.remove('show');
+                acceptBtn.onclick = null;
+                declineBtn.onclick = null;
+            };
+            
+            acceptBtn.onclick = () => {
+                cleanup();
+                
                 // Принимаем вызов
                 this.currentCode = data.battleCode;
                 this.bet = 15;
@@ -8644,13 +8890,19 @@ const WeeklyQuestSys = {
                 this.startListening(docRef);
                 SoundSys.play('success');
                 App.toast('⚔️ Дуэль начинается!');
-            } else {
-                // Отказываемся — возвращаем монеты отправителю
-                App.toast('❌ Вызов отклонён');
-            }
+                
+                // Удаляем документ вызова
+                window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            };
             
-            // Удаляем документ вызова
-            window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            declineBtn.onclick = () => {
+                cleanup();
+                App.toast('❌ Вызов отклонён');
+                window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+            };
+            
+            // Показываем модалку
+            modal.classList.add('show');
         });
     },
     stopChallengeListener() {
