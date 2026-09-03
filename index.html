@@ -196,18 +196,19 @@ window.addEventListener('load', () => {
                 console.log('📩 [FCM] Получено сообщение:', payload);
                 const title = payload?.notification?.title || 'MathBooster Pro';
                 const body = payload?.notification?.body || 'У вас новое уведомление';
+                const type = payload?.data?.type;
                 
-                // Показываем Toast внутри приложения
+                // Если это вызов на дуэль — НЕ показываем тост, потому что модалка уже появится через onSnapshot
+                if (type === 'duel_challenge') {
+                    console.log('📩 [FCM] Duel challenge push — modal handles this');
+                    return;
+                }
+                
+                // Для остальных уведомлений — показываем тост
                 if (window.App?.toast) {
                     App.toast(`🔔 ${title}: ${body}`);
                 }
-                
-                // Показываем системное уведомление
-                new Notification(title, {
-                    body: body,
-                    icon: 'icon-192.png',
-                    badge: 'icon-192.png'
-                });
+                // Системное уведомление НЕ показываем — Service Worker покажет его когда приложение закрыто
             });
             
             console.log('✅ [FCM] Система уведомлений полностью готова');
@@ -12613,7 +12614,7 @@ renderCharts(weekSec) {
 
     async subscribeFCM() {
         try {
-            const { messaging, getToken, onMessage } = window.DB_Online;
+            const { messaging, getToken } = window.DB_Online;
             const currentToken = await getToken(messaging, {
                 vapidKey: "BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw"
             });
@@ -12622,13 +12623,8 @@ renderCharts(weekSec) {
                 console.log("📱 Токен получен");
                 DB.user.fcmToken = currentToken;
                 Data.save();
-
-                // Слушаем сообщения, если приложение открыто
-                onMessage(messaging, (payload) => {
-                    App.toast(`🔔 ${payload.notification.title}`);
-                    SoundSys.play('quest_done');
-                });
             }
+            // Слушатель onMessage уже зарегистрирован в FCM.init() — НЕ регистрируем повторно!
         } catch (error) {
             console.error("Ошибка FCM:", error);
         }
