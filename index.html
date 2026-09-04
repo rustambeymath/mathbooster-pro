@@ -4707,9 +4707,11 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <h3>🏆 Глобальный Топ</h3>
                 <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Глобальный рейтинг (требует интернет)</p>
                 <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
-                <div id="season-switcher" style="display:flex; gap:8px; margin:12px 0;">
-                    <button class="btn season-btn" id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="background:var(--primary); color:white; border-color:var(--primary); font-weight:700; flex:1;">🏆 Сезон 2</button>
-                    <button class="btn season-btn" id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="background:var(--surface); color:var(--text); border-color:var(--bg); font-weight:600; flex:1;">📜 Сезон 1</button>
+                <div id="season-switcher" style="display:flex; justify-content:center; margin:14px 0 4px;">
+                    <div style="display:flex; background:var(--bg); border-radius:22px; padding:3px;">
+                        <button class="season-btn" id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; cursor:pointer; transition:all .2s;">🏆 Сезон 2</button>
+                        <button class="season-btn" id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="border:none; background:transparent; color:var(--text-light); padding:7px 20px; border-radius:19px; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s;">📜 Сезон 1</button>
+                    </div>
                 </div>
                 <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
                 <div id="leaderboard-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
@@ -6052,22 +6054,20 @@ body.dark-mode .tier-name { color: #f7eecf; }
     const CURRENT_SEASON = 2;
     const SEASON_NAMES = { 1: 'Сезон 1', 2: 'Сезон 2' };
     
-    // Подсветка активной кнопки сезона в Топе
+    // Подсветка активного сезона (компактный сегмент-переключатель)
     function markSeasonButtons(season) {
         const b2 = document.getElementById('season-btn-2');
         const b1 = document.getElementById('season-btn-1');
         if (!b2 || !b1) return;
         const active = (!season || season === CURRENT_SEASON) ? 2 : 1;
         [b2, b1].forEach(b => {
-            b.style.background = 'var(--surface)';
-            b.style.color = 'var(--text)';
-            b.style.borderColor = 'var(--bg)';
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-light)';
             b.style.fontWeight = '600';
         });
         const cur = active === 2 ? b2 : b1;
         cur.style.background = 'var(--primary)';
-        cur.style.color = 'white';
-        cur.style.borderColor = 'var(--primary)';
+        cur.style.color = '#fff';
         cur.style.fontWeight = '700';
     }
 
@@ -6107,16 +6107,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
             
             console.log(`📊 Сезон ${userSeason}: ${Math.floor(totalSec/3600)}ч, ${xp} XP, Lvl ${level}`);
             
-            // 2. Сбрасываем для нового сезона
+            // 2. Сбрасываем для нового сезона ТОЛЬКО часы (время учёбы).
+            // XP, уровень, монеты, PVP, стрик и всё остальное — навсегда.
             DB.user.totalSec = 0;
-            DB.user.xp = 0;
-            DB.user.level = 1;
-            DB.user.nextXp = 500;
-            DB.user.pvpWins = 0;
-            DB.user.pvpLosses = 0;
             DB.user.currentSeason = CURRENT_SEASON;
-            DB.user.dailyStreak = 0;
-            DB.user.streak = 0;
             
             // Предметы НЕ сбрасываем: их статистика по дисциплинам
             // копится всегда и стоит отдельно от сезонов
@@ -6138,7 +6132,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                         name: DB.user.name,
                         totalSec: 0,
                         avatar: DB.user.avatar,
-                        level: 1,
+                        level: DB.user.level || 1,
                         currentTitle: DB.user.currentTitle || "",
                         currentFrame: DB.user.currentFrame || null,
                         season: CURRENT_SEASON,
@@ -6147,7 +6141,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 } catch(e) { console.error("Ошибка обновления leaderboard:", e); }
             }
             
-            App.toast(`🏆 Добро пожаловать в ${SEASON_NAMES[CURRENT_SEASON]}! Статистика обнулена.`);
+            App.toast(`🏆 Добро пожаловать в ${SEASON_NAMES[CURRENT_SEASON]}! Часы учёбы обнулены — с чистого листа!`);
             App.updateUI();
         },
         
