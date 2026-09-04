@@ -37,12 +37,24 @@ exports.notifyParentOnStatusChange = functions.firestore
         // Если документ удалён — выходим
         if (!after) return null;
 
-        const childData = after.data?.user || {};
-        const childName = childData.name || "Ребёнок";
+        // === ЗАЩИТА ОТ ДУБЛЕЙ: отправляем push ТОЛЬКО когда статус ИЗМЕНИЛСЯ ===
+        const beforeUser = before?.user || {};
+        const afterUser = after?.user || {};
 
-        // === Определяем статус ===
-        const isActive = !!childData.activeSessionStart && !childData.pausedAt;
-        const isPaused = !!childData.pausedAt;
+        const wasActive = !!beforeUser.activeSessionStart && !beforeUser.pausedAt;
+        const wasPaused = !!beforeUser.pausedAt;
+
+        const isActive = !!afterUser.activeSessionStart && !afterUser.pausedAt;
+        const isPaused = !!afterUser.pausedAt;
+
+        // Если статус НЕ изменился — не отправляем push
+        if (wasActive === isActive && wasPaused === isPaused) {
+            console.log("Status unchanged — skip push");
+            return null;
+        }
+
+        const childData = afterUser;
+        const childName = childData.name || "Ребёнок";
 
         let statusEmoji, statusText, statusBody;
 

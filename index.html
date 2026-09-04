@@ -7528,7 +7528,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
             document.getElementById('auth-screen').classList.add('hidden'); 
             document.getElementById('app-container').style.display = 'block'; 
             
-            App.initAfterLogin();
+            await App.initAfterLogin();
             Data.startListening(id);
             
         } catch (e) {
@@ -9111,7 +9111,7 @@ const WeeklyQuestSys = {
                 this._challengeModalShown = false;
             };
             
-            acceptBtn.onclick = () => {
+            acceptBtn.onclick = async () => {
                 cleanup();
                 
                 // Принимаем вызов
@@ -10715,7 +10715,7 @@ r
             }
         },
         // ЛЕГКИЙ ВХОД (Без лагов)
-        initAfterLogin() {
+        async initAfterLogin() {
             // 🏆 Проверка сезона
             await SeasonSystem.checkAndReset();
             // --- АВТО-ЧИСТКА АНОМАЛЬНЫХ СЕССИЙ (> 10 ЧАСОВ) ---
