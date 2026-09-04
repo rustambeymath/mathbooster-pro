@@ -4709,8 +4709,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
                 <div id="season-switcher" style="display:flex; justify-content:center; margin:14px 0 4px;">
                     <div style="display:flex; background:var(--bg); border-radius:22px; padding:3px;">
-                        <button class="season-btn" id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; cursor:pointer; transition:all .2s;">🏆 Сезон 2</button>
-                        <button class="season-btn" id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="border:none; background:transparent; color:var(--text-light); padding:7px 20px; border-radius:19px; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s;">📜 Сезон 1</button>
+                        <div style="border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; letter-spacing:.3px;">🏆 Сезон 2</div>
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
@@ -6054,21 +6053,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
     const CURRENT_SEASON = 2;
     const SEASON_NAMES = { 1: 'Сезон 1', 2: 'Сезон 2' };
     
-    // Подсветка активного сезона (компактный сегмент-переключатель)
+    // Подсветка активного сезона (всегда Сезон 2 — прошлые сезоны в архиве)
     function markSeasonButtons(season) {
         const b2 = document.getElementById('season-btn-2');
-        const b1 = document.getElementById('season-btn-1');
-        if (!b2 || !b1) return;
-        const active = (!season || season === CURRENT_SEASON) ? 2 : 1;
-        [b2, b1].forEach(b => {
-            b.style.background = 'transparent';
-            b.style.color = 'var(--text-light)';
-            b.style.fontWeight = '600';
-        });
-        const cur = active === 2 ? b2 : b1;
-        cur.style.background = 'var(--primary)';
-        cur.style.color = '#fff';
-        cur.style.fontWeight = '700';
+        if (!b2) return;
+        b2.style.background = 'var(--primary)';
+        b2.style.color = '#fff';
+        b2.style.fontWeight = '700';
     }
 
     const SeasonSystem = {
@@ -6394,11 +6385,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     // 1. Загружаем данные из памяти
                     DB = JSON.parse(raw);
                     cleanSubjects();
-                    let sum = 0;
-                    if (DB.subjects) {
-                        Object.values(DB.subjects).forEach(s => { if(s.sec) sum += s.sec; });
-                    }
-                    if (sum > (DB.user.totalSec || 0)) DB.user.totalSec = sum;
+                    // Предметы копятся ПОЖИЗНЕННО и отдельно от сезонов —
+                    // их секунды НЕ должны восстанавливать часы текущего сезона.
                     // --- 🛡️ ПРОВЕРКА ЦЕЛОСТНОСТИ МОНЕТ (АНТИ-ЧИТ) ---
                     
                     // 2. 🛡️ ПРОВЕРКА НА ЧИТЕРСТВО (Перевод часов назад)
@@ -6439,20 +6427,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
             if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
             if (!DB.user.currentRadio) DB.user.currentRadio = null;
 
-            // 6. 📊 СИНХРОНИЗАЦИЯ СТАТИСТИКИ (Сумма всех предметов)
-            let subjectsSum = 0;
-            if (DB.subjects) {
-                // Считаем сумму секунд по всем предметам
-                Object.values(DB.subjects).forEach(s => {
-                    if (s && typeof s.sec === 'number') subjectsSum += s.sec;
-                });
-            }
-
-            // Если сумма по предметам больше, чем общее время в профиле — исправляем
-            if (subjectsSum > (DB.user.totalSec || 0)) {
-                console.log("🛠️ Статистика исправлена. Новое общее время:", subjectsSum);
-                DB.user.totalSec = subjectsSum;
-            }
+            // 6. 📊 Статистика предметов больше НЕ синхронизируется с часами сезона:
+            //    предметы — пожизненные, часы — сезонные. Они живут раздельно.
 
             // 7. Инициализация инвентаря и настроек
             if (!DB.user.inventory) {
@@ -10777,23 +10753,27 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
-// --- ВОССТАНОВЛЕНИЕ ОБЩЕГО ВРЕМЕНИ ---
-// Берём максимум из всех источников: журнал (≤50 записей), предметы и история.
+// --- ВОССТАНОВЛЕНИЕ ЧАСОВ СЕЗОНА (ТОЛЬКО текущий сезон) ---
+// Часы сезона считаем из журнала сессий и дневной истории — это единственные
+// реальные источники времени текущего сезона. Предметы НЕ учитываем: они
+// копятся пожизненно и стоят отдельно от сезонов.
 if (DB && DB.user) {
     let sessionSum = 0;
     if (DB.sessions) DB.sessions.forEach(s => { sessionSum += (Number(s.sec) || 0); });
 
-    // Предметы НЕ учитываем — их секунды копятся независимо от сезона,
-    // иначе при новом сезоне totalSec мгновенно восстановился бы из них.
     let historySum = 0;
     if (DB.history) Object.values(DB.history).forEach(v => { historySum += (Number(v) || 0); });
 
     const best = Math.max(sessionSum, historySum);
-    if (best > (Number(DB.user.totalSec) || 0)) {
+    const current = Number(DB.user.totalSec) || 0;
+    // Расхождение больше 1 минуты — чиним в обе стороны:
+    // старые часы, воскрешённые из предметов, обнуляются,
+    // а потерянные сессии восстанавливаются.
+    if (Math.abs(best - current) > 60) {
         DB.user.totalSec = best;
         Data.save();
         App.updateUI();
-        console.log("✅ Общее время восстановлено: " + best + " сек.");
+        console.log("✅ Часы сезона синхронизированы с журналом: " + best + " сек. (было: " + current + ")");
     }
 }
             setTimeout(() => {
