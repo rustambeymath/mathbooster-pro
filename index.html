@@ -4652,6 +4652,12 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 </div>
             </div>
 
+            <!-- 🏆 ИСТОРИЯ СЕЗОНОВ (стоит отдельно от предметов) -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h3>🏆 История сезонов</h3>
+                <div id="season-history"></div>
+            </div>
+
             <!-- ГЛАВНАЯ СЕТКА (Теперь тут 3 карточки на одном уровне) -->
             <div class="grid">
                 <!-- 1. Активность -->
@@ -4673,10 +4679,6 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <div class="card">
                     <h3>🎓 Твои предметы</h3>
                     <p style="font-size:11px; color:var(--text-light); margin-bottom:10px;">Статистика по дисциплинам</p>
-                    <!-- Контейнер со скроллом -->
-                            <!-- 🏆 ИСТОРИЯ СЕЗОНОВ -->
-        <div id="season-history" style="margin-bottom:16px;"></div>
-        
         <div id="subject-breakdown" style="max-height: 250px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
                         <!-- Сюда JS вставит список -->
                     </div>
@@ -4705,6 +4707,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <h3>🏆 Глобальный Топ</h3>
                 <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Глобальный рейтинг (требует интернет)</p>
                 <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
+                <div id="season-switcher" style="display:flex; gap:8px; margin:12px 0;">
+                    <button class="btn season-btn" id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="background:var(--primary); color:white; border-color:var(--primary); font-weight:700; flex:1;">🏆 Сезон 2</button>
+                    <button class="btn season-btn" id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="background:var(--surface); color:var(--text); border-color:var(--bg); font-weight:600; flex:1;">📜 Сезон 1</button>
+                </div>
                 <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
                 <div id="leaderboard-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
                     <div style="text-align:center; color:gray;">Нажми обновить...</div>
@@ -6046,7 +6052,27 @@ body.dark-mode .tier-name { color: #f7eecf; }
     const CURRENT_SEASON = 2;
     const SEASON_NAMES = { 1: 'Сезон 1', 2: 'Сезон 2' };
     
+    // Подсветка активной кнопки сезона в Топе
+    function markSeasonButtons(season) {
+        const b2 = document.getElementById('season-btn-2');
+        const b1 = document.getElementById('season-btn-1');
+        if (!b2 || !b1) return;
+        const active = (!season || season === CURRENT_SEASON) ? 2 : 1;
+        [b2, b1].forEach(b => {
+            b.style.background = 'var(--surface)';
+            b.style.color = 'var(--text)';
+            b.style.borderColor = 'var(--bg)';
+            b.style.fontWeight = '600';
+        });
+        const cur = active === 2 ? b2 : b1;
+        cur.style.background = 'var(--primary)';
+        cur.style.color = 'white';
+        cur.style.borderColor = 'var(--primary)';
+        cur.style.fontWeight = '700';
+    }
+
     const SeasonSystem = {
+        activeSeason: CURRENT_SEASON,
         /**
          * Проверяет нужна ли архивация и сброс при загрузке.
          * Вызывается после входа пользователя.
@@ -6075,8 +6101,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 level: level,
                 pvpWins: pvpWins,
                 pvpLosses: pvpLosses,
-                endDate: new Date().toISOString(),
-                subjects: JSON.parse(JSON.stringify(DB.subjects || {}))
+                endDate: new Date().toISOString()
+                // Предметы в архив сезона НЕ кладём — их статистика стоит отдельно
             });
             
             console.log(`📊 Сезон ${userSeason}: ${Math.floor(totalSec/3600)}ч, ${xp} XP, Lvl ${level}`);
@@ -6092,10 +6118,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
             DB.user.dailyStreak = 0;
             DB.user.streak = 0;
             
-            // Сбрасываем предметы (секунды)
-            if (DB.subjects) {
-                Object.values(DB.subjects).forEach(s => { s.sec = 0; });
-            }
+            // Предметы НЕ сбрасываем: их статистика по дисциплинам
+            // копится всегда и стоит отдельно от сезонов
             
             // Сбрасываем журнал сессий
             DB.user.sessions = [];
@@ -6137,22 +6161,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
          * Переключение сезона в Топе
          */
         async switchSeason(season) {
-            // Обновляем активную кнопку
-            document.querySelectorAll('.season-btn').forEach(btn => {
-                btn.style.background = 'var(--surface)';
-                btn.style.color = 'var(--text)';
-                btn.style.borderColor = 'var(--bg)';
-                btn.style.fontWeight = '600';
-            });
-            const activeIdx = season === CURRENT_SEASON ? 0 : 1;
-            const btns = document.querySelectorAll('.season-btn');
-            if (btns[activeIdx]) {
-                btns[activeIdx].style.background = 'var(--primary)';
-                btns[activeIdx].style.color = 'white';
-                btns[activeIdx].style.borderColor = 'var(--primary)';
-                btns[activeIdx].style.fontWeight = '700';
-            }
-            
+            this.activeSeason = season;
+            markSeasonButtons(season);
             await this.loadLeaderboard(season);
         },
 
@@ -6164,11 +6174,14 @@ body.dark-mode .tier-name { color: #f7eecf; }
             
             try {
                 const dbRef = window.DB_Online;
-                const col = (season && season < CURRENT_SEASON) 
-                    ? dbRef.collection(dbRef.db, "leaderboard_history_" + season)
-                    : dbRef.collection(dbRef.db, "leaderboard");
-                
-                const q = dbRef.query(col, dbRef.orderBy("totalSec", "desc"), dbRef.limit(50));
+                // Всегда читаем из leaderboard, а фильтр по сезону делаем на клиенте:
+                // записи без поля season — участники прошлых сезонов (до введения сезонов).
+                const isCurrentView = (!season || season === CURRENT_SEASON);
+                const q = dbRef.query(
+                    dbRef.collection(dbRef.db, "leaderboard"),
+                    dbRef.orderBy("totalSec", "desc"),
+                    dbRef.limit(200)
+                );
                 const snap = await dbRef.getDocs(q);
                 
                 if (snap.empty) {
@@ -6184,8 +6197,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 try { prevRanks = JSON.parse(localStorage.getItem('MathLeaderRanks_s' + season) || '{}'); } catch(e) {}
                 const newRanks = {};
                 
+                let shownCount = 0;
                 snap.forEach(doc => {
                     const u = doc.data();
+                    const docSeason = (u.season === undefined || u.season === null) ? 1 : u.season;
+                    const belongs = isCurrentView ? (docSeason === CURRENT_SEASON) : (docSeason !== CURRENT_SEASON);
+                    if (!belongs || shownCount >= 50) return; // записи другого сезона не участвуют в рейтинге
+                    shownCount++;
                     const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
                     const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
                     const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
@@ -7114,14 +7132,20 @@ body.dark-mode .tier-name { color: #f7eecf; }
 
             this.lastLoadTime = now; 
 
+            // Подсвечиваем активный сезон в кнопках переключения
+            const viewSeason = (window.SeasonSystem && SeasonSystem.activeSeason) ? SeasonSystem.activeSeason : CURRENT_SEASON;
+            if (window.SeasonSystem) markSeasonButtons(viewSeason);
+
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Загрузка...</div>';
 
             try {
+                // Фильтр по сезону делаем на клиенте: записи без поля season — прошлые сезоны
+                const isCurrentView = (!viewSeason || viewSeason === CURRENT_SEASON);
                 const q = window.DB_Online.query(
                     window.DB_Online.collection(window.DB_Online.db, "leaderboard"),
                     window.DB_Online.orderBy("totalSec", "desc"),
-                    window.DB_Online.limit(50)
+                    window.DB_Online.limit(200)
                 );
 
                 const snap = await window.DB_Online.getDocs(q);
@@ -7134,8 +7158,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 try { prevRanks = JSON.parse(localStorage.getItem('MathLeaderRanks') || '{}'); } catch(e) {}
                 const newRanks = {};
 
+                let shownCount = 0;
                 snap.forEach(doc => {
     const u = doc.data();
+    const docSeason = (u.season === undefined || u.season === null) ? 1 : u.season;
+    const belongs = isCurrentView ? (docSeason === CURRENT_SEASON) : (docSeason !== CURRENT_SEASON);
+    if (!belongs || shownCount >= 50) return; // записи другого сезона не участвуют в рейтинге
+    shownCount++;
     const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
     const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
     const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
@@ -10760,13 +10789,12 @@ if (DB && DB.user) {
     let sessionSum = 0;
     if (DB.sessions) DB.sessions.forEach(s => { sessionSum += (Number(s.sec) || 0); });
 
-    let subjectSum = 0;
-    if (DB.subjects) Object.values(DB.subjects).forEach(s => { subjectSum += (Number(s.sec) || 0); });
-
+    // Предметы НЕ учитываем — их секунды копятся независимо от сезона,
+    // иначе при новом сезоне totalSec мгновенно восстановился бы из них.
     let historySum = 0;
     if (DB.history) Object.values(DB.history).forEach(v => { historySum += (Number(v) || 0); });
 
-    const best = Math.max(sessionSum, subjectSum, historySum);
+    const best = Math.max(sessionSum, historySum);
     if (best > (Number(DB.user.totalSec) || 0)) {
         DB.user.totalSec = best;
         Data.save();
