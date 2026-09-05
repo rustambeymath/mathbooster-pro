@@ -6106,8 +6106,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
             // Предметы НЕ сбрасываем: их статистика по дисциплинам
             // копится всегда и стоит отдельно от сезонов
             
-            // Сбрасываем журнал сессий
-            DB.user.sessions = [];
+            // Сбрасываем журнал сессий и дневную историю времени
+            DB.sessions = [];
             DB.history = {};
             
             // 3. Сохраняем в облако
@@ -6135,7 +6135,36 @@ body.dark-mode .tier-name { color: #f7eecf; }
             App.toast(`🏆 Добро пожаловать в ${SEASON_NAMES[CURRENT_SEASON]}! Часы учёбы обнулены — с чистого листа!`);
             App.updateUI();
         },
-        
+
+        // Момент старта текущего сезона = endDate последнего архивного сезона.
+        // Если архивов нет (сезон ещё не переключался) — 0 (считаем все сессии).
+        currentSeasonStart() {
+            let start = 0;
+            const archives = (DB.seasonHistory || []).filter(a => (a.season || 1) < CURRENT_SEASON);
+            archives.forEach(a => {
+                const t = Date.parse(a.endDate || '');
+                if (!isNaN(t) && t > start) start = t;
+            });
+            return start;
+        },
+
+        // Сумма секунд журнала ТОЛЬКО текущего сезона.
+        // Сессии прошлых сезонов остаются в журнале навсегда, но в часы
+        // текущего сезона не идут (иначе старые часы воскресают в новом).
+        currentSessionSec() {
+            const start = this.currentSeasonStart();
+            let sum = 0;
+            (DB.sessions || []).forEach(s => {
+                let t = Number(s.date);
+                if (!t) {
+                    const p = Date.parse(s.date);
+                    if (!isNaN(p)) t = p; else t = 0;
+                }
+                if (!start || t >= start) sum += (Number(s.sec) || 0);
+            });
+            return sum;
+        },
+
         /**
          * Загружает лидерборд для указанного сезона.
          * season=0 или season=CURRENT_SEASON → текущий сезон (из leaderboard)
@@ -10753,27 +10782,20 @@ if (DB && DB.sessions && DB.sessions.length > 0) {
             this.updateUI();
             this.updateDailyQuote();
             this.renderMonthlyWidget();
-// --- ВОССТАНОВЛЕНИЕ ЧАСОВ СЕЗОНА (ТОЛЬКО текущий сезон) ---
-// Часы сезона считаем из журнала сессий и дневной истории — это единственные
-// реальные источники времени текущего сезона. Предметы НЕ учитываем: они
-// копятся пожизненно и стоят отдельно от сезонов.
+// --- СИНХРОНИЗАЦИЯ ЧАСОВ ТЕКУЩЕГО СЕЗОНА ---
+// Часы сезона = ТОЛЬКО сессии, начавшиеся после старта текущего сезона
+// (старт = конец последнего архивного сезона в seasonHistory).
+// Сессии Сезона 1 остаются в журнале навсегда, но в часы Сезона 2 не идут.
 if (DB && DB.user) {
-    let sessionSum = 0;
-    if (DB.sessions) DB.sessions.forEach(s => { sessionSum += (Number(s.sec) || 0); });
-
-    let historySum = 0;
-    if (DB.history) Object.values(DB.history).forEach(v => { historySum += (Number(v) || 0); });
-
-    const best = Math.max(sessionSum, historySum);
+    const seasonSec = SeasonSystem.currentSessionSec();
     const current = Number(DB.user.totalSec) || 0;
     // Расхождение больше 1 минуты — чиним в обе стороны:
-    // старые часы, воскрешённые из предметов, обнуляются,
-    // а потерянные сессии восстанавливаются.
-    if (Math.abs(best - current) > 60) {
-        DB.user.totalSec = best;
+    // воскрешённые старые часы обнуляются, потерянные сессии восстанавливаются.
+    if (Math.abs(seasonSec - current) > 60) {
+        DB.user.totalSec = seasonSec;
         Data.save();
         App.updateUI();
-        console.log("✅ Часы сезона синхронизированы с журналом: " + best + " сек. (было: " + current + ")");
+        console.log("✅ Часы сезона синхронизированы: " + seasonSec + " сек. (было: " + current + ")");
     }
 }
             setTimeout(() => {
@@ -10813,18 +10835,7 @@ if (DB && DB.user) {
             quoteEl.innerText = `"${randomQuote}"`;
             }
             WeeklyReportSys.check();
-            // Авто-починка при каждом входе
-setTimeout(() => {
-    let finalSec = 0;
-    if (DB.sessions) DB.sessions.forEach(s => { finalSec += (Number(s.sec) || 0); });
-    
-    if (finalSec > (DB.user.totalSec || 0)) {
-        DB.user.totalSec = finalSec;
-        Data.save();
-        App.updateUI();
-        console.log("🛠️ Время принудительно восстановлено из сессий: " + finalSec);
-    }
-}, 2000);
+
             },
 
         copyId() {
