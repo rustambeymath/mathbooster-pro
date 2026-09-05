@@ -4709,7 +4709,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
                 <div id="season-switcher" style="display:flex; justify-content:center; margin:14px 0 4px;">
                     <div style="display:flex; background:var(--bg); border-radius:22px; padding:3px;">
-                        <div style="border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; letter-spacing:.3px;">🏆 Сезон 2</div>
+                        <div id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="cursor:pointer; border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; letter-spacing:.3px;">🏆 Сезон 2</div>
+                        <div id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="cursor:pointer; border:none; background:transparent; color:var(--text-light); padding:7px 20px; border-radius:19px; font-weight:500; font-size:13px; letter-spacing:.3px;">📜 Сезон 1</div>
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
@@ -6055,11 +6056,16 @@ body.dark-mode .tier-name { color: #f7eecf; }
     
     // Подсветка активного сезона (всегда Сезон 2 — прошлые сезоны в архиве)
     function markSeasonButtons(season) {
+        const b1 = document.getElementById('season-btn-1');
         const b2 = document.getElementById('season-btn-2');
-        if (!b2) return;
-        b2.style.background = 'var(--primary)';
-        b2.style.color = '#fff';
-        b2.style.fontWeight = '700';
+        const setActive = (el, active) => {
+            if (!el) return;
+            el.style.background = active ? 'var(--primary)' : 'transparent';
+            el.style.color = active ? '#fff' : 'var(--text-light)';
+            el.style.fontWeight = active ? '700' : '500';
+        };
+        setActive(b1, season === 1);
+        setActive(b2, season !== 1);
     }
 
     const SeasonSystem = {
@@ -10746,6 +10752,23 @@ r
         async initAfterLogin() {
             // 🏆 Проверка сезона
             await SeasonSystem.checkAndReset();
+            // 🧹 Новый сезон: вычищаем из журнала сессии прошлого сезона.
+            // Итоги прошлого сезона уже лежат в архиве seasonHistory (профиль).
+            if (DB && DB.sessions && DB.sessions.length) {
+                const seasonStart = SeasonSystem.currentSeasonStart();
+                if (seasonStart > 0) {
+                    const before = DB.sessions.length;
+                    DB.sessions = DB.sessions.filter(s => {
+                        let t = Number(s.date);
+                        if (!t) { const p = Date.parse(s.date); t = isNaN(p) ? 0 : p; }
+                        return t >= seasonStart;
+                    });
+                    if (DB.sessions.length !== before) {
+                        Data.save();
+                        console.log(`🧹 Журнал очищен от сессий прошлого сезона: удалено ${before - DB.sessions.length}`);
+                    }
+                }
+            }
             // --- АВТО-ЧИСТКА АНОМАЛЬНЫХ СЕССИЙ (> 10 ЧАСОВ) ---
 if (DB && DB.sessions && DB.sessions.length > 0) {
     const MAX_ALLOWED_SEC = 36000; // 10 часов в секундах
