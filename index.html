@@ -6119,6 +6119,30 @@ body.dark-mode .tier-name { color: #f7eecf; }
             // 3. Сохраняем в облако
             Data.save();
             
+            // 3.5 🧊 Замораживаем карточку Сезона 1 в архиве топа
+            // (чтобы игрок остался в итоговой таблице Сезона 1 навсегда,
+            // даже когда его живая карточка перезаписалась на Сезон 2)
+            if (window.DB_Online) {
+                try {
+                    const dbRef = window.DB_Online;
+                    const histDoc = dbRef.doc(dbRef.db, "leaderboard_history_" + userSeason, userId);
+                    await dbRef.setDoc(histDoc, {
+                        name: DB.user.name,
+                        totalSec: totalSec,
+                        avatar: DB.user.avatar,
+                        level: level,
+                        currentTitle: DB.user.currentTitle || "",
+                        currentFrame: DB.user.currentFrame || null,
+                        isTitan: !!DB.user.isTitan,
+                        isKing: !!DB.user.isKing,
+                        isPro: !!DB.user.isPro,
+                        isVip: !!DB.user.isVip,
+                        season: userSeason,
+                        archivedAt: Date.now()
+                    }, { merge: true });
+                } catch(e) { console.error("Ошибка заморозки карточки сезона:", e); }
+            }
+            
             // 4. Обновляем leaderboard в облаке
             if (window.DB_Online) {
                 try {
@@ -6194,14 +6218,20 @@ body.dark-mode .tier-name { color: #f7eecf; }
             
             try {
                 const dbRef = window.DB_Online;
-                // Всегда читаем из leaderboard, а фильтр по сезону делаем на клиенте:
-                // записи без поля season — участники прошлых сезонов (до введения сезонов).
+                // Сезон 1 = замороженный архив leaderboard_history_1.
+                // Текущий сезон = живая коллекция leaderboard.
                 const isCurrentView = (!season || season === CURRENT_SEASON);
-                const q = dbRef.query(
-                    dbRef.collection(dbRef.db, "leaderboard"),
-                    dbRef.orderBy("totalSec", "desc"),
-                    dbRef.limit(200)
-                );
+                const q = isCurrentView
+                    ? dbRef.query(
+                        dbRef.collection(dbRef.db, "leaderboard"),
+                        dbRef.orderBy("totalSec", "desc"),
+                        dbRef.limit(200)
+                    )
+                    : dbRef.query(
+                        dbRef.collection(dbRef.db, "leaderboard_history_" + season),
+                        dbRef.orderBy("totalSec", "desc"),
+                        dbRef.limit(200)
+                    );
                 const snap = await dbRef.getDocs(q);
                 
                 if (snap.empty) {
@@ -6220,9 +6250,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 let shownCount = 0;
                 snap.forEach(doc => {
                     const u = doc.data();
-                    const docSeason = (u.season === undefined || u.season === null) ? 1 : u.season;
-                    const belongs = isCurrentView ? (docSeason === CURRENT_SEASON) : (docSeason !== CURRENT_SEASON);
-                    if (!belongs || shownCount >= 50) return; // записи другого сезона не участвуют в рейтинге
+                    const belongs = true; // Архив уже отфильтрован по коллекции
+                    if (!belongs || shownCount >= 50) return;
                     shownCount++;
                     const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
                     const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
@@ -6285,8 +6314,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
         },
         
         /**
-         * При входе: архивируем leaderboard текущего сезона в leaderboard_history_N
-         * Вызывается только когда начинается новый сезон.
+         * При входе: замораживаем итоги сезона в leaderboard_history_N.
+         * Пропускаем записи уже помеченные этим сезоном — архив пишется один раз.
          */
         async archiveLeaderboard() {
             if (!window.DB_Online) return;
@@ -6300,15 +6329,96 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 const snap = await dbRef.getDocs(sourceCol);
                 const batch = [];
                 snap.forEach(doc => {
-                    batch.push(dbRef.setDoc(dbRef.doc(dbRef.db, "leaderboard_history_" + oldSeason, doc.id), doc.data()));
+                    const d = doc.data();
+                    // Пропускаем: (а) записи нового сезона, (б) уже заархивированные
+                    if (d.season === CURRENT_SEASON) return;
+                    if (d.archivedSeason === oldSeason) return;
+                    batch.push(dbRef.setDoc(
+                        dbRef.doc(dbRef.db, "leaderboard_history_" + oldSeason, doc.id),
+                        { ...d, archivedSeason: oldSeason }
+                    ));
                 });
                 
-                // Не ждём все — fire and forget
+                if (batch.length === 0) {
+                    console.log("🏆 Архив сезона " + oldSeason + " уже актуален");
+                    return;
+                }
+                
                 Promise.all(batch).then(() => {
                     console.log(`🏆 Архивировано ${batch.length} игроков в leaderboard_history_${oldSeason}`);
                 }).catch(e => console.error("Ошибка архивации leaderboard:", e));
                 
             } catch(e) { console.error("Ошибка архивации leaderboard:", e); }
+        },
+        
+        /**
+         * 🧊 САМООРХИВАЦИЯ: игрок сам замораживает свои итоги прошлых сезонов
+         * в leaderboard_history_N (из своего архива seasonHistory).
+         * Лечит всех, кто уже перешёл в Сезон 2 и чья живая карточка перезаписана.
+         */
+        async archiveMySeasonCards() {
+            if (!window.DB_Online || !DB.seasonHistory || !DB.seasonHistory.length) return;
+            const dbRef = window.DB_Online;
+            for (const s of DB.seasonHistory) {
+                const sn = s.season || 1;
+                if (sn >= CURRENT_SEASON) continue; // Архивируем только завершённые сезоны
+                try {
+                    await dbRef.setDoc(
+                        dbRef.doc(dbRef.db, "leaderboard_history_" + sn, Auth.currentUser.id),
+                        {
+                            name: DB.user.name,
+                            totalSec: s.totalSec || 0,
+                            avatar: DB.user.avatar,
+                            level: s.level || 1,
+                            currentTitle: DB.user.currentTitle || "",
+                            currentFrame: DB.user.currentFrame || null,
+                            isTitan: !!DB.user.isTitan,
+                            isKing: !!DB.user.isKing,
+                            isPro: !!DB.user.isPro,
+                            isVip: !!DB.user.isVip,
+                            season: sn,
+                            archivedAt: Date.now()
+                        },
+                        { merge: true }
+                    );
+                } catch(e) { console.error("Ошибка самоархивации сезона " + sn + ":", e); }
+            }
+        },
+        
+        /**
+         * 🧹 ЗАМОРОЗКА (один раз за сессию): копируем из живой leaderboard все
+         * карточки завершённых сезонов в архив. Спасает данные игроков,
+         * которые ещё НЕ заходили в Сезон 2 и могут не зайти никогда.
+         */
+        async sweepOldSeasons() {
+            if (!window.DB_Online) return;
+            if (sessionStorage.getItem('seasons_swept')) return;
+            try {
+                const dbRef = window.DB_Online;
+                const q = dbRef.query(
+                    dbRef.collection(dbRef.db, "leaderboard"),
+                    dbRef.orderBy("totalSec", "desc"),
+                    dbRef.limit(500)
+                );
+                const snap = await dbRef.getDocs(q);
+                const writes = [];
+                snap.forEach(d => {
+                    const u = d.data();
+                    const ds = (u.season === undefined || u.season === null) ? 1 : u.season;
+                    if (ds >= CURRENT_SEASON) return;          // Карточка текущего сезона — не трогаем
+                    if (u.archivedSeason === ds) return;        // Уже в архиве
+                    writes.push(dbRef.setDoc(
+                        dbRef.doc(dbRef.db, "leaderboard_history_" + ds, d.id),
+                        Object.assign({}, u, { archivedSeason: ds, archivedAt: Date.now() }),
+                        { merge: true }
+                    ));
+                });
+                sessionStorage.setItem('seasons_swept', '1');
+                if (writes.length) {
+                    console.log(`🧊 Заморозка Сезона 1: ${writes.length} карточек → архив`);
+                    Promise.all(writes).catch(e => console.error("Ошибка заморозки:", e));
+                }
+            } catch(e) { console.error("Ошибка заморозки сезонов:", e); }
         },
         
         /**
@@ -7140,6 +7250,11 @@ body.dark-mode .tier-name { color: #f7eecf; }
             // Подсвечиваем активный сезон в кнопках переключения
             const viewSeason = (window.SeasonSystem && SeasonSystem.activeSeason) ? SeasonSystem.activeSeason : CURRENT_SEASON;
             if (window.SeasonSystem) markSeasonButtons(viewSeason);
+            
+            // 🧊 Прошлые сезоны смотрим в замороженном архиве
+            if (viewSeason && viewSeason !== CURRENT_SEASON) {
+                return SeasonSystem.loadLeaderboard(viewSeason);
+            }
 
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Загрузка...</div>';
@@ -10752,6 +10867,12 @@ r
         async initAfterLogin() {
             // 🏆 Проверка сезона
             await SeasonSystem.checkAndReset();
+            
+            // 🧊 Замораживаем итоги Сезона 1 (сам и общая заморозка топа)
+            if (window.DB_Online && Auth.currentUser) {
+                SeasonSystem.archiveMySeasonCards().catch(e => console.error(e));
+                SeasonSystem.sweepOldSeasons().catch(e => console.error(e));
+            }
             // 🧹 Новый сезон: вычищаем из журнала сессии прошлого сезона.
             // Итоги прошлого сезона уже лежат в архиве seasonHistory (профиль).
             if (DB && DB.sessions && DB.sessions.length) {
