@@ -8073,20 +8073,11 @@ const Timer = {
     // === PUSH-УВЕДОМЛЕНИЕ: отправляем когда пора проходить проверку ===
     async _sendCheckPush() {
         try {
-            // 1. Браузерное уведомление (если приложение открыто)
-            if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                    new Notification('🚨 Время проверки!', {
-                        body: 'Прошёл час! Решите пример чтобы продолжить.',
-                        icon: 'icon-192.png',
-                        badge: 'icon-192.png',
-                        tag: 'afk-check',
-                        requireInteraction: true,
-                        vibrate: [300, 100, 300, 100, 300]
-                    });
-                } catch(e) {}
-            }
-            // 2. Звук "двойной ding" ( Web Audio API)
+            // 🔒 ЗАЩИТА ОТ ДУБЛЕЙ: системное уведомление здесь НЕ показываем —
+            // его отправляет Cloud Function afkCheckPush (timerChecks). Локальный
+            // new Notification() дублировал push, когда приложение открыто.
+            // Здесь остаются только звук и вибрация (работают, когда страница видима).
+            // 1. Звук "двойной ding" ( Web Audio API)
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const notes = [660, 880, 1100]; // Три нарастающие ноты
