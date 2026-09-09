@@ -9232,10 +9232,10 @@ const WeeklyQuestSys = {
             // Проверка истечения времени
             if (data.expiresAt && Date.now() > data.expiresAt && data.status === 'waiting') {
                 if (this.listener) this.listener();
-                DB.user.coins += 15;
+                DB.user.coins += this.bet || 15;
                 Data.save();
                 App.updateUI();
-                alert("⏰ Время ожидания истекло. Монеты возвращены.");
+                App.toast("⏰ Время ожидания истекло. Монеты возвращены.");
                 location.reload();
                 return;
             }
@@ -9267,7 +9267,7 @@ const WeeklyQuestSys = {
         if (this.listener) this.listener();
         
         if (!this.gameStarted) {
-            DB.user.coins += 15;
+            DB.user.coins += this.bet || 15;
             Data.save();
             App.updateUI();
             App.toast("💰 Монеты возвращены");
@@ -9310,6 +9310,20 @@ const WeeklyQuestSys = {
         App.updateUI();
         
         try {
+            // 🎯 Проверяем что цель существует и онлайн (иначе вызов уйдёт в никуда)
+            let targetProfile = null;
+            try {
+                const targetSnap = await window.DB_Online.getDoc(
+                    window.DB_Online.doc(window.DB_Online.db, 'leaderboard', targetId)
+                );
+                if (targetSnap.exists()) targetProfile = targetSnap.data();
+            } catch(e) {}
+            if (!targetProfile || (Date.now() - Number(targetProfile.lastActive || 0)) >= 300000) {
+                DB.user.coins += 15; // возврат списанных монет
+                Data.save(); App.updateUI();
+                return App.toast('❌ Игрок не в сети или не найден');
+            }
+
             // Создаём боевую комнату
             const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', code);
             await window.DB_Online.setDoc(docRef, {
@@ -9363,6 +9377,12 @@ const WeeklyQuestSys = {
             if (!snap.exists()) return;
             const data = snap.data();
             if (!data || !data.battleCode) return;
+            // 🧹 Просроченные вызовы (>35 сек) удаляем и игнорируем — иначе
+            // забытый старый вызов навсегда блокирует приём новых
+            if (data.createdAt && (Date.now() - Number(data.createdAt)) > 35000) {
+                window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                return;
+            }
             // Защита от двойного показа модалки
             if (this._challengeModalShown) return;
             this._challengeModalShown = true;
