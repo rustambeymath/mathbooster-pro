@@ -4713,9 +4713,8 @@ body.dark-mode .tier-name { color: #f7eecf; }
                         <div id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="cursor:pointer; border:none; background:transparent; color:var(--text-light); padding:7px 20px; border-radius:19px; font-weight:500; font-size:13px; letter-spacing:.3px;">📜 Сезон 1</div>
                     </div>
                 </div>
-                <div id="season1-banner" style="display:none; margin:10px 0 4px; padding:10px 14px; background:var(--bg); border:1px solid var(--primary); border-radius:14px; text-align:center;">
-                    <div style="font-size:13px; font-weight:800; color:var(--primary); letter-spacing:.3px;">📜 Сезон 1 завершён</div>
-                    <div style="font-size:11px; color:var(--text-light); margin-top:2px;">🧊 Итоги зафиксированы навсегда — таблица заморожена и не меняется</div>
+                <div id="season1-banner" style="display:none; margin:10px 0 4px; padding:16px 14px; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(108,99,255,.12), rgba(108,99,255,.03)); border:1.5px solid var(--primary); border-radius:18px; text-align:center;">
+                    <div id="season1-banner-inner" style="position:relative; z-index:1;"></div>
                 </div>
                 <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
                 <div id="leaderboard-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
@@ -6076,14 +6075,16 @@ body.dark-mode .tier-name { color: #f7eecf; }
     }
 
     /**
-     * 🏅 Баннер завершённого сезона: дата окончания + победители топ-3.
+     * 🏆 Баннер завершённого сезона: дата окончания + подиум победителей топ-3.
      * Дата берётся из seasonHistory (когда сезон был заархивирован),
      * победители — из замороженного архива топа.
      */
     function renderSeasonBanner(top3) {
         const banner = document.getElementById('season1-banner');
         if (!banner) return;
-        
+        const inner = document.getElementById('season1-banner-inner');
+        if (!inner) return;
+
         // Дата окончания сезона из личного архива игрока
         let dateStr = '';
         if (DB && DB.seasonHistory && DB.seasonHistory.length) {
@@ -6092,21 +6093,37 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 try { dateStr = new Date(s1.endDate).toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {}
             }
         }
-        
-        let winnersHtml = '';
+
+        // 🏆 Подиум победителей
+        let podiumHtml = '';
         if (top3 && top3.length) {
             const medals = ['🥇', '🥈', '🥉'];
-            winnersHtml = top3.map((w, i) => {
-                const h = Math.floor((w.totalSec || 0) / 3600);
-                const m = Math.floor(((w.totalSec || 0) % 3600) / 60);
-                return `<span style="white-space:nowrap;">${medals[i]} ${w.avatar} ${w.name} <b style="color:var(--primary);">${h}ч${m ? ' ' + m + 'м' : ''}</b></span>`;
-            }).join('<span style="opacity:.4; margin:0 4px;">•</span>');
+            // Сортируем для подиума: 2-й, 1-й, 3-й (классический подиум)
+            const order = top3.length >= 3 ? [1, 0, 2] : top3.map((_, i) => i);
+            podiumHtml = `<div style="display:flex; align-items:flex-end; justify-content:center; gap:6px; margin-top:12px;">` +
+                order.map(idx => {
+                    const w = top3[idx];
+                    if (!w) return '';
+                    const h = Math.floor((w.totalSec || 0) / 3600);
+                    const m = Math.floor(((w.totalSec || 0) % 3600) / 60);
+                    const place = idx;
+                    const heights = ['56px', '40px', '32px'];
+                    const bh = heights[place] || '32px';
+                    return `<div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:110px;">
+                        <div style="font-size:18px; line-height:1;">${medals[place]}</div>
+                        <div style="font-size:20px; margin-top:3px;">${w.avatar || '😎'}</div>
+                        <div style="font-size:10.5px; font-weight:700; color:var(--text); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;">${w.name}</div>
+                        <div style="font-size:10px; color:var(--primary); font-weight:800;">${h}ч${m ? ' ' + m + 'м' : ''}</div>
+                        <div style="width:100%; height:${bh}; margin-top:5px; background:linear-gradient(180deg, var(--primary), transparent); border-radius:8px 8px 0 0; opacity:.35;"></div>
+                    </div>`;
+                }).join('') + `</div>`;
         }
-        
-        banner.innerHTML = `
-            <div style="font-size:13px; font-weight:800; color:var(--primary); letter-spacing:.3px;">📜 Сезон 1 завершён${dateStr ? ' — ' + dateStr : ''}</div>
-            ${winnersHtml ? `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:4px 10px; margin-top:6px; font-size:11.5px; color:var(--text);">${winnersHtml}</div>` : ''}
-            <div style="font-size:11px; color:var(--text-light); margin-top:${winnersHtml ? '6px' : '2px'};">🧊 Итоги зафиксированы навсегда — таблица заморожена и не меняется</div>
+
+        inner.innerHTML = `
+            <div style="font-size:22px; line-height:1;">🏆</div>
+            <div style="font-size:14px; font-weight:900; color:var(--primary); letter-spacing:.5px; margin-top:4px;">СЕЗОН 1 ЗАВЕРШЁН</div>
+            ${dateStr ? `<div style="font-size:10.5px; color:var(--text-light); margin-top:2px; letter-spacing:.3px;">${dateStr}</div>` : ''}
+            ${podiumHtml}
         `;
     }
 
