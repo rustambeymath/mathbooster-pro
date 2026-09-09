@@ -6075,6 +6075,41 @@ body.dark-mode .tier-name { color: #f7eecf; }
         if (banner) banner.style.display = (season === 1) ? 'block' : 'none';
     }
 
+    /**
+     * 🏅 Баннер завершённого сезона: дата окончания + победители топ-3.
+     * Дата берётся из seasonHistory (когда сезон был заархивирован),
+     * победители — из замороженного архива топа.
+     */
+    function renderSeasonBanner(top3) {
+        const banner = document.getElementById('season1-banner');
+        if (!banner) return;
+        
+        // Дата окончания сезона из личного архива игрока
+        let dateStr = '';
+        if (DB && DB.seasonHistory && DB.seasonHistory.length) {
+            const s1 = DB.seasonHistory.find(s => (s.season || 1) === 1);
+            if (s1 && s1.endDate) {
+                try { dateStr = new Date(s1.endDate).toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {}
+            }
+        }
+        
+        let winnersHtml = '';
+        if (top3 && top3.length) {
+            const medals = ['🥇', '🥈', '🥉'];
+            winnersHtml = top3.map((w, i) => {
+                const h = Math.floor((w.totalSec || 0) / 3600);
+                const m = Math.floor(((w.totalSec || 0) % 3600) / 60);
+                return `<span style="white-space:nowrap;">${medals[i]} ${w.avatar} ${w.name} <b style="color:var(--primary);">${h}ч${m ? ' ' + m + 'м' : ''}</b></span>`;
+            }).join('<span style="opacity:.4; margin:0 4px;">•</span>');
+        }
+        
+        banner.innerHTML = `
+            <div style="font-size:13px; font-weight:800; color:var(--primary); letter-spacing:.3px;">📜 Сезон 1 завершён${dateStr ? ' — ' + dateStr : ''}</div>
+            ${winnersHtml ? `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:4px 10px; margin-top:6px; font-size:11.5px; color:var(--text);">${winnersHtml}</div>` : ''}
+            <div style="font-size:11px; color:var(--text-light); margin-top:${winnersHtml ? '6px' : '2px'};">🧊 Итоги зафиксированы навсегда — таблица заморожена и не меняется</div>
+        `;
+    }
+
     const SeasonSystem = {
         activeSeason: CURRENT_SEASON,
         /**
@@ -6244,6 +6279,17 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 if (snap.empty) {
                     list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-light);">Нет данных за этот сезон</div>';
                     return;
+                }
+                
+                // 🏅 Собираем топ-3 для баннера «Сезон завершён»
+                if (!isCurrentView) {
+                    const top3 = [];
+                    snap.forEach(doc => {
+                        if (top3.length >= 3) return;
+                        const u = doc.data();
+                        if (u && u.name) top3.push({ name: u.name, avatar: u.avatar || '😎', totalSec: u.totalSec || 0 });
+                    });
+                    renderSeasonBanner(top3);
                 }
                 
                 // Используем существующий рендер, но с новыми данными
