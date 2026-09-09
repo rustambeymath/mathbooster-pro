@@ -92,13 +92,15 @@ exports.notifyParentOnStatusChange = functions.firestore
 
         const tokens = [];
         const staleTokens = [];
+        const seenTokens = new Set(); // 🔒 один токен = один push
 
         tokensSnap.forEach((doc) => {
             const d = doc.data();
             // Пропускаем токены старше 7 дней (неактивные родители)
             if (d.lastSeen && Date.now() - d.lastSeen > 7 * 24 * 3600 * 1000) {
                 staleTokens.push(doc.ref);
-            } else {
+            } else if (d.token && !seenTokens.has(d.token)) {
+                seenTokens.add(d.token);
                 tokens.push(d.token);
             }
         });
@@ -185,6 +187,7 @@ exports.dailyReminder = functions.pubsub
         // Берём всех пользователей
         const snap = await db.collection("users").get();
         const tokens = [];
+        const seenTokens = new Set(); // 🔒 защита от дублей: один токен = один push
         const phrases = [
             "Пора поучиться! Твой мозг скучает 🧠",
             "Готов стать умнее? Открой MathBooster! 📚",
@@ -207,6 +210,8 @@ exports.dailyReminder = functions.pubsub
             if (!fcmToken) continue;
             if (lastPing > todayMs) continue;
             if (u.fcmTokenDate && (now - Number(u.fcmTokenDate)) > 30 * 86400000) continue;
+            if (seenTokens.has(fcmToken)) continue; // этот токен уже получил push
+            seenTokens.add(fcmToken);
 
             tokens.push({ token: fcmToken, name: u.name || "Игрок" });
         }
@@ -260,6 +265,7 @@ exports.streakReminder = functions.pubsub
 
         const snap = await db.collection("users").get();
         const tokens = [];
+        const seenTokens = new Set(); // 🔒 защита от дублей
 
         for (const doc of snap.docs) {
             const data = doc.data();
@@ -275,6 +281,8 @@ exports.streakReminder = functions.pubsub
             if (!fcmToken) continue;
             if (lastPing < threeDaysAgo || lastPing > twoDaysAgo) continue;
             if (streak <= 0) continue;
+            if (seenTokens.has(fcmToken)) continue;
+            seenTokens.add(fcmToken);
 
             tokens.push({ token: fcmToken, streak, name: u.name || "Игрок" });
         }
@@ -325,6 +333,7 @@ exports.weeklyReport = functions.pubsub
 
         const snap = await db.collection("users").get();
         const tokens = [];
+        const seenTokens = new Set(); // 🔒 защита от дублей
 
         for (const doc of snap.docs) {
             const data = doc.data();
@@ -334,6 +343,8 @@ exports.weeklyReport = functions.pubsub
 
             if (!fcmToken) continue;
             if (lastPing < weekAgo) continue; // Не заходил всю неделю
+            if (seenTokens.has(fcmToken)) continue;
+            seenTokens.add(fcmToken);
 
             // Считаем статистику из локальных данных
             const totalSec = u.totalSec || 0;
