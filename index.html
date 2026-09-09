@@ -6320,7 +6320,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 let shownCount = 0;
                 snap.forEach(doc => {
                     const u = doc.data();
-                    const belongs = true; // Архив уже отфильтрован по коллекции
+                    // 🔒 Фильтр по сезону: в архиве лежат записи прошлого сезона,
+                    // а в живой таблице — только текущего (season === CURRENT_SEASON).
+                    const docSeason = (u.season === undefined || u.season === null) ? 1 : Number(u.season);
+                    const belongs = isCurrentView ? (docSeason === CURRENT_SEASON) : (docSeason === Number(season));
                     if (!belongs || shownCount >= 50) return;
                     shownCount++;
                     const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
