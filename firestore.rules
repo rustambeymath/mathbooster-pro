@@ -92,12 +92,17 @@ service cloud.firestore {
 
     // ============================================
     // ⚔️ ВЫЗОВЫ НА ДУЭЛЬ (pendingChallenges)
+    // Документ адресуется по ИГРОВОМУ id игрока, который у легаси/
+    // восстановленных профилей НЕ совпадает с Firebase Auth UID —
+    // старое правило request.auth.uid == userId блокировало чтение
+    // вызова и его удаление. Документы одноразовые и содержат только
+    // имя/аватар/код комнаты, поэтому любому вошедшему можно читать.
     // ============================================
-    match /pendingChallenges/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+    match /pendingChallenges/{challengeId} {
+      allow read: if request.auth != null;
       allow create: if request.auth != null;
       allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null;
     }
   }
 }
