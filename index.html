@@ -8113,6 +8113,11 @@ const Timer = {
             const now = Date.now();
             const elapsedSinceSave = Math.floor((now - state.lastSave) / 1000);
 
+            // Восстанавливаем чекпоинтные счётчики (иначе после перезагрузки
+            // страницы час, записанный чекпоинтом, был бы начислен второй раз)
+            this.bankedSec = Number(state.bankedSec || 0);
+            this.nextCheckAt = Number(state.nextCheckAt || this.CHECK_AFTER_SECONDS);
+
             // Если прошло < 5 минут — восстанавливаем таймер
             if (elapsedSinceSave < 300 && this.active) {
                 const serverElapsed = Math.floor((this.getTrueTime() - state.startTime - state.pausedDuration) / 1000);
@@ -8245,6 +8250,8 @@ const Timer = {
         this.lastPaidBlock = 0;
         this.lastCheckTime = 0;
         this.checkShown = false;
+        this.bankedSec = 0;                          // сколько секунд уже записано чекпоинтами
+        this.nextCheckAt = this.CHECK_AFTER_SECONDS; // следующая проверка через час
 
         await this.requestWakeLock(); 
 
@@ -8354,7 +8361,9 @@ const Timer = {
                         pausedDuration: this.totalPausedDuration,
                         realSec: this.realSec,
                         active: true,
-                        lastSave: Date.now()
+                        lastSave: Date.now(),
+                        bankedSec: this.bankedSec || 0,
+                        nextCheckAt: this.nextCheckAt || this.CHECK_AFTER_SECONDS
                     }));
                 } catch(e) {}
             }
@@ -8405,10 +8414,10 @@ const Timer = {
                 // Когда интернет вернётся — heartbeat обновит lastPing
             }
 
-            // === АНТИ-AFK: строго после 1 часа, ОДНОРАЗОВО ===
+            // === АНТИ-AFK: строго после 1 часа, потом каждые 60 минут (чекпоинты) ===
             // ПUSH УВЕДОМЛЕНИЕ: отправляем push когда пора проверять
-            if (this.realSec >= this.CHECK_AFTER_SECONDS && !this.checkShown) {
-                this.checkShown = true;
+            if (this.realSec >= this.nextCheckAt && !this.isPaused) {
+                this.nextCheckAt = this.realSec; // защита от повторного срабатывания до ответа
                 // Отправляем push-уведомление (если разрешено)
                 this._sendCheckPush();
                 this.showMathCheck();
@@ -8455,7 +8464,7 @@ const Timer = {
         modal.dataset.countdown = countdown;
     },
 
-    checkAnswer(correct, btn) {
+    async checkAnswer(correct, btn) {
         const input = document.getElementById('check-answer');
         const userAnswer = parseInt(input.value);
         const modal = btn.closest('.modal');
@@ -8463,11 +8472,81 @@ const Timer = {
 
         if (userAnswer === correct) {
             SoundSys.play('success');
-            App.toast("✅ Проверка пройдена! Сессия завершена.");
             modal.remove();
-            this.stop(true);
+            // ✅ ПРОВЕРКА = ЧЕКПОИНТ: час сохраняется, сессия ПРОДОЛЖАЕТСЯ (баг №2)
+            await this.checkpointSave();
         } else {
             this.failCheck(modal);
+        }
+    },
+
+    /**
+     * ✅ ЧЕКПОИНТ ПОСЛЕ УСПЕШНОЙ ПРОВЕРКИ (баг №2):
+     * — накопленный час записывается в базу (монеты, XP, журнал);
+     * — таймер НЕ обнуляется: общий счётчик и экран продолжают идти;
+     * — следующая проверка ровно через час.
+     */
+    async checkpointSave() {
+        try {
+            // 1. Сохраняем только НЕЗАПИСАННУЮ часть времени (последний час)
+            const unbanked = Math.max(0, this.realSec - (this.bankedSec || 0));
+            const totalSnapshot = this.realSec;
+            if (unbanked > 0) {
+                this.realSec = unbanked;
+                this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
+                await this.saveSession();
+                this.realSec = totalSnapshot;
+                this.bankedSec = totalSnapshot;
+            }
+
+            // 2. Выходим из паузы проверки (activeSessionStart НЕ трогаем —
+            //    от него зависит античит-проверка длительности в stop())
+            //    Время, проведённое в окне проверки, в учёбу НЕ идёт:
+            //    добавляем его к общей длительности пауз
+            const now = this.getTrueTime();
+            if (this.pausedTime) {
+                this.totalPausedDuration += Math.max(0, now - this.pausedTime);
+                this.pausedTime = null;
+            }
+            this.isPaused = false;
+            this.isRunning = true;
+            if (DB && DB.user) {
+                DB.user.pausedAt = null;
+                DB.user.lastPing = Number(now);
+            }
+            if (window.DB_Online && Auth.currentUser) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, 'users', Auth.currentUser.id);
+                try {
+                    await window.DB_Online.updateDoc(docRef, {
+                        'user.pausedAt': null,
+                        'user.lastPing': Number(now)
+                    });
+                } catch(e) {}
+                // 3. Перевзводим push-напоминание на СЛЕДУЮЩИЙ час
+                const checkAt = Number(now) + this.CHECK_AFTER_SECONDS * 1000;
+                const fcmToken = localStorage.getItem('fcm_token') || '';
+                const checkDoc = window.DB_Online.doc(window.DB_Online.db, 'timerChecks', Auth.currentUser.id);
+                try {
+                    await window.DB_Online.setDoc(checkDoc, {
+                        userId: Auth.currentUser.id,
+                        checkAt: checkAt,
+                        fcmToken: fcmToken,
+                        sent: false,
+                        createdAt: Date.now()
+                    });
+                } catch(e) { console.warn('timerCheck rearm error:', e); }
+            }
+
+            // 4. Следующая проверка — ровно через час после текущей
+            this.nextCheckAt = this.realSec + this.CHECK_AFTER_SECONDS;
+
+            this.updateDisplay();
+            App.toast("🔥 Час записан! Таймер продолжает идти — следующая проверка через час.");
+            FX.confetti();
+        } catch(e) {
+            console.error('checkpointSave error:', e);
+            App.toast("⚠️ Ошибка сохранения часа. Сессия завершена.");
+            this.stop(true);
         }
     },
 
@@ -8558,10 +8637,16 @@ const Timer = {
         const maxAllowed = Math.floor((stopTime - serverStart) / 1000) + 10; // +10 сек на задержку сети
         const verifiedSec = Math.min(this.realSec, maxAllowed);
 
-        if (saveSession && verifiedSec >= 60) {
-            this.realSec = verifiedSec;
+        // 💾 Записываем только НЕЗАПИСАННУЮ часть: часы, уже сохранённые
+        // чекпоинтами после пройденных проверок, повторно не начисляются
+        const unbanked = Math.max(0, verifiedSec - (this.bankedSec || 0));
+        if (saveSession && unbanked >= 60) {
+            const totalSnapshot = this.realSec;
+            this.realSec = unbanked;
+            this.sessionStartTime = Date.now();
             await this.saveSession();
-        } else {
+            this.realSec = totalSnapshot;
+        } else if ((this.bankedSec || 0) === 0) {
             const cancelPhrases = ["⚠️ Слишком коротко!", "🚫 Фокус потерян.", "📉 Сессия аннулирована."];
             App.toast(cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)]);
         }
