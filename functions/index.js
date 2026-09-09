@@ -15,7 +15,7 @@
  *   { "projects": { "default": "mathbooster-pro" } }
  */
 
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1"); // v7 SDK: старый API (document().onWrite, pubsub.schedule) живёт в /v1
 const admin = require("firebase-admin");
 
 // ⚡ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ — критично для деплоя!
