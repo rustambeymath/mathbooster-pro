@@ -6184,7 +6184,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
             if (window.DB_Online) {
                 try {
                     const dbRef = window.DB_Online;
-                    const histDoc = dbRef.doc(dbRef.db, "leaderboard_history_" + userSeason, userId);
+                    const histDoc = dbRef.doc(dbRef.db, "leaderboard_history_" + userSeason, Auth.currentUser.id);
                     await dbRef.setDoc(histDoc, {
                         name: DB.user.name,
                         totalSec: totalSec,
