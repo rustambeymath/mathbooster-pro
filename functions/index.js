@@ -17,6 +17,10 @@
 
 const functions = require("firebase-functions/v1"); // v7 SDK: старый API (document().onWrite, pubsub.schedule) живёт в /v1
 const admin = require("firebase-admin");
+// firebase-admin v14+: top-level admin.firestore()/admin.messaging() УДАЛЕНЫ —
+// доступ только через deep-импорты
+const { getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
 // ⚡ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ — критично для деплоя!
 // admin.initializeApp() при загрузке модуля вешает проверку кода CLI
@@ -25,8 +29,8 @@ let _db = null, _messaging = null;
 function getAdmin() {
     if (!_db) {
         admin.initializeApp();
-        _db = admin.firestore();
-        _messaging = admin.messaging();
+        _db = getFirestore();
+        _messaging = getMessaging();
     }
     return { db: _db, messaging: _messaging };
 }
