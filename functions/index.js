@@ -129,28 +129,21 @@ exports.notifyParentOnStatusChange = functions.firestore
         }
 
         // === Отправляем push-уведомление ===
+        // ⚠️ DATA-ONLY сообщение: НЕ используем поле notification!
+        // Если присутствуют ОБА поля (notification + data), Firebase SDK на вебе
+        // показывает уведомление ДВАЖДЫ: автопоказ notification-пейлоада +
+        // ручной показ в onBackgroundMessage. Data-only = один показ в SW.
         const message = {
-            notification: {
-                title: `${statusEmoji} ${statusText}`,
-                body: statusBody,
-            },
             data: {
                 type: "parent_status",
                 code: code,
                 status: isActive ? "studying" : isPaused ? "paused" : "idle",
                 childName: childName,
+                title: `${statusEmoji} ${statusText}`,
+                body: statusBody,
                 timestamp: String(Date.now()),
             },
             tokens: tokens, // multicast — до 500 токенов за раз
-            webpush: {
-                fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                notification: {
-                    icon: "/icon-192.png",
-                    badge: "/icon-192.png",
-                    tag: "parent-status",
-                    requireInteraction: isActive,
-                },
-            },
         };
 
         try {
@@ -241,20 +234,9 @@ exports.dailyReminder = functions.pubsub
             const batch = tokens.slice(i, i + 500);
             try {
                 await messaging.sendEachForMulticast({
-                    notification: {
-                        title: "📚 MathBooster Pro",
-                        body: phrase,
-                    },
-                    data: { type: "daily_reminder", timestamp: String(now) },
+                    // ⚠️ DATA-ONLY — защита от двойного показа (см. комментарий выше)
+                    data: { type: "daily_reminder", title: "📚 MathBooster Pro", body: phrase, timestamp: String(now) },
                     tokens: batch.map(t => t.token),
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "daily-reminder",
-                        },
-                    },
                 });
             } catch (e) {
                 console.error("Daily reminder error:", e.message);
@@ -312,19 +294,12 @@ exports.streakReminder = functions.pubsub
             try {
                 await messaging.send({
                     token: t.token,
-                    notification: {
+                    // ⚠️ DATA-ONLY — защита от двойного показа
+                    data: {
+                        type: "streak_reminder",
                         title: `🔥 Стрик ${t.streak} дней подряд!`,
                         body: `Ты 2 дня не заходил. Открой приложение чтобы не потерять стрик!`,
-                    },
-                    data: { type: "streak_reminder", streak: String(t.streak) },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "streak-reminder",
-                            requireInteraction: true,
-                        },
+                        streak: String(t.streak),
                     },
                 });
             } catch (e) {
@@ -389,18 +364,12 @@ exports.weeklyReport = functions.pubsub
             try {
                 await messaging.send({
                     token: t.token,
-                    notification: {
+                    // ⚠️ DATA-ONLY — защита от двойного показа
+                    data: {
+                        type: "weekly_report",
                         title: "📊 Твой еженедельный отчёт",
                         body: body,
-                    },
-                    data: { type: "weekly_report", level: String(t.level) },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "weekly-report",
-                        },
+                        level: String(t.level),
                     },
                 });
             } catch (e) {
@@ -446,23 +415,13 @@ exports.afkCheckPush = functions.pubsub
             try {
                 await messaging.send({
                     token: fcmToken,
-                    notification: {
-                        title: "🚨 Время проверки!",
-                        body: "Прошёл час! Откройте приложение и решите пример чтобы продолжить.",
-                    },
+                    // ⚠️ DATA-ONLY — защита от двойного показа
                     data: {
                         type: "afk_check",
+                        title: "🚨 Время проверки!",
+                        body: "Прошёл час! Откройте приложение и решите пример чтобы продолжить.",
                         userId: userId,
                         timestamp: String(now),
-                    },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "afk-check",
-                            requireInteraction: true,
-                        },
                     },
                 });
                 console.log(`🔔 AFK push отправлен: ${userId}`);
@@ -520,30 +479,16 @@ exports.challengeNotify = functions.firestore
         try {
             await messaging.send({
                 token: fcmToken,
-                notification: {
-                    title: `⚔️ ${challenge.fromName} вызвал тебя на дуэль!`,
-                    body: `${modeLabels[challenge.mode] || challenge.mode} | ${diffLabels[challenge.diff] || challenge.diff}`,
-                },
+                // ⚠️ DATA-ONLY — защита от двойного показа
                 data: {
                     type: "duel_challenge",
+                    title: `⚔️ ${challenge.fromName} вызвал тебя на дуэль!`,
+                    body: `${modeLabels[challenge.mode] || challenge.mode} | ${diffLabels[challenge.diff] || challenge.diff}`,
                     battleCode: challenge.battleCode,
                     fromName: challenge.fromName,
                     mode: challenge.mode,
                     diff: challenge.diff,
                 },
-                webpush: {
-                    fcmOptions: { link: "/" },
-                    notification: {
-                        icon: "/icon-192.png",
-                        badge: "/icon-192.png",
-                        tag: "duel-challenge",
-                        requireInteraction: true,
-                        actions: [
-                            { action: "accept", title: "⚔️ Принять" },
-                            { action: "decline", title: "❌ Отказаться" }
-                        ]
-                    }
-                }
             });
             console.log(`🔔 Duel push отправлен: ${challenge.fromName} → ${targetId}`);
         } catch (e) {
