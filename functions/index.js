@@ -424,8 +424,9 @@ exports.afkCheckPush = functions.pubsub
     .onRun(async () => {
         const { db, messaging } = getAdmin();
         const now = Date.now();
+        // Запрос только по одному полю (sent == false) — composite index не нужен.
+        // checkAt фильтруем в коде: коллекция крошечная (один док на активный таймер).
         const snap = await db.collection("timerChecks")
-            .where("checkAt", "<=", now)
             .where("sent", "==", false)
             .get();
 
@@ -433,6 +434,9 @@ exports.afkCheckPush = functions.pubsub
             const data = doc.data();
             const userId = data.userId;
             const fcmToken = data.fcmToken;
+
+            // Фильтр по времени — в коде (запрос по одному полю не требует index)
+            if (Number(data.checkAt) > now) continue;
 
             if (!fcmToken) {
                 await doc.ref.update({ sent: true });
