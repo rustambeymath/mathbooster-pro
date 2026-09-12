@@ -416,6 +416,66 @@ window.addEventListener('load', () => {
             box-shadow: none;
         }
 
+        /* 🏁 BW ФИКС КОНТРАСТА: все элементы с фоном var(--primary) и жёстким
+           color: white. Ночью primary = БЕЛЫЙ → белый текст становится невидимым.
+           Принудительно ставим чёрный текст на белом (и наоборот днём не нужно:
+           днём primary = чёрный, white-текст там читается). */
+        body.dark-mode.theme-bw .calc-mode-btn.active,
+        body.dark-mode.theme-bw .calc-btn.eq,
+        body.dark-mode.theme-bw .daily-day.claimed,
+        body.dark-mode.theme-bw .diff-btn.active,
+        body.dark-mode.theme-bw .reg-step-num,
+        body.dark-mode.theme-bw .shop-price-tag.affordable,
+        body.dark-mode.theme-bw #funding-pct-text,
+        body.dark-mode.theme-bw .tier-price {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            border: 2px solid #FFFFFF;
+            box-shadow: none;
+        }
+
+        /* Днём: элементы с прозрачным/светлым фоном и жёстким color: white
+           остаются читаемыми (primary чёрный), но добавим рамку-контур
+           для toggle-кнопок, где фон совпадает с фоном страницы */
+        body.theme-bw .calc-mode-btn,
+        body.theme-bw .diff-btn {
+            border: 2px solid #000000;
+        }
+        body.dark-mode.theme-bw .calc-mode-btn,
+        body.dark-mode.theme-bw .diff-btn {
+            border: 2px solid #FFFFFF;
+        }
+
+        /* 🏁 BW: еженедельный отчёт — белые пилюли + var(--primary) = невидимый текст ночью */
+        body.dark-mode.theme-bw #weekly-modal .stat-pill {
+            background: #000000 !important;
+            border: 1px solid #FFFFFF !important;
+        }
+        body.dark-mode.theme-bw #weekly-modal .stat-val,
+        body.dark-mode.theme-bw #weekly-modal .stat-label {
+            color: #FFFFFF !important;
+        }
+
+        /* 🏁 BW: журнал калькулятора — res = var(--primary) невидим ночью */
+        body.dark-mode.theme-bw .calc-history-item .res {
+            color: #FFFFFF !important;
+        }
+        body.dark-mode.theme-bw .calc-history-item .expr {
+            color: #FFFFFF !important;
+        }
+
+        /* 🏁 BW: галочка выбранного аватара (белый фон + primary-галочка ночью = невидим) */
+        body.dark-mode.theme-bw .reg-step .avatar-option.selected::after {
+            color: #000000 !important;
+        }
+
+        /* 🏁 BW: кнопка регистрации — градиент с primary ночью почти белый */
+        body.dark-mode.theme-bw .reg-create-btn {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            border: 2px solid #FFFFFF;
+        }
+
             /* 🔥 MAGMA (Легендарная) */
             body.theme-magma { --primary: #FF3333; --bg: #000000; --surface: #121212; --text: #FFFFFF; --text-light: #888888; --shadow: 0 0 25px rgba(255, 51, 51, 0.4); }
             
