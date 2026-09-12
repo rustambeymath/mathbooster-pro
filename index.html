@@ -203,6 +203,12 @@ window.addEventListener('load', () => {
                     console.log('📩 [FCM] Duel challenge push — modal handles this');
                     return;
                 }
+                // parent_status обрабатывает локальный onSnapshot дашборда родителя
+                // (ding + тост) — здесь НЕ дублируем, иначе 2 тоста за раз
+                if (type === 'parent_status') {
+                    console.log('📩 [FCM] Parent status push — dashboard handles this');
+                    return;
+                }
                 
                 // Для остальных уведомлений — показываем тост
                 if (window.App?.toast) {
@@ -12869,18 +12875,16 @@ renderCharts(weekSec) {
                 });
             } catch(e) {}
         };
-        // === УВЕДОМЛЕНИЕ (тост + звук + браузерное) ===
+        // === УВЕДОМЛЕНИЕ (тост + звук) ===
+        // ⚠️ БЕЗ new Notification()! Системное уведомление присылает FCM-пуш
+        // (Cloud Function notifyParentOnStatusChange → Service Worker).
+        // Локальное создание дублировало пуш: страница показывает своё,
+        // SW — пушное = 2 уведомления за раз.
         const notifyParent = (icon, title, body) => {
             // 1. Звук "ding"
             playDing();
-            // 2. Toast в приложении
+            // 2. Toast в приложении (виден когда дашборд открыт)
             App.toast(icon + ' ' + title);
-            // 3. Браузерное уведомление (если разрешено)
-            if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                    new Notification(title, { body: body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'parent-status' });
-                } catch(e) {}
-            }
         };
         // Слушаем изменения данных пользователя
         this.parentUnsub1 = dbRef.onSnapshot(docRef, (snap) => {

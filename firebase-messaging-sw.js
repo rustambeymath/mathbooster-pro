@@ -63,6 +63,11 @@ function playSound(type) {
 messaging.onBackgroundMessage(function(payload) {
     console.log('[SW] Background message:', payload);
     
+    // ⚠️ Все пуши теперь DATA-ONLY (без поля notification).
+    // Если в сообщении есть notification-пейлоад, SDK показывает его АВТОМАТИЧЕСКИ,
+    // и наш ручной showNotification становится ВТОРЫМ уведомлением = дубли!
+    // Data-only = показываем ровно ОДИН раз здесь.
+    
     // Если приложение открыто — НЕ показываем уведомление (onMessage в странице покажет тост)
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clients) {
         var appOpen = false;
@@ -77,13 +82,14 @@ messaging.onBackgroundMessage(function(payload) {
             return;
         }
         
-        // Приложение закрыто — показываем системное уведомление
+        // Приложение закрыто/свёрнуто — показываем системное уведомление ОДИН раз
         var data = payload.data || {};
         var type = data.type || 'default';
-        var title = (payload.notification && payload.notification.title) || 'MathBooster PRO';
-        var body = (payload.notification && payload.notification.body) || '';
+        // Заголовок и текст берём из data (сервер кладёт их туда)
+        var title = data.title || 'MathBooster PRO';
+        var body = data.body || '';
         var isDuel = (type === 'duel_challenge');
-        var isCheck = (type === 'afk_check' || title.indexOf('роверк') > -1);
+        var isCheck = (type === 'afk_check');
         var soundType = isCheck ? 'check' : (isDuel ? 'duel' : 'status');
         playSound(soundType);
         self.registration.showNotification(title, {
