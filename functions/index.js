@@ -15,13 +15,25 @@
  *   { "projects": { "default": "mathbooster-pro" } }
  */
 
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1"); // v7 SDK: старый API (document().onWrite, pubsub.schedule) живёт в /v1
 const admin = require("firebase-admin");
+// firebase-admin v14+: top-level admin.firestore()/admin.messaging() УДАЛЕНЫ —
+// доступ только через deep-импорты
+const { getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
-admin.initializeApp();
-
-const db = admin.firestore();
-const messaging = admin.messaging();
+// ⚡ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ — критично для деплоя!
+// admin.initializeApp() при загрузке модуля вешает проверку кода CLI
+// (Timeout after 10000). Инициализируем только при первом вызове функции.
+let _db = null, _messaging = null;
+function getAdmin() {
+    if (!_db) {
+        admin.initializeApp();
+        _db = getFirestore();
+        _messaging = getMessaging();
+    }
+    return { db: _db, messaging: _messaging };
+}
 
 /**
  * Триггер: запись/обновление transfers/{code}
@@ -30,6 +42,7 @@ const messaging = admin.messaging();
 exports.notifyParentOnStatusChange = functions.firestore
     .document("transfers/{code}")
     .onWrite(async (change, context) => {
+        const { db, messaging } = getAdmin();
         const code = context.params.code;
         const before = change.before.data();
         const after = change.after.data();
@@ -116,28 +129,21 @@ exports.notifyParentOnStatusChange = functions.firestore
         }
 
         // === Отправляем push-уведомление ===
+        // ⚠️ DATA-ONLY сообщение: НЕ используем поле notification!
+        // Если присутствуют ОБА поля (notification + data), Firebase SDK на вебе
+        // показывает уведомление ДВАЖДЫ: автопоказ notification-пейлоада +
+        // ручной показ в onBackgroundMessage. Data-only = один показ в SW.
         const message = {
-            notification: {
-                title: `${statusEmoji} ${statusText}`,
-                body: statusBody,
-            },
             data: {
                 type: "parent_status",
                 code: code,
                 status: isActive ? "studying" : isPaused ? "paused" : "idle",
                 childName: childName,
+                title: `${statusEmoji} ${statusText}`,
+                body: statusBody,
                 timestamp: String(Date.now()),
             },
             tokens: tokens, // multicast — до 500 токенов за раз
-            webpush: {
-                fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                notification: {
-                    icon: "/icon-192.png",
-                    badge: "/icon-192.png",
-                    tag: "parent-status",
-                    requireInteraction: isActive,
-                },
-            },
         };
 
         try {
@@ -158,6 +164,7 @@ exports.notifyParentOnStatusChange = functions.firestore
 exports.cleanupStaleTokens = functions.pubsub
     .schedule("every 24 hours")
     .onRun(async () => {
+        const { db } = getAdmin();
         const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
         const snap = await db.collection("parentTokens").get();
 
@@ -179,6 +186,7 @@ exports.dailyReminder = functions.pubsub
     .schedule("0 13 * * *")  // 13:00 UTC = 18:00 Tashkent
     .timeZone("Asia/Tashkent")
     .onRun(async () => {
+        const { db, messaging } = getAdmin();
         const now = Date.now();
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -226,20 +234,9 @@ exports.dailyReminder = functions.pubsub
             const batch = tokens.slice(i, i + 500);
             try {
                 await messaging.sendEachForMulticast({
-                    notification: {
-                        title: "📚 MathBooster Pro",
-                        body: phrase,
-                    },
-                    data: { type: "daily_reminder", timestamp: String(now) },
+                    // ⚠️ DATA-ONLY — защита от двойного показа (см. комментарий выше)
+                    data: { type: "daily_reminder", title: "📚 MathBooster Pro", body: phrase, timestamp: String(now) },
                     tokens: batch.map(t => t.token),
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "daily-reminder",
-                        },
-                    },
                 });
             } catch (e) {
                 console.error("Daily reminder error:", e.message);
@@ -259,6 +256,7 @@ exports.streakReminder = functions.pubsub
     .schedule("0 15 * * *")  // 15:00 UTC = 20:00 Tashkent
     .timeZone("Asia/Tashkent")
     .onRun(async () => {
+        const { db, messaging } = getAdmin();
         const now = Date.now();
         const twoDaysAgo = now - 2 * 86400000;
         const threeDaysAgo = now - 3 * 86400000;
@@ -296,19 +294,12 @@ exports.streakReminder = functions.pubsub
             try {
                 await messaging.send({
                     token: t.token,
-                    notification: {
+                    // ⚠️ DATA-ONLY — защита от двойного показа
+                    data: {
+                        type: "streak_reminder",
                         title: `🔥 Стрик ${t.streak} дней подряд!`,
                         body: `Ты 2 дня не заходил. Открой приложение чтобы не потерять стрик!`,
-                    },
-                    data: { type: "streak_reminder", streak: String(t.streak) },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "streak-reminder",
-                            requireInteraction: true,
-                        },
+                        streak: String(t.streak),
                     },
                 });
             } catch (e) {
@@ -328,6 +319,7 @@ exports.weeklyReport = functions.pubsub
     .schedule("0 5 * * 0")  // Воскресенье 05:00 UTC = 10:00 Tashkent
     .timeZone("Asia/Tashkent")
     .onRun(async () => {
+        const { db, messaging } = getAdmin();
         const now = Date.now();
         const weekAgo = now - 7 * 86400000;
 
@@ -372,18 +364,12 @@ exports.weeklyReport = functions.pubsub
             try {
                 await messaging.send({
                     token: t.token,
-                    notification: {
+                    // ⚠️ DATA-ONLY — защита от двойного показа
+                    data: {
+                        type: "weekly_report",
                         title: "📊 Твой еженедельный отчёт",
                         body: body,
-                    },
-                    data: { type: "weekly_report", level: String(t.level) },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "weekly-report",
-                        },
+                        level: String(t.level),
                     },
                 });
             } catch (e) {
@@ -405,9 +391,11 @@ exports.weeklyReport = functions.pubsub
 exports.afkCheckPush = functions.pubsub
     .schedule("every 1 minutes")
     .onRun(async () => {
+        const { db, messaging } = getAdmin();
         const now = Date.now();
+        // Запрос только по одному полю (sent == false) — composite index не нужен.
+        // checkAt фильтруем в коде: коллекция крошечная (один док на активный таймер).
         const snap = await db.collection("timerChecks")
-            .where("checkAt", "<=", now)
             .where("sent", "==", false)
             .get();
 
@@ -415,6 +403,9 @@ exports.afkCheckPush = functions.pubsub
             const data = doc.data();
             const userId = data.userId;
             const fcmToken = data.fcmToken;
+
+            // Фильтр по времени — в коде (запрос по одному полю не требует index)
+            if (Number(data.checkAt) > now) continue;
 
             if (!fcmToken) {
                 await doc.ref.update({ sent: true });
@@ -424,23 +415,13 @@ exports.afkCheckPush = functions.pubsub
             try {
                 await messaging.send({
                     token: fcmToken,
-                    notification: {
-                        title: "🚨 Время проверки!",
-                        body: "Прошёл час! Откройте приложение и решите пример чтобы продолжить.",
-                    },
+                    // ⚠️ DATA-ONLY — защита от двойного показа
                     data: {
                         type: "afk_check",
+                        title: "🚨 Время проверки!",
+                        body: "Прошёл час! Откройте приложение и решите пример чтобы продолжить.",
                         userId: userId,
                         timestamp: String(now),
-                    },
-                    webpush: {
-                        fcmOptions: { link: "https://rustambeymath.github.io/mathbooster-pro/" },
-                        notification: {
-                            icon: "/icon-192.png",
-                            badge: "/icon-192.png",
-                            tag: "afk-check",
-                            requireInteraction: true,
-                        },
                     },
                 });
                 console.log(`🔔 AFK push отправлен: ${userId}`);
@@ -461,6 +442,7 @@ exports.afkCheckPush = functions.pubsub
 exports.challengeNotify = functions.firestore
     .document("pendingChallenges/{targetId}")
     .onCreate(async (snap, context) => {
+        const { db, messaging } = getAdmin();
         const targetId = context.params.targetId;
         const challenge = snap.data();
 
@@ -497,30 +479,16 @@ exports.challengeNotify = functions.firestore
         try {
             await messaging.send({
                 token: fcmToken,
-                notification: {
-                    title: `⚔️ ${challenge.fromName} вызвал тебя на дуэль!`,
-                    body: `${modeLabels[challenge.mode] || challenge.mode} | ${diffLabels[challenge.diff] || challenge.diff}`,
-                },
+                // ⚠️ DATA-ONLY — защита от двойного показа
                 data: {
                     type: "duel_challenge",
+                    title: `⚔️ ${challenge.fromName} вызвал тебя на дуэль!`,
+                    body: `${modeLabels[challenge.mode] || challenge.mode} | ${diffLabels[challenge.diff] || challenge.diff}`,
                     battleCode: challenge.battleCode,
                     fromName: challenge.fromName,
                     mode: challenge.mode,
                     diff: challenge.diff,
                 },
-                webpush: {
-                    fcmOptions: { link: "/" },
-                    notification: {
-                        icon: "/icon-192.png",
-                        badge: "/icon-192.png",
-                        tag: "duel-challenge",
-                        requireInteraction: true,
-                        actions: [
-                            { action: "accept", title: "⚔️ Принять" },
-                            { action: "decline", title: "❌ Отказаться" }
-                        ]
-                    }
-                }
             });
             console.log(`🔔 Duel push отправлен: ${challenge.fromName} → ${targetId}`);
         } catch (e) {
@@ -529,3 +497,66 @@ exports.challengeNotify = functions.firestore
 
         return null;
     });
+
+/**
+ * 🧪 TEST PUSH — разовая отправка тестового пуша для проверки доставки.
+ * Вызов: https://us-central1-mathbooster-pro.cloudfunctions.net/testPush?token=FCM_TOKEN
+ * Или без token — отправит всем, у кого есть fcmToken (как dailyReminder, но без фильтра lastPing).
+ * После проверки можно удалить эту функцию.
+ */
+exports.testPush = functions.https.onRequest(async (req, res) => {
+    const { db, messaging } = getAdmin();
+
+    // CORS-заголовки, чтобы можно было вызвать из браузера
+    res.set("Access-Control-Allow-Origin", "*");
+    if (req.method === "OPTIONS") {
+        res.set("Access-Control-Allow-Methods", "GET");
+        res.status(204).send("");
+        return;
+    }
+
+    const title = req.query.title || "🧪 Тестовый пуш MathBooster";
+    const body = req.query.body || "Если ты видишь ЭТО уведомление ОДИН раз — дубли исправлены! ✅";
+
+    const tokens = [];
+    const seen = new Set();
+
+    if (req.query.token) {
+        // Режим одной цели
+        tokens.push(req.query.token);
+    } else {
+        // Режим всем — берём все fcmToken из users
+        const snap = await db.collection("users").get();
+        snap.forEach(doc => {
+            const u = doc.data()?.user || {};
+            if (u.fcmToken && !seen.has(u.fcmToken)) {
+                seen.add(u.fcmToken);
+                tokens.push(u.fcmToken);
+            }
+        });
+    }
+
+    if (tokens.length === 0) {
+        res.status(404).send("No FCM tokens found");
+        return;
+    }
+
+    let success = 0, failure = 0;
+    for (let i = 0; i < tokens.length; i += 500) {
+        const batch = tokens.slice(i, i + 500);
+        try {
+            const resp = await messaging.sendEachForMulticast({
+                // ⚠️ DATA-ONLY — тот же формат, что и продакшен-пуши
+                data: { type: "test_push", title, body, timestamp: String(Date.now()) },
+                tokens: batch,
+            });
+            success += resp.successCount;
+            failure += resp.failureCount;
+        } catch (e) {
+            failure += batch.length;
+        }
+    }
+
+    console.log(`🧪 Test push: ${success} ok, ${failure} failed`);
+    res.json({ ok: true, sent: success, failed: failure, total: tokens.length });
+});
