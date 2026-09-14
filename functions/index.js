@@ -497,3 +497,66 @@ exports.challengeNotify = functions.firestore
 
         return null;
     });
+
+/**
+ * 🧪 TEST PUSH — разовая отправка тестового пуша для проверки доставки.
+ * Вызов: https://us-central1-mathbooster-pro.cloudfunctions.net/testPush?token=FCM_TOKEN
+ * Или без token — отправит всем, у кого есть fcmToken (как dailyReminder, но без фильтра lastPing).
+ * После проверки можно удалить эту функцию.
+ */
+exports.testPush = functions.https.onRequest(async (req, res) => {
+    const { db, messaging } = getAdmin();
+
+    // CORS-заголовки, чтобы можно было вызвать из браузера
+    res.set("Access-Control-Allow-Origin", "*");
+    if (req.method === "OPTIONS") {
+        res.set("Access-Control-Allow-Methods", "GET");
+        res.status(204).send("");
+        return;
+    }
+
+    const title = req.query.title || "🧪 Тестовый пуш MathBooster";
+    const body = req.query.body || "Если ты видишь ЭТО уведомление ОДИН раз — дубли исправлены! ✅";
+
+    const tokens = [];
+    const seen = new Set();
+
+    if (req.query.token) {
+        // Режим одной цели
+        tokens.push(req.query.token);
+    } else {
+        // Режим всем — берём все fcmToken из users
+        const snap = await db.collection("users").get();
+        snap.forEach(doc => {
+            const u = doc.data()?.user || {};
+            if (u.fcmToken && !seen.has(u.fcmToken)) {
+                seen.add(u.fcmToken);
+                tokens.push(u.fcmToken);
+            }
+        });
+    }
+
+    if (tokens.length === 0) {
+        res.status(404).send("No FCM tokens found");
+        return;
+    }
+
+    let success = 0, failure = 0;
+    for (let i = 0; i < tokens.length; i += 500) {
+        const batch = tokens.slice(i, i + 500);
+        try {
+            const resp = await messaging.sendEachForMulticast({
+                // ⚠️ DATA-ONLY — тот же формат, что и продакшен-пуши
+                data: { type: "test_push", title, body, timestamp: String(Date.now()) },
+                tokens: batch,
+            });
+            success += resp.successCount;
+            failure += resp.failureCount;
+        } catch (e) {
+            failure += batch.length;
+        }
+    }
+
+    console.log(`🧪 Test push: ${success} ok, ${failure} failed`);
+    res.json({ ok: true, sent: success, failed: failure, total: tokens.length });
+});

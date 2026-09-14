@@ -5931,7 +5931,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
             weeklyQuest: {
                 weekId: "", 
                 progressSec: 0,
-                targetSec: 18000, // Цель: 5 часов (5 * 3600)
+                targetSec: 28800, // Цель: 8 часов (8 * 3600)
                 claimed: false
             }
         }, 
@@ -9008,6 +9008,10 @@ const QuestSys = {
     };
     
 const WeeklyQuestSys = {
+    // Настройки марафона: цель недели и награда
+    REWARD: 100,        // монеты за выполнение
+    TARGET_HOURS: 8,    // часов учёбы на неделю
+
     getWeekID() {
         const now = new Date();
         const oneJan = new Date(now.getFullYear(), 0, 1);
@@ -9019,11 +9023,18 @@ const WeeklyQuestSys = {
     checkWeek() {
         const currentWeek = this.getWeekID();
         
+        // Миграция: у кого осталась старая цель (случайная 4-10 ч или 5 ч) — ставим 8 ч
+        if (DB.user.weeklyQuest && DB.user.weeklyQuest.weekId === currentWeek &&
+            DB.user.weeklyQuest.targetSec !== this.TARGET_HOURS * 3600) {
+            DB.user.weeklyQuest.targetSec = this.TARGET_HOURS * 3600;
+            Data.save();
+        }
+        
         // Если квеста еще нет или наступила новая неделя
         if (!DB.user.weeklyQuest || DB.user.weeklyQuest.weekId !== currentWeek) {
             
-            // Генерируем случайную цель от 4 до 10 часов
-            const randomHours = 4 + Math.floor(Math.random() * 7); // Выберет 4, 5, 6, 7, 8, 9 или 10
+            // Фиксированная цель недели (8 часов)
+            const randomHours = this.TARGET_HOURS;
             
             DB.user.weeklyQuest = {
                 weekId: currentWeek,
@@ -9068,11 +9079,11 @@ const WeeklyQuestSys = {
 
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="font-weight: 900; color: var(--primary); font-size: 14px;">
-                        ${Math.floor(q.progressSec / 3600)} / 5 ч.
+                        ${Math.floor(q.progressSec / 3600)} / ${Math.round(q.targetSec / 3600)} ч.
                     </div>
                     ${isDone && !q.claimed ? 
-                        `<button class="btn btn-primary" onclick="WeeklyQuestSys.claim()" style="padding: 8px 20px; width: auto; background: var(--gold); color: #000;">🎁 ЗАБРАТЬ 500 💰</button>` : 
-                        (q.claimed ? '<b style="color:var(--success);">✅ НАГРАДА ВЗЯТА</b>' : '<span style="font-size:11px; opacity:0.6;">Награда: 500 💰</span>')
+                        `<button class="btn btn-primary" onclick="WeeklyQuestSys.claim()" style="padding: 8px 20px; width: auto; background: var(--gold); color: #000;">🎁 ЗАБРАТЬ ${this.REWARD} 💰</button>` : 
+                        (q.claimed ? '<b style="color:var(--success);">✅ НАГРАДА ВЗЯТА</b>' : `<span style="font-size:11px; opacity:0.6;">Награда: ${this.REWARD} 💰</span>`)
                     }
                 </div>
             </div>`;
@@ -9080,15 +9091,16 @@ const WeeklyQuestSys = {
 
     claim() {
         if (DB.user.weeklyQuest.claimed) return;
+        const reward = this.REWARD;
         DB.user.weeklyQuest.claimed = true;
-        DB.user.coins += 500;
-        App.addXP(1000);
+        DB.user.coins += reward;
+        App.addXP(500);
         Data.save();
         App.updateUI();
         this.render();
         SoundSys.play('level_up');
         FX.confetti();
-        App.toast("🏆 Марафон недели пройден! +500 💰");
+        App.toast(`🏆 Марафон недели пройден! +${reward} 💰`);
     }
 };
     
