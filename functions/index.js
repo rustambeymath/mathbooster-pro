@@ -636,3 +636,38 @@ exports.antiCheat = functions.firestore
         }
         return null;
     });
+
+/**
+ * 🛡️ АНТИ-ЧИТ ЛИДЕРБОРДА — триггер на запись в leaderboard/{userId}
+ * Публичная визитка — её видят все, поэтому фейковые часы/уровень здесь
+ * заметнее всего. Откатываем: часы > 720 за сезон (месяц учёбы нон-стоп),
+ * уровень > 100, имя длиннее 20 символов.
+ */
+exports.antiCheatLeaderboard = functions.firestore
+    .document("leaderboard/{userId}")
+    .onWrite(async (change, context) => {
+        const { db } = getAdmin();
+        const userId = context.params.userId;
+        const after = change.after.data();
+        if (!after) return null;
+
+        const fixes = {};
+        const totalSec = Number(after.totalSec) || 0;
+        const level = Number(after.level) || 0;
+        const name = String(after.name || "");
+
+        if (totalSec > 720 * 3600) fixes["totalSec"] = 0;
+        if (level > 100) fixes["level"] = 1;
+        if (name.length > 20 || name.length === 0) fixes["name"] = "Игрок";
+
+        if (Object.keys(fixes).length === 0) return null;
+
+        fixes["cheatFlag"] = `lb ${JSON.stringify(fixes)} @ ${new Date().toISOString()}`;
+        try {
+            await change.after.ref.update(fixes);
+            console.log(`🚨 ANTI-CHEAT LB ${userId}:`, JSON.stringify(fixes));
+        } catch (e) {
+            console.error(`antiCheatLeaderboard update failed for ${userId}:`, e.message);
+        }
+        return null;
+    });
