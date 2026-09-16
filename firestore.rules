@@ -53,15 +53,18 @@ service cloud.firestore {
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
-      // ⏱️ анти-фарм часов: totalSec не может появиться из ниоткуда
+      // ⏱️ анти-фарм часов: новая карточка не может появиться с большим запасом часов
+      // (13ч — максимум одной честной сессии; дальше часы растут только апдейтами,
+      //  которые ограничены дельтой и серверной проверкой скорости antiCheatLeaderboard)
       && request.resource.data.totalSec is int
-      && request.resource.data.totalSec <= 60 * 60 * 24 * 30 // 720ч = максимум за месяц с момента старта сезона
+      && request.resource.data.totalSec >= 0
+      && request.resource.data.totalSec <= 60 * 60 * 13
       && request.resource.data.name is string
       && request.resource.data.name.size() > 0
       && request.resource.data.name.size() <= 20
       && request.resource.data.level is int
       && request.resource.data.level >= 0
-      && request.resource.data.level <= 200;
+      && request.resource.data.level <= 100;
 
       allow update: if isSignedIn() && (
         resource.data._ownerUID == request.auth.uid
@@ -74,7 +77,10 @@ service cloud.firestore {
       && request.resource.data.totalSec - resource.data.totalSec <= 60 * 60 * 13
       && request.resource.data.name is string
       && request.resource.data.name.size() > 0
-      && request.resource.data.name.size() <= 20;
+      && request.resource.data.name.size() <= 20
+      && request.resource.data.level is int
+      && request.resource.data.level >= 0
+      && request.resource.data.level <= 100;
 
       allow delete: if isAdmin();
     }
