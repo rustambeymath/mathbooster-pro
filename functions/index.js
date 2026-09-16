@@ -560,3 +560,79 @@ exports.testPush = functions.https.onRequest(async (req, res) => {
     console.log(`🧪 Test push: ${success} ok, ${failure} failed`);
     res.json({ ok: true, sent: success, failed: failure, total: tokens.length });
 });
+
+/**
+ * 🛡️ СЕРВЕРНЫЙ АНТИ-ЧИТ — триггер на запись в users/{userId}
+ * Клиент пишет профиль целиком (setDoc), поэтому проверяем ЗНАЧЕНИЯ,
+ * а не поля: если coins/totalSec/xp выходят за физически возможные
+ * пределы — санитизируем документ обратно.
+ *
+ * Пределы (консервативные, чтобы не зацепить честных):
+ *   coins:   максимум 100_000 — столько не нафармить даже годами;
+ *            у честного топа ~1-5к. Монеты выше 100к = чит.
+ *   totalSec: прирост за 5 минут не может быть больше 13 часов.
+ *   xp:      прирост за 5 минут не может быть больше 50_000.
+ */
+exports.antiCheat = functions.firestore
+    .document("users/{userId}")
+    .onWrite(async (change, context) => {
+        const { db } = getAdmin();
+        const userId = context.params.userId;
+        const after = change.after.data();
+        if (!after) return null; // удаление — не наша забота
+
+        const u = after.user || {};
+        const before = change.before.data() || {};
+        const bu = before.user || {};
+        const now = Date.now();
+
+        const fixes = {};
+        let punish = false;
+
+        // --- 1. МОНЕТЫ: потолок + скорость фарма ---
+        const coins = Number(u.coins) || 0;
+        const prevCoins = Number(bu.coins) || 0;
+        if (coins > 100000) {
+            fixes["user.coins"] = 0; // читерский запас — обнуляем целиком
+            fixes["user.cheatFlag"] = `coins=${coins} @ ${new Date().toISOString()}`;
+            punish = true;
+        } else if (before && coins - prevCoins > 50000) {
+            // +50к монет за один сейв — невозможно честно (даже PVP даёт десятки)
+            fixes["user.coins"] = prevCoins;
+            fixes["user.cheatFlag"] = `coinJump+${coins - prevCoins} @ ${new Date().toISOString()}`;
+            punish = true;
+        }
+
+        // --- 2. ЧАСЫ: скорость ---
+        const totalSec = Number(u.totalSec) || 0;
+        const prevSec = Number(bu.totalSec) || 0;
+        const prevTs = Number(bu.lastSaveTime) || 0;
+        const dtMs = prevTs ? Math.max(0, now - prevTs) : 0;
+        if (before && dtMs > 0 && dtMs < 5 * 60 * 1000 && totalSec - prevSec > 13 * 3600) {
+            // за 5 минут «накрутили» больше 13 часов
+            fixes["user.totalSec"] = prevSec;
+            fixes["user.cheatFlag"] = `hoursJump+${Math.round((totalSec - prevSec) / 360) / 10}h @ ${new Date().toISOString()}`;
+            punish = true;
+        }
+        if (totalSec < 0) fixes["user.totalSec"] = 0;
+
+        // --- 3. XP: скорость ---
+        const xp = Number(u.xp) || 0;
+        const prevXp = Number(bu.xp) || 0;
+        if (before && xp - prevXp > 50000) {
+            fixes["user.xp"] = prevXp;
+            fixes["user.cheatFlag"] = `xpJump+${xp - prevXp} @ ${new Date().toISOString()}`;
+            punish = true;
+        }
+
+        if (!punish) return null;
+
+        fixes["user.lastSaveTime"] = now;
+        try {
+            await change.after.ref.update(fixes);
+            console.log(`🚨 ANTI-CHEAT ${userId}:`, JSON.stringify(fixes));
+        } catch (e) {
+            console.error(`antiCheat update failed for ${userId}:`, e.message);
+        }
+        return null;
+    });
