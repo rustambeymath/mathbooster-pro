@@ -7,48 +7,99 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == '9RapHM80aPWOfspjOR5uvhVHriF2';
     }
 
-    // ============================================
-    // 📋 ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ
-    // ============================================
-    match /users/{userId} {
-      allow read: if true;
-      
-      // Владелец пишет в свой профиль ИЛИ админ пишет куда угодно
-      allow write: if request.auth != null && (
-        request.resource.data._ownerUID == request.auth.uid  // Владелец
-        || isAdmin()                                          // Админ
-      );
-      
-      allow create: if request.auth != null && (
-        request.resource.data._ownerUID == request.auth.uid
-        || isAdmin()
-      );
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     // ============================================
-    // 🏆 ТАБЛИЦА ЛИДЕРОВ
+    // 📋 ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ
+    // Профиль большой (сессии, предметы, квесты) — проверяем только
+    // владельца и разумный размер документа. Точную валидацию монет/часов
+    // делает Cloud Function onUserWrite (серверный анти-чит).
     // ============================================
-    match /leaderboard/{userId} {
+    match /users/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && (
+
+      // Владелец пишет в свой профиль ИЛИ админ
+      // + лимит размера: цельный профиль не может быть меньше ключевых полей
+      allow write: if isSignedIn() && (
+        request.resource.data._ownerUID == request.auth.uid
+        || isAdmin()
+      )
+      // защита от создания чужих документов под чужим uid
+      && (
+        request.resource.data.get('_ownerUID', '') == request.auth.uid
+        || isAdmin()
+      );
+
+      allow create: if isSignedIn() && (
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       );
+
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // 🏆 ТАБЛИЦА ЛИДЕРОВ (публичная визитка)
+    // Каждый пишет ТОЛЬКО в свою карточку и только разумные значения:
+    // totalSec — не больше реальных секунд с начала сезона (анти-фарм часов),
+    // name — не пустое, level — в разумных пределах.
+    // ============================================
+    match /leaderboard/{userId} {
+      allow read: if true;
+
+      allow create: if isSignedIn() && (
+        request.resource.data._ownerUID == request.auth.uid
+        || isAdmin()
+      )
+      // ⏱️ анти-фарм часов: totalSec не может появиться из ниоткуда
+      && request.resource.data.totalSec is int
+      && request.resource.data.totalSec <= 60 * 60 * 24 * 30 // 720ч = максимум за месяц с момента старта сезона
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.name.size() <= 20
+      && request.resource.data.level is int
+      && request.resource.data.level >= 0
+      && request.resource.data.level <= 200;
+
+      allow update: if isSignedIn() && (
+        resource.data._ownerUID == request.auth.uid
+        || isAdmin()
+      )
+      // ⏱️ анти-фарм: прирост часов за одну запись не больше 13 часов
+      // (час в сессии + защита от склеенных сейвов)
+      && request.resource.data.totalSec is int
+      && request.resource.data.totalSec >= 0
+      && request.resource.data.totalSec - resource.data.totalSec <= 60 * 60 * 13
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.name.size() <= 20;
+
+      allow delete: if isAdmin();
     }
 
     // ============================================
     // 🧊 АРХИВ СЕЗОНОВ (замороженные таблицы лидеров)
-    // Данные публичные (как leaderboard): любой вошедший может
-    // дописать карточку в архив, читать — все.
+    // Читать — все. Писать карточку может ТОЛЬКО её владелец
+    // (иначе кто угодно переписывает чужие результаты прошлого сезона)
     // ============================================
     match /leaderboard_history_1/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSignedIn() && (
+        request.resource.data.get('_ownerUID', '') == request.auth.uid
+        || resource.data.get('_ownerUID', '') == request.auth.uid
+        || isAdmin()
+      );
     }
 
     match /leaderboard_history_2/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSignedIn() && (
+        request.resource.data.get('_ownerUID', '') == request.auth.uid
+        || resource.data.get('_ownerUID', '') == request.auth.uid
+        || isAdmin()
+      );
     }
 
     // ============================================
@@ -56,14 +107,14 @@ service cloud.firestore {
     // ============================================
     match /transfers/{code} {
       allow read: if true;
-      
+
       allow create: if request.resource.data.keys().hasAll(['userId', 'data', 'createdAt']);
-      
-      allow update: if request.auth != null && (
-        request.resource.data.userId == request.auth.uid
+
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid
         || isAdmin()
       );
-      
+
       allow delete: if isAdmin();
     }
 
@@ -80,14 +131,14 @@ service cloud.firestore {
     // ============================================
     match /battles_v2/{roomCode} {
       allow read: if true;
-      
-      allow create: if request.auth != null && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
-      
+
+      allow create: if isSignedIn() && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
+
       // Любой авторизованный может обновлять (для PVP дуэлей)
-      allow update: if request.auth != null;
-      
+      allow update: if isSignedIn();
+
       // Удалять может создатель ИЛИ админ
-      allow delete: if request.auth != null;
+      allow delete: if isSignedIn() || isAdmin();
     }
 
     // ============================================
@@ -99,10 +150,10 @@ service cloud.firestore {
     // имя/аватар/код комнаты, поэтому любому вошедшему можно читать.
     // ============================================
     match /pendingChallenges/{challengeId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
   }
 }
