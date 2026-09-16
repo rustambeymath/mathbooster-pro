@@ -2624,6 +2624,30 @@ body.dark-mode .subject-item-fixed {
         padding: 10px;
     }
 
+    /* === АДАПТАЦИЯ ЭКРАНА ИГРЫ ПОД ТЕЛЕФОН ===
+       Длинные текстовые задачи (Проценты: средний/сложный) переносятся
+       вместо вытекания из окна, короткие примеры остаются крупными */
+    #game-problem {
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
+        max-width: 100% !important;
+        font-size: clamp(24px, 8vw, 42px) !important; /* перебивает .trainer-problem 48px !important */
+    }
+
+    /* Длинные предложения — компактный шрифт (класс ставит JS по длине текста) */
+    #game-problem.compact {
+        font-size: clamp(18px, 5.2vw, 27px) !important; /* длинные предложения — мельче, чтобы влезали */
+        font-weight: 800 !important;
+        letter-spacing: 0 !important;
+    }
+
+    /* Контейнер задачи не даёт тексту вылезти за экран */
+    #problem-box {
+        overflow: hidden;
+    }
+
     /* Таймер в Zen-режиме */
     body.zen-active #timer {
         font-size: 16vw; /* было 18vw — чуть меньше, чтобы влезал */
@@ -4634,7 +4658,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
         <div class="battle-flash" id="battle-flash"></div>
 
         <div class="problem-container" id="problem-box" style="background: var(--bg); border-radius: 25px; padding: 40px 20px; margin: 20px 0;">
-            <div class="trainer-problem" id="game-problem" style="font-size: 42px; font-weight: 900;">2 x 2</div>
+            <div class="trainer-problem" id="game-problem" style="font-weight: 900;">2 x 2</div>
         </div>
 
         <div id="input-area" style="max-width: 320px; margin: 0 auto; display: block !important; flex: none !important;">
@@ -10050,7 +10074,6 @@ else if (this.mode === 'fractions') {
                 }
                 else if (this.difficulty === 'medium') {
                     // СРЕДНИЙ: «X% от Y = ?» + «A — это сколько % от B» + обратные задачи
-r
                     const type = Math.random() < 0.5 ? 'findValue' : 'findPercent';
                     
                     if (type === 'findValue') {
@@ -13909,6 +13932,32 @@ App.switchTab = function(id, btn) {
         </div>
 
     <script>
+        // 📱 АДАПТАЦИЯ ТЕКСТА ЗАДАЧИ ПОД ТЕЛЕФОН:
+        // следим за текстом примера — длинные предложения (Проценты и др.)
+        // получают класс .compact, чтобы переноситься и помещаться в окно
+        (function() {
+            function fitProblem(el) {
+                if (!el) return;
+                const t = el.textContent || '';
+                if (t.length > 18) {
+                    el.classList.add('compact');
+                } else {
+                    el.classList.remove('compact');
+                }
+            }
+            const gp = document.getElementById('game-problem');
+            if (gp) fitProblem(gp);
+            const mo = new MutationObserver(function(muts) {
+                muts.forEach(function(m) {
+                    if (m.type === 'characterData' || m.type === 'childList') {
+                        fitProblem(m.target.nodeType === 1 ? m.target : m.target.parentElement);
+                    }
+                });
+            });
+            const opts = { characterData: true, childList: true, subtree: true };
+            if (gp) mo.observe(gp, opts);
+        })();
+
         // 🛡️ ЗАЩИТА ОТ КОПИРОВАНИЯ
         document.addEventListener('contextmenu', event => event.preventDefault()); // Блок правой кнопки
 
