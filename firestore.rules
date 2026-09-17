@@ -11,6 +11,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // 🚫 БАН-ЛИСТ — забаненные Firebase Auth UID.
+    // Забаненный не может: создать/записать профиль, карточку Топа,
+    // архивную карточку, код восстановления, вызов на дуэль.
+    // Чтение не запрещаем (иначе у него крашится приложение, а нам это не нужно).
+    function isBanned() {
+      return request.auth != null && (
+        request.auth.uid == '1rBstYZgAAR7YjhIGegcwT9kfPV2'
+        || request.auth.uid == '2ocWWmfpANNmPk1vInBpnBHfUBH3'
+      );
+    }
+
     // ============================================
     // 📋 ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ
     // Профиль большой (сессии, предметы, квесты) — проверяем только
@@ -20,9 +31,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
 
-      // Владелец пишет в свой профиль ИЛИ админ
-      // + лимит размера: цельный профиль не может быть меньше ключевых полей
-      allow write: if isSignedIn() && (
+      // Владелец пишет в свой профиль ИЛИ админ (кроме забаненных)
+      allow write: if isSignedIn() && !isBanned() && (
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
@@ -32,7 +42,7 @@ service cloud.firestore {
         || isAdmin()
       );
 
-      allow create: if isSignedIn() && (
+      allow create: if isSignedIn() && !isBanned() && (
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       );
@@ -49,7 +59,7 @@ service cloud.firestore {
     match /leaderboard/{userId} {
       allow read: if true;
 
-      allow create: if isSignedIn() && (
+      allow create: if isSignedIn() && !isBanned() && (
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
@@ -66,7 +76,7 @@ service cloud.firestore {
       && request.resource.data.level >= 0
       && request.resource.data.level <= 100;
 
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() && !isBanned() && (
         resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
@@ -92,7 +102,7 @@ service cloud.firestore {
     // ============================================
     match /leaderboard_history_1/{userId} {
       allow read: if true;
-      allow write: if isSignedIn() && (
+      allow write: if isSignedIn() && !isBanned() && (
         request.resource.data.get('_ownerUID', '') == request.auth.uid
         || resource.data.get('_ownerUID', '') == request.auth.uid
         || isAdmin()
@@ -101,7 +111,7 @@ service cloud.firestore {
 
     match /leaderboard_history_2/{userId} {
       allow read: if true;
-      allow write: if isSignedIn() && (
+      allow write: if isSignedIn() && !isBanned() && (
         request.resource.data.get('_ownerUID', '') == request.auth.uid
         || resource.data.get('_ownerUID', '') == request.auth.uid
         || isAdmin()
@@ -114,9 +124,9 @@ service cloud.firestore {
     match /transfers/{code} {
       allow read: if true;
 
-      allow create: if request.resource.data.keys().hasAll(['userId', 'data', 'createdAt']);
+      allow create: if isSignedIn() && !isBanned() && request.resource.data.keys().hasAll(['userId', 'data', 'createdAt']);
 
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() && !isBanned() && (
         resource.data.userId == request.auth.uid
         || isAdmin()
       );
@@ -138,13 +148,13 @@ service cloud.firestore {
     match /battles_v2/{roomCode} {
       allow read: if true;
 
-      allow create: if isSignedIn() && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
+      allow create: if isSignedIn() && !isBanned() && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
 
       // Любой авторизованный может обновлять (для PVP дуэлей)
-      allow update: if isSignedIn();
+      allow update: if isSignedIn() && !isBanned();
 
       // Удалять может создатель ИЛИ админ
-      allow delete: if isSignedIn() || isAdmin();
+      allow delete: if (isSignedIn() && !isBanned()) || isAdmin();
     }
 
     // ============================================
@@ -156,10 +166,10 @@ service cloud.firestore {
     // имя/аватар/код комнаты, поэтому любому вошедшему можно читать.
     // ============================================
     match /pendingChallenges/{challengeId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read: if isSignedIn() && !isBanned();
+      allow create: if isSignedIn() && !isBanned();
+      allow update: if isSignedIn() && !isBanned();
+      allow delete: if isSignedIn() && !isBanned();
     }
   }
 }

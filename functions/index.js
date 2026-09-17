@@ -671,3 +671,61 @@ exports.antiCheatLeaderboard = functions.firestore
         }
         return null;
     });
+
+/**
+ * 🧹 PURGE USER — временное средство: удалить читерский профиль и все его
+ * карточки из всех коллекций одним вызовом. Admin SDK обходит правила.
+ * Вызов: /purgeUser?key=SECRET&uid=AUTH_UID   — удалить по auth UID + его users-докам
+ *        /purgeUser?key=SECRET&name=HACKER   — найти и удалить по имени во всех коллекциях
+ * После использования функцию удалить из кода.
+ */
+const PURGE_SECRET = "MB-purge-9f4Kz72mQx";
+exports.purgeUser = functions.https.onRequest(async (req, res) => {
+    if (req.query.key !== PURGE_SECRET) {
+        res.status(403).send("forbidden");
+        return;
+    }
+    const { db } = getAdmin();
+    const uid = req.query.uid;   // Firebase Auth UID
+    const name = req.query.name; // имя игрока (case-insensitive)
+    if (!uid && !name) {
+        res.status(400).json({ ok: false, error: "pass uid or name" });
+        return;
+    }
+
+    const collections = ["users", "leaderboard", "leaderboard_history_1", "leaderboard_history_2"];
+    const deleted = [];
+    const toDelete = new Set(); // полный путь документа
+
+    for (const col of collections) {
+        if (uid) {
+            // Точный doc id = auth UID
+            toDelete.add(`${col}/${uid}`);
+            // users может лежать и под игровым id — ищем по _ownerUID
+            if (col === "users") {
+                const snap = await db.collection(col).where("_ownerUID", "==", uid).get();
+                snap.forEach(d => toDelete.add(`${col}/${d.id}`));
+            }
+        }
+        if (name) {
+            const snap = await db.collection(col).get();
+            snap.forEach(d => {
+                const data = d.data() || {};
+                const nm = String(data.name || (data.user || {}).name || "").toLowerCase();
+                if (nm === String(name).toLowerCase()) toDelete.add(`${col}/${d.id}`);
+            });
+        }
+    }
+
+    for (const path of toDelete) {
+        try {
+            await db.doc(path).delete();
+            deleted.push(path);
+        } catch (e) {
+            // документа нет — норм
+        }
+    }
+
+    console.log(`🧹 PURGE: удалено ${deleted.length}:`, deleted.join(", "));
+    res.json({ ok: true, deleted });
+});
