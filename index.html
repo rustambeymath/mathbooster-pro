@@ -8164,6 +8164,128 @@ const Timer = {
         return TimeGuard.getTrueTime();
     },
 
+    // === ⚡️ АВТОВОССТАНОВЛЕНИЕ ПОСЛЕ ПЕРЕЗАГРУЗКИ СТРАНИЦЫ ===
+    // Ученик случайно обновил экран во время сессии — якорь activeSessionStart
+    // остался в Firebase. Подхватываем сессию бесшовно: таймер продолжает идти
+    // с момента старта, уже оплаченные блоки и записанные чекпоинтами часы
+    // не задваиваются.
+    resumeInterrupted(sessionStart, lastPing) {
+        if (this.active) return false;
+        try {
+            const start = Number(sessionStart);
+            const now = this.getTrueTime();
+            let elapsed = Math.floor((now - start) / 1000);
+            if (!(elapsed > 0) || elapsed > 6 * 3600) return false;
+
+            // 🛡️ Считаем только время под наблюдением: до последнего пульса
+            // (heartbeat каждые 30 сек). Если страницу закрыли надолго, время
+            // отсутствия в зачёт не идёт — накрутить «придётся» не выйдет.
+            const lp = Number(lastPing || 0);
+            if (lp > start) elapsed = Math.min(elapsed, Math.floor((lp - start) / 1000) + 45);
+            else elapsed = Math.min(elapsed, 300); // нет пульса — максимум 5 минут доверия
+            if (elapsed <= 0) return false;
+
+            this.active = true;
+            this.isRunning = true;
+            this.isPaused = false;
+            this.isStrict = false; // строгий режим после перезагрузки не восстановить — продолжаем обычным
+            this.sessionStartTime = start;
+            this.startTime = start;
+            this.totalPausedDuration = 0;
+            this.sessionCoins = 0;
+            this.lastPaidBlock = Math.floor(elapsed / this.REWARD_INTERVAL); // блоки до перезагрузки уже оплачены
+            this.lastCheckTime = 0;
+            this.checkShown = false;
+            this.bankedSec = Number(DB?.user?.lastCheckpointSec || 0);
+            this.nextCheckAt = this.bankedSec + this.CHECK_AFTER_SECONDS;
+            this.realSec = elapsed;
+            this.visualSec = elapsed;
+            this._offlineToastShown = false;
+
+            // Восстанавливаем UI как при обычном запуске
+            this.requestWakeLock();
+            const timerEl = document.getElementById('timer');
+            if (timerEl) {
+                timerEl.classList.remove('timer-hardcore', 'timer-active-anim');
+                timerEl.classList.add('timer-active-anim');
+            }
+            this.tick();
+            const btn = document.getElementById('btn-start');
+            if (btn) {
+                btn.innerText = '⏸ ПАУЗА';
+                btn.style.fontSize = '14px';
+                btn.style.opacity = '1';
+                btn.disabled = false;
+                btn.onclick = () => this.pause();
+            }
+
+            // Освежаем пульс и перевзводим push-напоминание, если проверка ещё впереди
+            if (window.DB_Online && Auth.currentUser) {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, 'users', Auth.currentUser.id);
+                window.DB_Online.updateDoc(docRef, { "user.lastPing": Number(now) }).catch(() => {});
+                if (this.bankedSec < elapsed) {
+                    const remainSec = Math.max(60, this.bankedSec + this.CHECK_AFTER_SECONDS - elapsed);
+                    const checkDoc = window.DB_Online.doc(window.DB_Online.db, 'timerChecks', Auth.currentUser.id);
+                    window.DB_Online.setDoc(checkDoc, {
+                        userId: Auth.currentUser.id,
+                        checkAt: Number(now) + remainSec * 1000,
+                        fcmToken: localStorage.getItem('fcm_token') || '',
+                        sent: false,
+                        createdAt: Date.now()
+                    }).catch(() => {});
+                }
+            }
+
+            const h = Math.floor(elapsed / 3600), m = Math.floor((elapsed % 3600) / 60);
+            App.toast(`⏱️ Сессия восстановлена после перезагрузки: ${h}ч ${m}м на счету — таймер идёт дальше!`);
+            console.log('⚡️ Таймер восстановлен после перезагрузки,Elapsed сек:', elapsed);
+            return true;
+        } catch (e) {
+            console.warn('resumeInterrupted error:', e);
+            this.active = false;
+            return false;
+        }
+    },
+
+    // === ⏹️ ЗАКРЫТИЕ ПРЕРВАННОЙ СЕССИИ, ОСТАВШЕЙСЯ НА ПАУЗЕ ===
+    // Ученик поставил паузу и перезагрузил/закрыл страницу. Сохраняем
+    // наработанное до паузы время и чистим якорь — без показа таймера.
+    async closeInterrupted(sessionStart, pausedAt) {
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            const snap = await window.DB_Online.getDoc(docRef);
+            const u = (snap.data() || {}).user || {};
+            const lastPing = Number(u.lastPing || 0);
+            // Время учёбы: от старта до последнего пульса, но не дальше паузы
+            const monitoredEnd = Math.min(Number(pausedAt), lastPing > 0 ? lastPing + 45000 : Number(pausedAt));
+            let studiedSec = Math.floor((monitoredEnd - Number(sessionStart)) / 1000);
+            studiedSec = Math.max(0, Math.min(studiedSec, 6 * 3600));
+            const banked = Number(u.lastCheckpointSec || 0);
+            const unbanked = Math.max(0, studiedSec - banked);
+
+            if (unbanked >= 60) {
+                const savedRealSec = this.realSec, savedStart = this.sessionStartTime;
+                this.realSec = unbanked;
+                this.sessionStartTime = Number(pausedAt); // дата в журнале = момент паузы
+                await this.saveSession();
+                this.realSec = savedRealSec;
+                this.sessionStartTime = savedStart;
+            }
+
+            if (DB && DB.user) { DB.user.activeSessionStart = null; DB.user.lastPing = null; DB.user.pausedAt = null; }
+            await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null, "user.pausedAt": null });
+            try { localStorage.setItem('MathTimerLastStop', String(Date.now())); } catch(e) {}
+            try { localStorage.removeItem('MathTimerState'); } catch(e) {}
+            if (Auth.currentUser) {
+                const checkRef = window.DB_Online.doc(window.DB_Online.db, 'timerChecks', Auth.currentUser.id);
+                window.DB_Online.deleteDoc(checkRef).catch(() => {});
+            }
+            console.log('⏹️ Прерванная сессия закрыта, сохранено сек:', unbanked);
+        } catch (e) {
+            console.warn('closeInterrupted error:', e);
+        }
+    },
+
     // === PUSH-УВЕДОМЛЕНИЕ: отправляем когда пора проходить проверку ===
     async _sendCheckPush() {
         try {
@@ -8328,6 +8450,24 @@ const Timer = {
         if (this.active) return;
         // Проверяем что Firebase подключён
         if (!window.DB_Online) return App.toast("❌ Сервер недоступен. Попробуйте позже.");
+
+        // ⚡️ ВОССТАНОВЛЕНИЕ: если в Firebase жива незакрытая сессия (случайная
+        // перезагрузка страницы) — продолжаем её, а не начинаем с нуля.
+        try {
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            const snap = await window.DB_Online.getDoc(docRef);
+            const data = snap.data();
+            const serverStart = Number(data?.user?.activeSessionStart || 0);
+            const pausedAt = Number(data?.user?.pausedAt || 0);
+            if (serverStart > 0) {
+                if (pausedAt > 0) {
+                    // Сессия стояла на паузе → закрываем её с сохранением наработанного
+                    await this.closeInterrupted(serverStart, pausedAt);
+                    return App.toast("⏹️ Прошлая сессия закрыта и сохранена. Теперь можно начать новую.");
+                }
+                if (this.resumeInterrupted(serverStart, Number(data?.user?.lastPing || 0))) return;
+            }
+        } catch (e) { console.warn('Recovery check failed:', e); }
 
         await TimeGuard.sync();
 
@@ -8588,6 +8728,12 @@ const Timer = {
                 await this.saveSession();
                 this.realSec = totalSnapshot;
                 this.bankedSec = totalSnapshot;
+                // 💾 Запоминаем границу записанных часов — по ней автовосстановление
+                // после перезагрузки страницы поймёт, что повторно начислять нельзя
+                if (DB && DB.user) {
+                    DB.user.lastCheckpointSec = this.bankedSec;
+                    Data.save();
+                }
             }
 
             // 2. Выходим из паузы проверки (activeSessionStart НЕ трогаем —
@@ -8760,6 +8906,10 @@ const Timer = {
         this.isStrict = false;
         this.active = false;
         this._offlineToastShown = false;
+        // Граница записанных чекпоинтами часов больше не актуальна (сессия закрыта)
+        if (DB && DB.user && DB.user.lastCheckpointSec) {
+            delete DB.user.lastCheckpointSec;
+        }
         // Очищаем сохранённое состояние фонового таймера
         try { localStorage.removeItem('MathTimerState'); } catch(e) {}
         // Удаляем таймер AFK-проверки из Firebase
