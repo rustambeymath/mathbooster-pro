@@ -4589,6 +4589,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 <div class="icon-circle">📊</div>
                 <div style="font-weight: 800; font-size: 13px;">Проценты</div>
             </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('fsu', this)">
+                <div class="icon-circle">🧮</div>
+                <div style="font-weight: 800; font-size: 13px;">ФСУ</div>
+            </div>
         </div>
 
         <button class="btn" onclick="BattleSys.openMenu()" style="background: linear-gradient(45deg, #FF416C, #FF4B2B); color: white; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3); border: none; width: 100%;">
@@ -7255,26 +7259,13 @@ body.dark-mode .tier-name { color: #f7eecf; }
             prompt("Скопируйте номер карты для перевода (Visa):", this.worldCard);
             alert("После перевода скинь скриншот мне в тг @mathboosterpro, чтобы получить код!");
         },
-        
         async enterCode() {
             const c = prompt("Введите промокод:"); 
-            if(!c) return;
             const code = c.trim().toUpperCase();
             
             // 1. ПРОВЕРКА ЛОКАЛЬНО: Брал ли я его уже?
             if(DB.user.usedCodes && DB.user.usedCodes.includes(code)) {
                 return App.toast("Вы уже активировали этот код!");
-            }
-
-            // 2. СТАТИЧНЫЕ КОДЫ
-            const staticRewards = { 
-                "START271":    { c: 1000, msg: "Бонус новичка!" },
-                "YOUTUBE1000":    { c: 1000, msg: "Ютуб 1000 подписчиков!" },
-                "WELCOME314":  { c: 1000, msg: "Добро пожаловать!" }
-            };
-            if (staticRewards[code]) {
-                this.applyReward(code, staticRewards[code]);
-                return;
             }
 
             // 3. ПРОВЕРКА В ОБЛАКЕ
@@ -9575,7 +9566,8 @@ const WeeklyQuestSys = {
                 DB.user.coins += 15; // возврат списанных монет
                 Data.save(); App.updateUI();
                 return App.toast('❌ Игрок не в сети или не найден');
-            }
+
+            }
 
             // Создаём боевую комнату
             const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', code);
@@ -9765,7 +9757,7 @@ const WeeklyQuestSys = {
         },
 
         updateMenuRecordDisplay() {
-            const labels = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Степени', 'fractions': 'Дроби' };
+            const labels = { 'standard': 'Классика', 'sign': 'Найди знак', 'square': 'Степени', 'fractions': 'Дроби', 'percent': 'Проценты', 'fsu': 'ФСУ' };
             // Защита от сбоев
             if (DB && DB.user && DB.user.trainerRecords && DB.user.trainerRecords[this.mode]) {
                 const rec = DB.user.trainerRecords[this.mode][this.difficulty] || 0;
@@ -10267,7 +10259,85 @@ else if (this.mode === 'fractions') {
                 }
             }
 
-            // --- 5. РЕЖИМ: КЛАССИКА 🔢 ---
+            // --- 5. РЕЖИМ: ФСУ (Формулы сокращённого умножения) 🧮 ---
+            else if (this.mode === 'fsu') {
+                // Коэффициенты для загадывания: a/b — числа, k — множитель перед x
+                // Задача: «(kx ± a)² раскрой. Введи коэффициент при x» — ответ ka² и т.п.
+                if (this.difficulty === 'easy') {
+                    // ЛЕГКИЙ: (x ± a)² → коэффициент при x (2a)
+                    const type = Math.random() < 0.5 ? 'sq' : 'sqSum';
+                    const a = Math.floor(Math.random() * 9) + 2; // 2-10
+
+                    if (type === 'sq') {
+                        const sign = Math.random() < 0.5 ? '+' : '-';
+                        this.ans = 2 * a;
+                        document.getElementById('game-problem').innerText = `(x ${sign} ${a})² = x² ± ?x + ${a*a}. ? =`;
+                    } else {
+                        // (x + a)(x - a) = x² - ?
+                        this.ans = a * a;
+                        document.getElementById('game-problem').innerText = `(x + ${a})(x - ${a}) = x² - ?. ? =`;
+                    }
+                }
+                else if (this.difficulty === 'medium') {
+                    // СРЕДНИЙ: логические задачи на формулы (без подстановки чисел)
+                    const type = Math.floor(Math.random() * 4);
+                    const a = Math.floor(Math.random() * 8) + 2; // 2-9
+                    const b = Math.floor(Math.random() * 8) + 2;
+
+                    if (type === 0) {
+                        // Коэффициент при x в (x+a)(x+b) → a+b
+                        this.ans = a + b;
+                        document.getElementById('game-problem').innerText = `(x + ${a})(x + ${b}) = x² + ?x + ${a*b}. ? =`;
+                    } else if (type === 1) {
+                        // (x - a)(x - b) = x² - (a+b)x + ab → коэффициент при x (a+b), всегда положительный
+                        this.ans = a + b;
+                        document.getElementById('game-problem').innerText = `(x - ${a})(x - ${b}) = x² - ?x + ${a*b}. ? =`;
+                    } else if (type === 2) {
+                        // (a + b)² = a² + 2ab + b² → коэффициент при a равен 2b
+                        this.ans = 2 * b;
+                        document.getElementById('game-problem').innerText = `(a + ${b})² = a² + ?a + ${b*b}. ? =`;
+                    } else {
+                        // Обратная логика: x² + 12x + 36 = (x + ?)²
+                        // a² = last, 2a = middle → a = last^(1/2)
+                        const sq = [2,3,4,5,6,7,8,9][Math.floor(Math.random() * 8)];
+                        this.ans = sq;
+                        document.getElementById('game-problem').innerText = `x² + ${2*sq}x + ${sq*sq} = (x + ?)². ? =`;
+                    }
+                }
+                else {
+                    // СЛОЖНЫЙ: формулы 3-й степени + сложная логика (без подстановки)
+                    const type = Math.floor(Math.random() * 5);
+                    const a = Math.floor(Math.random() * 6) + 2; // 2-7
+                    const k = [2, 3, 4][Math.floor(Math.random() * 3)];
+
+                    if (type === 0) {
+                        // Куб суммы: (x+a)³ = x³ + 3a·x² + 3a²·x + a³ → коэффициент при x²
+                        this.ans = 3 * a;
+                        document.getElementById('game-problem').innerText = `(x + ${a})³ = x³ + ?x² + ... . ? =`;
+                    } else if (type === 1) {
+                        // Куб разности: (x-a)³ = x³ - 3a·x² + 3a²·x - a³ → последний член a³
+                        this.ans = a * a * a;
+                        document.getElementById('game-problem').innerText = `(x - ${a})³ = x³ - ${3*a}x² + ... - ?. Последний ? =`;
+                    } else if (type === 2) {
+                        // (kx + m)(kx - m) = k²x² - m² → свободный член m²
+                        const m = Math.floor(Math.random() * 6) + 2;
+                        this.ans = m * m;
+                        document.getElementById('game-problem').innerText = `(${k}x + ${m})(${k}x - ${m}) = ${k*k}x² - ?. ? =`;
+                    } else if (type === 3) {
+                        // Обратная куб-формула: x³ + 6x² + 12x + 8 = (x + ?)³ → 3a=6 → a=2, a³=8
+                        const c = Math.floor(Math.random() * 4) + 2; // 2-5
+                        this.ans = c;
+                        document.getElementById('game-problem').innerText = `x³ + ${3*c}x² + ${3*c*c}x + ${c*c*c} = (x + ?)³. ? =`;
+                    } else {
+                        // Сумма кубов: a³ + b³ = (a+b)(a² - ab + b²) → коэффициент при ab всегда 1
+                        this.ans = 1;
+                        document.getElementById('game-problem').innerText = `Сумма кубов: a³ + b³ = (a + b)(a² - ?ab + b²). ? =`;
+                    }
+                }
+                document.getElementById('game-input').value = '';
+            }
+
+            // --- 6. РЕЖИМ: КЛАССИКА 🔢 ---
             else {
                 // Легко/Средне
                 if (this.difficulty !== 'hard') {
