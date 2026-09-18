@@ -9287,27 +9287,86 @@ const WeeklyQuestSys = {
 
     
     const BattleSys = {
-    bet: 50,
+    bet: 15,
     currentCode: null,
     listener: null,
     myRole: null,
     gameStarted: false,
+    _betReserved: false,   // 🛡️ ставка зарезервирована (списана, ждёт исхода)
+    _closing: false,       // 🛡️ защита от двойного закрытия/возврата
     
     selectedMode: 'standard',
     selectedDiff: 'easy',
     
-    // Генерация кода
+    // 🛡️ ЕДИНАЯ ТОЧКА РЕЗЕРВИРОВАНИЯ СТАВКИ
+    // Списывает монеты ОДИН раз и помечает сессию как активную
+    reserveBet(amount) {
+        if (this._betReserved) return true; // уже зарезервировано
+        amount = amount || 15;
+        if (DB.user.coins < amount) {
+            App.toast(`Нужно минимум ${amount} монет!`);
+            return false;
+        }
+        DB.user.coins -= amount;
+        this.bet = amount;
+        this._betReserved = true;
+        this._closing = false;
+        Data.save();
+        App.updateUI();
+        return true;
+    },
+    
+    // 🛡️ ЕДИНАЯ ТОЧКА ВОЗВРАТА СТАВКИ (строго один раз)
+    refundBet(msg) {
+        if (!this._betReserved || this._closing) return; // уже возвращено/не списано
+        this._closing = true;
+        DB.user.coins += this.bet || 15;
+        this._betReserved = false;
+        Data.save();
+        App.updateUI();
+        if (msg) App.toast(msg);
+    },
+    
+    // 🛡️ ЗАВЕРШЕНИЕ СЕССИИ — сброс всех флагов и слушателей
+    teardown() {
+        if (this.listener) { this.listener(); this.listener = null; }
+        this.currentCode = null;
+        this.myRole = null;
+        this.gameStarted = false;
+        this._betReserved = false;
+        this._closing = false;
+    },
+    
+    // Генерация кода (4 цифры, непустой)
     generateCode() {
-        const rand = Math.floor(Math.random() * 900) + 100;
+        const rand = Math.floor(Math.random() * 9000) + 1000;
         document.getElementById('battle-code-create').value = rand;
     },
     
     // Создать бой
     async createBattle() {
-        const code = document.getElementById('battle-code-create').value.trim();
+        let code = document.getElementById('battle-code-create').value.trim();
         if (!code || code.length < 3) {
-            return App.toast("❌ Сгенерируй код сначала!");
+            this.generateCode();
+            code = document.getElementById('battle-code-create').value.trim();
         }
+        
+        // 🛡️ Защита от самому с собой: тот же код уже ждёт с моим p1_id
+        try {
+            const existing = await window.DB_Online.getDoc(window.DB_Online.doc(window.DB_Online.db, "battles_v2", code));
+            if (existing.exists()) {
+                const d = existing.data();
+                if (d.p1_id === Auth.currentUser.id && !d.p2) {
+                    // Моя же живая комната — просто возвращаюсь в лобби
+                    this.currentCode = code;
+                    this.myRole = 'p1';
+                    this.showLobby();
+                    this.startListening(window.DB_Online.doc(window.DB_Online.db, "battles_v2", code));
+                    return App.toast("⚔️ Ты уже ждёшь соперника в этой комнате");
+                }
+                return App.toast("❌ Этот код уже занят. Сгенерируй другой!");
+            }
+        } catch (e) { /* сеть — продолжим, connect() откатит */ }
         
         this.currentCode = code;
         await this.connect();
@@ -9319,6 +9378,22 @@ const WeeklyQuestSys = {
         if (!code || code.length < 3) {
             return App.toast("❌ Введи код комнаты!");
         }
+        
+        // 🛡️ Нельзя присоединиться к СВОЕЙ комнате waiting (само-дуэль баг)
+        try {
+            const existing = await window.DB_Online.getDoc(window.DB_Online.doc(window.DB_Online.db, "battles_v2", code));
+            if (existing.exists()) {
+                const d = existing.data();
+                if (d.p1_id === Auth.currentUser.id) {
+                    return App.toast("❌ Это твоя же комната! Жди соперника.");
+                }
+                if (d.p2 && d.p2 !== null) {
+                    return App.toast("⛔️ Комната уже полная!");
+                }
+            } else {
+                return App.toast("❌ Комната не найдена. Проверь код!");
+            }
+        } catch (e) { /* сеть */ }
         
         this.currentCode = code;
         await this.connect();
@@ -9379,17 +9454,9 @@ const WeeklyQuestSys = {
         // this.currentCode уже установлен в createBattle() или joinBattle()
         const code = this.currentCode;
 
-        // Кулдаун отключён — можно создавать бесконечно
-        const now = Date.now();
-
-        // 2. Проверка монет (динамическая ставка по уровню)
-        this.bet = Math.max(15, Math.floor((DB.user.level || 1) * 10));
-        if (DB.user.coins < this.bet) return App.toast(`Нужно минимум ${this.bet} монет!`);
-
-        // 🔒 СПИСЫВАЕМ МОНЕТЫ
-        DB.user.coins -= this.bet;
-        Data.save();
-        App.updateUI();
+        // 2. Проверка монет (динамическая ставка по уровню) + 🛡️ резервирование ОДИН раз
+        const bet = Math.max(15, Math.floor((DB.user.level || 1) * 10));
+        if (!this.reserveBet(bet)) return;
 
         App.toast("⏳ Подключение...");
 
@@ -9403,9 +9470,7 @@ const WeeklyQuestSys = {
             } else {
                 const data = snap.data();
                 if (data.p2) {
-                    DB.user.coins += this.bet;
-                    Data.save();
-                    App.updateUI();
+                    this.refundBet();
                     return alert("⛔️ Комната уже полная!");
                 }
                 
@@ -9418,10 +9483,7 @@ const WeeklyQuestSys = {
 
         } catch (e) {
             console.error(e);
-            DB.user.coins += this.bet;
-            Data.save();
-            App.updateUI();
-            App.toast("Ошибка сети. Монеты возвращены.");
+            this.refundBet("Ошибка сети. Монеты возвращены.");
         }
     },
 
@@ -9440,6 +9502,7 @@ const WeeklyQuestSys = {
             diff: this.selectedDiff,
             status: 'waiting',
             date: new Date().toISOString(),
+            createdAt: Date.now(),
             expiresAt: expiresAt
         });
     },
@@ -9469,24 +9532,23 @@ const WeeklyQuestSys = {
     },
 
     startListening(docRef) {
+        if (this.listener) this.listener(); // 🛡️ старый слушатель — вон
         this.listener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
             if (!docSnap.exists()) return;
             const data = docSnap.data();
 
             // Проверка истечения времени
             if (data.expiresAt && Date.now() > data.expiresAt && data.status === 'waiting') {
-                if (this.listener) this.listener();
-                DB.user.coins += this.bet || 15;
-                Data.save();
-                App.updateUI();
-                App.toast("⏰ Время ожидания истекло. Монеты возвращены.");
-                location.reload();
+                this.teardown();
+                this.refundBet("⏰ Время ожидания истекло. Монеты возвращены.");
+                document.getElementById('battle-modal').classList.remove('show');
                 return;
             }
 
             // Обновляем имена
             if (data.p1) document.getElementById('p1-name').innerText = data.p1 + (this.myRole === 'p1' ? " (Вы)" : "");
             if (data.p2) document.getElementById('p2-name').innerText = data.p2 + (this.myRole === 'p2' ? " (Вы)" : "");
+            else if (this.myRole === 'p1') document.getElementById('p2-name').innerText = "Ожидание...";
 
             // Гость видит настройки хоста
             if (this.myRole === 'p2' && data.mode && data.diff) {
@@ -9508,33 +9570,39 @@ const WeeklyQuestSys = {
     },
 
     async leaveLobby() {
-        if (this.listener) this.listener();
+        const wasReserved = this._betReserved;
+        const iAmHost = this.myRole === 'p1' && this.currentCode;
+        const code = this.currentCode;
+        const started = this.gameStarted;
         
-        if (!this.gameStarted) {
-            DB.user.coins += this.bet || 15;
-            Data.save();
-            App.updateUI();
-            App.toast("💰 Монеты возвращены");
-            
-            if (this.myRole === 'p1' && this.currentCode) {
-                try {
-                    const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", this.currentCode);
-                    await window.DB_Online.deleteDoc(docRef);
-                } catch (e) {
-                    console.error("Не удалось удалить комнату:", e);
-                }
-            }
+        // 🛡️ Возврат ставки ДО teardown (teardown сбрасывает флаги)
+        if (!started && wasReserved) {
+            this.refundBet("💰 Монеты возвращены");
         }
         
-        location.reload();
+        this.teardown();
+        document.getElementById('battle-modal').classList.remove('show');
+        
+        // Хост, ушедший из лобби, закрывает комнату (соперник не зависнет в ожидании)
+        if (!started && iAmHost && code) {
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, "battles_v2", code);
+                await window.DB_Online.deleteDoc(docRef);
+            } catch (e) {
+                console.error("Не удалось удалить комнату:", e);
+            }
+        }
     },
 
     // === ВЫЗОВ НА ДУЭЛЬ ИЗ ТОПА ===
     _challengeUnsub: null,
     async challengePlayer(targetId, targetName, targetFcmToken) {
         // Проверки
-        if (DB.user.coins < 15) return App.toast('❌ Нужно минимум 15 💰 для дуэли');
         if (!window.DB_Online) return App.toast('⚠️ Нет связи с сервером');
+        if (targetId === Auth.currentUser.id) return App.toast('❌ Нельзя вызвать самого себя!');
+        
+        // 🛡️ Резервируем ставку ОДИН раз (защита от двойного клика)
+        if (!this.reserveBet(15)) return;
         
         const now = Date.now();
         
@@ -9545,13 +9613,7 @@ const WeeklyQuestSys = {
         // Генерируем код комнаты
         const code = String(Math.floor(Math.random() * 9000) + 1000);
         this.currentCode = code;
-        this.bet = 15;
         this.myRole = 'p1';
-        
-        // Списываем монеты
-        DB.user.coins -= 15;
-        Data.save();
-        App.updateUI();
         
         try {
             // 🎯 Проверяем что цель существует и онлайн (иначе вызов уйдёт в никуда)
@@ -9563,10 +9625,8 @@ const WeeklyQuestSys = {
                 if (targetSnap.exists()) targetProfile = targetSnap.data();
             } catch(e) {}
             if (!targetProfile || (Date.now() - Number(targetProfile.lastActive || 0)) >= 300000) {
-                DB.user.coins += 15; // возврат списанных монет
-                Data.save(); App.updateUI();
+                this.refundBet();
                 return App.toast('❌ Игрок не в сети или не найден');
-
             }
 
             // Создаём боевую комнату
@@ -9574,6 +9634,10 @@ const WeeklyQuestSys = {
             await window.DB_Online.setDoc(docRef, {
                 p1: DB.user.name,
                 p1_id: Auth.currentUser.id,
+                p1_score: -1,
+                p2: null,
+                p2_id: null,
+                p2_score: -1,
                 bet: 15,
                 mode: this.selectedMode || 'standard',
                 diff: this.selectedDiff || 'easy',
@@ -9605,10 +9669,7 @@ const WeeklyQuestSys = {
         } catch (e) {
             console.error('Challenge error:', e);
             // Возвращаем монеты при ошибке
-            DB.user.coins += 15;
-            Data.save();
-            App.updateUI();
-            App.toast('\u274c \u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u0434\u0443\u044d\u043b\u0438. \u041c\u043e\u043d\u0435\u0442\u044b \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0435\u043d\u044b.');
+            this.refundBet('\u274c \u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u0434\u0443\u044d\u043b\u0438. \u041c\u043e\u043d\u0435\u0442\u044b \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0435\u043d\u044b.');
         }
     },
 
@@ -9677,14 +9738,30 @@ const WeeklyQuestSys = {
             acceptBtn.onclick = async () => {
                 cleanup();
                 
-                // Принимаем вызов
-                this.currentCode = data.battleCode;
-                this.bet = 15;
-                this.myRole = 'p2';
-                DB.user.coins -= 15;
+                // 🛡️ Проверка что комната ещё жива и свободна
+                try {
+                    const roomSnap = await window.DB_Online.getDoc(window.DB_Online.doc(window.DB_Online.db, 'battles_v2', data.battleCode));
+                    if (!roomSnap.exists()) {
+                        window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                        return App.toast('⌛ Комната дуэли уже закрыта');
+                    }
+                    const rd = roomSnap.data();
+                    if (rd.p2 && rd.p2 !== null) {
+                        window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                        return App.toast('⛔️ Кто-то уже принял этот вызов');
+                    }
+                    if (rd.p1_id === Auth.currentUser.id) {
+                        window.DB_Online.deleteDoc(challengeRef).catch(() => {});
+                        return App.toast('❌ Это твой собственный вызов');
+                    }
+                } catch (e) {
+                    return App.toast('⚠️ Ошибка сети');
+                }
+                
+                // 🛡️ Резервируем ставку ОДИН раз
+                if (!this.reserveBet(15)) return;
                 DB.user.lastBattleTime = Date.now();
                 Data.save();
-                App.updateUI();
                 
                 // Присоединяемся к комнате
                 try { const docRef = window.DB_Online.doc(window.DB_Online.db, 'battles_v2', data.battleCode);
@@ -9693,11 +9770,13 @@ const WeeklyQuestSys = {
                         p2_id: Auth.currentUser.id,
                         status: 'ready'
                     });
+                    this.currentCode = data.battleCode;
+                    this.myRole = 'p2';
                     this.gameStarted = true;
                     this.startListening(docRef);
                     SoundSys.play('success');
                     App.toast('⚔️ Дуэль начинается!');
-                } catch(e) { console.error('Accept error:', e); DB.user.coins += 15; Data.save(); App.updateUI(); App.toast('❌ Ошибка. Монеты возвращены.'); }
+                } catch(e) { console.error('Accept error:', e); this.refundBet('❌ Ошибка. Монеты возвращены.'); }
                 
                 // Удаляем документ вызова
                 window.DB_Online.deleteDoc(challengeRef).catch(() => {});
@@ -9813,6 +9892,7 @@ const WeeklyQuestSys = {
 
         init() { 
             this.unlockControls(); // <--- ЛЕКАРСТВО
+            this._duelSettled = false; // 🛡️ сброс при возврате в меню
             // Скрываем Battle HUD если остался
             document.getElementById('battle-hud').classList.remove('active');
             document.getElementById('normal-stats').style.display = '';
@@ -10579,7 +10659,18 @@ else if (this.mode === 'fractions') {
             clearInterval(this.interval); 
             document.getElementById('trainer-game').style.display = 'none'; 
             
-            // Расчет награды
+            if (this.isDuel) {
+                // ⚔️ В ДУЭЛИ — БЕЗ обычной награды (ставка/приз решают всё)
+                // Убираем Battle HUD
+                document.getElementById('battle-hud').classList.remove('active');
+                document.getElementById('normal-stats').style.display = '';
+                if (this._rivalScoreListener) { this._rivalScoreListener(); this._rivalScoreListener = null; }
+                this.handleDuelEnd();
+                this.isDuel = false;
+                return; 
+            }
+            
+            // Расчет награды (только обычная игра)
             let mult = (this.difficulty === 'hard') ? 10 : (this.difficulty === 'medium' ? 7 : 4);
             const earnedXP = this.score * mult; 
 
@@ -10589,16 +10680,6 @@ else if (this.mode === 'fractions') {
             App.addXP(earnedXP);
             if(earnedCoins > 0) { 
                 DB.user.coins += earnedCoins; 
-            }
-
-            if (this.isDuel) {
-                // Убираем Battle HUD
-                document.getElementById('battle-hud').classList.remove('active');
-                document.getElementById('normal-stats').style.display = '';
-                if (this._rivalScoreListener) { this._rivalScoreListener(); this._rivalScoreListener = null; }
-                this.handleDuelEnd();
-                this.isDuel = false;
-                return; 
             }
 
             // ПОКАЗЫВАЕМ РЕЗУЛЬТАТ
@@ -10633,6 +10714,7 @@ else if (this.mode === 'fractions') {
             this.pvpCode = code;
             this.duelBet = bet; 
             this.isDuel = true; 
+            this._duelSettled = false; // 🛡️ сброс флага награды для нового боя
             
             this.mode = mode || 'standard';
             this.difficulty = diff || 'easy';
@@ -10732,7 +10814,11 @@ else if (this.mode === 'fractions') {
             // Отправляем свой счет
             const updateData = {};
             updateData[`${this.pvpRole}_score`] = score;
-            await window.DB_Online.updateDoc(docRef, updateData);
+            try {
+                await window.DB_Online.updateDoc(docRef, updateData);
+            } catch (e) {
+                console.error('Не удалось отправить счёт:', e);
+            }
 
             // --- ТАЙМ-АУТ (ЗАЩИТА) ---
             let timeLeft = 120;
@@ -10750,7 +10836,11 @@ else if (this.mode === 'fractions') {
             // Слушаем результат
             this.pvpListener = window.DB_Online.onSnapshot(docRef, (docSnap) => {
                 const data = docSnap.data();
-                if (data.p1_score !== -1 && data.p2_score !== -1) {
+                if (!data) return;
+                const my = this.pvpRole === 'p1' ? data.p1_score : data.p2_score;
+                const opp = this.pvpRole === 'p1' ? data.p2_score : data.p1_score;
+                // 🛡️ -1 = "ещё не сыграл". Ждём ОБА реальных счёта (0 — валидный счёт!)
+                if (my !== -1 && opp !== -1) {
                     clearInterval(timeoutInterval);
                     this.finishPVP(data);
                 }
@@ -10759,19 +10849,35 @@ else if (this.mode === 'fractions') {
 
         // Функция для тех. победы
         claimTechnicalWin() {
-            alert("⚔️ Соперник сбежал! Техническая победа!");
+            // 🛡️ Защита от двойной выдачи награды
+            if (this._duelSettled) return;
+            this._duelSettled = true;
+            
+            alert("⚔️ Соперник не ответил! Ставка возвращена.");
+            // 🛡️ Возврат ставки (а не Award: соперник мог просто выйти)
             DB.user.coins += this.duelBet; 
 
-            DB.user.pvpWins = (DB.user.pvpWins || 0) + 1;
-            
-            document.querySelector('#trainer-result h2').innerText = "⚖️ НИЧЬЯ";
-            document.getElementById('result-coins').innerText = "Соперник покинул бой (ставка возвращена)";
+            document.querySelector('#trainer-result h2').innerText = "🤝 НИЧЬЯ (тех.)";
+            document.getElementById('result-coins').innerText = "Соперник не закончил — ставка возвращена";
             Data.save();
             App.updateUI();
+            
+            const btn = document.querySelector('#trainer-result button');
+            if (btn) {
+                btn.innerText = "✓ Закрыть";
+                btn.onclick = () => {
+                    document.getElementById('trainer-result').style.display = 'none';
+                    Trainer.init();
+                };
+            }
         },
 
         // Финал: оба закончили
         finishPVP(data) {
+            // 🛡️ Защита от двойной выдачи (two snapshots / timeout race)
+            if (this._duelSettled) return;
+            this._duelSettled = true;
+            
             if (this.pvpListener) this.pvpListener();
 
             const myScore = (this.pvpRole === 'p1') ? data.p1_score : data.p2_score;
@@ -10784,7 +10890,7 @@ else if (this.mode === 'fractions') {
             if (myScore > oppScore) {
                 msg = "🏆 ПОБЕДА!";
                 resultMsg = `Ты выиграл ${myScore} : ${oppScore}`;
-                DB.user.coins += data.bet * 2;
+                DB.user.coins += data.bet * 2; // 🛡️ своя ставка + ставка соперника
                 DB.user.pvpWins = (DB.user.pvpWins || 0) + 1;
                 SoundSys.play('win');
                 FX.confetti();
