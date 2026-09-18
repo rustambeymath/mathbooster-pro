@@ -11120,8 +11120,33 @@ else if (this.mode === 'fractions') {
             const data = await response.json();
             clearTimeout(timeoutId);
             
-            const serverTime = new Date(data.dateTime).getTime();
-            this.serverOffset = serverTime - Date.now();
+            // 🛡️ FIX (+120 мин при смене пояса): API возвращает МЕСТНОЕ время
+            // выбранной зоны БЕЗ маркера зоны ("2026-09-18T18:30:58"). Старый код
+            // делал new Date(data.dateTime), и браузер парсил это как ЛОКАЛЬНОЕ
+            // время устройства. При смене пояса (Москва → Ташкент = +2ч) офсет
+            // прыгал ровно на разницу зон, и идущий таймер мгновенно получал +120 мин.
+            //
+            // Правильно: собираем UTC-время из ПОЛЕЙ ответа (API отдаёт их как
+            // составляющие времени ВЫБРАННОЙ зоны) и вычитаем зону вручную.
+            const tzOffsetMin = this._getZoneOffsetMinutes(data.timeZone || userTZ);
+            const asUTC = Date.UTC(
+                data.year, data.month - 1, data.day,
+                data.hour, data.minute, data.seconds, data.milliSeconds || 0
+            );
+            const serverTime = asUTC - tzOffsetMin * 60000; // → истинный UTC-мгновенный момент
+            
+            const newOffset = serverTime - Date.now();
+            
+            // 🛡️ ЗАЩИТА ОТ СКАЧКА: реальная разница зон меняется редко, а вот
+            // подмена часов или кривой ответ API — запросто. Если офсет прыгнул
+            // больше чем на 5 минут между синхронизациями — не применяем его
+            // немедленно (иначе идущий таймер улетит). Ограничиваем шаг.
+            const drift = Math.abs(newOffset - (this.serverOffset || 0));
+            if (this.serverOffset !== 0 && drift > 5 * 60000) {
+                console.warn(`⚠️ Прыжок офсета ${drift}ms отклонён (смена зоны НЕ должна двигать время). Старый офсет оставлен.`);
+            } else {
+                this.serverOffset = newOffset;
+            }
             
             console.log(`✅ Синхронизация с ${userTZ}. Офсет: ${this.serverOffset}ms`);
         } catch (e) {
@@ -11131,8 +11156,31 @@ else if (this.mode === 'fractions') {
         this.isSyncing = false;
     },
 
+    // 🛡️ Смещение зоны в минутах (как getTimezoneOffset, но для ЛЮБОЙ IANA-зоны).
+    // formatToParts даёт «настенное» время зоны; сравнение с UTC даёт смещение.
+    _getZoneOffsetMinutes(tz) {
+        try {
+            const now = Date.now();
+            const dtf = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz, hour12: false,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            const parts = {};
+            dtf.formatToParts(new Date(now)).forEach(p => { parts[p.type] = p.value; });
+            const asUTC = Date.UTC(
+                +parts.year, +parts.month - 1, +parts.day,
+                +parts.hour % 24, +parts.minute, +parts.second
+            );
+            return Math.round((asUTC - now) / 60000);
+        } catch (e) {
+            return 0; // неизвестная зона — считаем UTC
+        }
+    },
+
     getTrueTime() {
-        // Теперь эта функция ВСЕГДА возвращает точное время Ташкента
+        // Возвращает истинный момент времени (UTC-эпоха) с поправкой на
+        // расхождение часов устройства и сервера. НЕ зависит от выбора пояса.
         return Date.now() + this.serverOffset;
     }
 };
@@ -11388,6 +11436,17 @@ else if (this.mode === 'fractions') {
         },
     async changeTimezone(tz) {
         if (!DB.user) return;
+        
+        // 🛡️ ЗАЩИТА ОТ +120 МИН: смена пояса во время идущего таймера
+        // перевзводит TimeGuard и исторически двигала время сессии.
+        // Пояс влияет ТОЛЬКО на отображение дат (журнал), не на ход времени.
+        if (Timer.active) {
+            // Возвращаем селект к текущему значению
+            const sel = document.getElementById('timezone-select');
+            if (sel) sel.value = DB.user.timezone || 'Asia/Tashkent';
+            return App.toast("⏱️ Сначала останови таймер — потом меняй пояс!");
+        }
+        
         DB.user.timezone = tz;
         
         App.toast("⏳ Синхронизация пояса...");
@@ -11395,7 +11454,7 @@ else if (this.mode === 'fractions') {
         // 1. Сохраняем в базу
         Data.save();
         
-        // 2. Принудительно обновляем время под новый пояс
+        // 2. Обновляем отображение дат под новый пояс (ход времени НЕ меняется)
         await TimeGuard.sync();
         
         // 3. Обновляем интерфейс
