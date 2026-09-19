@@ -6310,6 +6310,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                         level: DB.user.level || 1,
                         currentTitle: DB.user.currentTitle || "",
                         currentFrame: DB.user.currentFrame || null,
+                        isPro: !!DB.user.isPro,
+                        isVip: !!DB.user.isVip,
+                        isKing: !!DB.user.isKing,
+                        isTitan: !!DB.user.isTitan,
                         season: CURRENT_SEASON,
                         lastActive: Date.now()
                     }, { merge: true });
@@ -6912,9 +6916,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     level: DB.user.level,
                     currentTitle: DB.user.currentTitle || "",
                     currentFrame: DB.user.currentFrame || null,
-                    isVip: DB.user.isVip || false,
-                    isKing: DB.user.isKing || false,
-                    isTitan: DB.user.isTitan || false,
+                    isPro: !!DB.user.isPro,
+                    isVip: !!DB.user.isVip,
+                    isKing: !!DB.user.isKing,
+                    isTitan: !!DB.user.isTitan,
                     _ownerUID: window._firebaseUID || null,
                     lastActive: Date.now(),
                     fcmToken: DB.user.fcmToken || null

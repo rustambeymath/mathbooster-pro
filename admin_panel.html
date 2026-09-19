@@ -296,6 +296,9 @@
                 const s = data.subjects || {};
                 const uid = docSnap.id;
                 const authUid = data._ownerUID || '';
+                // Запоминаем _ownerUID найденного юзера — saveUser() сохранит его в Топ,
+                // чтобы правила не отклонили запись карточки
+                window._lastFoundUser = { _ownerUID: data._ownerUID || null };
                 
                 let subjectsHtml = '';
                 ALL_SUBJECTS_LIST.forEach(key => {
@@ -403,8 +406,8 @@
                 </div>`;
                 results.innerHTML += html;
             });
-            // Синхронизируем статусы по монетам для всех найденных пользователей
-            querySnapshot.forEach((docSnap) => { window.syncStatusFromCoins(docSnap.id); });
+            // Галочки уже выставлены из реальных данных БД при рендере —
+            // автосинк по монетам здесь перезаписывал бы снятые статусы.
             log(`Найдено: ${querySnapshot.size}`, "success");
         } catch (e) { log("Ошибка поиска: " + e.message, "error"); }
     };
@@ -483,10 +486,11 @@
             const level = parseInt(document.getElementById(`level_${uid}`).value);
             const xp = parseInt(document.getElementById(`xp_${uid}`).value);
             
-            // Синхронизируем статусы по монетам (автоматически)
-            window.syncStatusFromCoins(uid);
+            // ⚠️ НЕ синхронизируем статусы по монетам: галочки читаем КАК ЕСТЬ.
+            // Иначе снятая админом галочка автоматически возвращается при сохранении
+            // (автосинк остаётся только при вводе суммы пакета в поле монет).
             
-            // СЧИТЫВАЕМ ВСЕ СТАТУСЫ (теперь они синхронизированы с монетами)
+            // СЧИТЫВАЕМ СТАТУСЫ С УЧЁТОМ РУЧНЫХ ПРАВОК
             const isPro = document.getElementById(`pro_${uid}`).checked;
             const isVip = document.getElementById(`vip_${uid}`).checked;
             const isKing = document.getElementById(`king_${uid}`).checked;
@@ -526,7 +530,7 @@
             });
 
             const topRef = doc(db, "leaderboard", uid);
-            await setDoc(topRef, {
+            const topCard = {
                 name: name,
                 totalSec: newTotalSec,
                 level: level,
@@ -536,7 +540,11 @@
                 isKing: isKing,
                 isTitan: isTitan, 
                 lastActive: Date.now()
-            }, { merge: true });
+            };
+            if (window._lastFoundUser && window._lastFoundUser._ownerUID) {
+                topCard._ownerUID = window._lastFoundUser._ownerUID;
+            }
+            await setDoc(topRef, topCard, { merge: true });
 
             const statusText = currentTitle ? ` (${currentTitle})` : '';
             log(`✅ ${name} обновлен: ${coins} 💰${statusText}`, "success");
