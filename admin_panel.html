@@ -137,6 +137,13 @@
     <div id="statusResult"></div>
     <div id="resultsArea"></div>
 
+    <!-- 📊 СТАТИСТИКА СЕЗОНОВ -->
+    <div class="card" style="border-color: #1f6feb;">
+        <h3 style="color: #58a6ff; margin-top: 0;">📊 Статистика сезонов</h3>
+        <button class="btn-search" onclick="window.loadSeasonStats()">📈 ЗАГРУЗИТЬ СТАТИСТИКУ</button>
+        <div id="seasonStatsArea" style="margin-top: 15px;"></div>
+    </div>
+
     <div class="card">
         <h3>📜 Лог</h3>
         <div id="log"></div>
@@ -576,6 +583,90 @@
             document.getElementById('resultsArea').innerHTML = '';
         } catch(e) { log("Ошибка: " + e.message, "error"); }
     }
+
+    // === 📊 СТАТИСТИКА СЕЗОНОВ ===
+    // Агрегация по leaderboard (текущий сезон) и leaderboard_history_N (архивы).
+    const SEASON_META = {
+        1: { name: 'Сезон 1', status: '🔒 ЗАВЕРШЁН (архив)' },
+        2: { name: 'Сезон 2', status: '🔴 АКТИВНЫЙ' }
+    };
+
+    window.loadSeasonStats = async () => {
+        const area = document.getElementById('seasonStatsArea');
+        area.innerHTML = '<div style="color:#aaa; text-align:center;">⏳ Считаю...</div>';
+        try {
+            // 1. Текущий сезон — из живой leaderboard
+            const curSnap = await getDocs(collection(db, 'leaderboard'));
+            const seasons = [{ season: 2, docs: curSnap }];
+
+            // 2. Архивы
+            for (const s of [1]) {
+                try { seasons.push({ season: s, docs: await getDocs(collection(db, 'leaderboard_history_' + s)) }); } catch (e) { /* архива нет — пропускаем */ }
+            }
+
+            let html = '';
+            for (const { season, docs } of seasons) {
+                let players = 0, totalSec = 0, maxSec = 0, topPlayer = { name: '—', sec: 0 };
+                let statuses = { pro: 0, vip: 0, king: 0, titan: 0 };
+                let levels = [];
+                docs.forEach(d => {
+                    const u = d.data() || {};
+                    // В живой таблице лежат карточки прошлых сезонов (season < CURRENT) — фильтруем
+                    if (season === 2 && (u.season !== undefined) && Number(u.season) !== 2) return;
+                    players++;
+                    const sec = Number(u.totalSec) || 0;
+                    totalSec += sec;
+                    if (sec > maxSec) { maxSec = sec; topPlayer = { name: u.name || '—', sec }; }
+                    if (u.isTitan) statuses.titan++; else if (u.isKing) statuses.king++;
+                    else if (u.isPro) statuses.pro++; else if (u.isVip) statuses.vip++;
+                    if (u.level) levels.push(Number(u.level));
+                });
+                levels.sort((a, b) => b - a);
+                const meta = SEASON_META[season] || { name: 'Сезон ' + season, status: '' };
+                const avgSec = players ? totalSec / players : 0;
+                const fmt = s => {
+                    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+                    return h + 'ч ' + m + 'м';
+                };
+                const activeMeta = SEASON_META[2];
+                html += `
+                <div style="background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:15px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <b style="color:white; font-size:16px;">🏆 ${meta.name}</b>
+                        <span style="font-size:11px; color:${season === 2 ? '#f85149' : '#8b949e'}; font-weight:bold;">${meta.status}</span>
+                    </div>
+                    <div class="grid-4" style="margin-bottom:10px;">
+                        <div style="background:#161b22; border-radius:6px; padding:10px; text-align:center;">
+                            <div style="font-size:22px; font-weight:bold; color:#58a6ff;">${players}</div>
+                            <div style="font-size:10px; color:#8b949e;">ИГРОКОВ</div>
+                        </div>
+                        <div style="background:#161b22; border-radius:6px; padding:10px; text-align:center;">
+                            <div style="font-size:22px; font-weight:bold; color:#3fb950;">${fmt(totalSec)}</div>
+                            <div style="font-size:10px; color:#8b949e;">ВСЕГО ЧАСОВ</div>
+                        </div>
+                        <div style="background:#161b22; border-radius:6px; padding:10px; text-align:center;">
+                            <div style="font-size:22px; font-weight:bold; color:#d29922;">${fmt(avgSec)}</div>
+                            <div style="font-size:10px; color:#8b949e;">СРЕДНИЙ</div>
+                        </div>
+                        <div style="background:#161b22; border-radius:6px; padding:10px; text-align:center;">
+                            <div style="font-size:22px; font-weight:bold; color:#f85149;">${fmt(maxSec)}</div>
+                            <div style="font-size:10px; color:#8b949e;">РЕКОРД</div>
+                        </div>
+                    </div>
+                    <div style="font-size:12px; color:#8b949e; line-height:1.8;">
+                        🥇 Лидер: <b style="color:#d29922;">${topPlayer.name}</b> — ${fmt(topPlayer.sec)}<br>
+                        ⭐ PRO: ${statuses.pro} &nbsp;|&nbsp; 💎 VIP: ${statuses.vip} &nbsp;|&nbsp; 👑 KING: ${statuses.king} &nbsp;|&nbsp; 🌌 TITAN: ${statuses.titan}<br>
+                        📈 Макс. уровень: <b style="color:#58a6ff;">${levels[0] || 0}</b> &nbsp;|&nbsp; Средний: ${levels.length ? Math.round(levels.reduce((a, b) => a + b, 0) / levels.length) : 0}
+                    </div>
+                </div>`;
+            }
+            area.innerHTML = html;
+            log('📊 Статистика сезонов загружена', 'success');
+        } catch (e) {
+            area.innerHTML = `<div style="color:#f85149;">Ошибка: ${e.message}</div>`;
+            log('Ошибка статистики: ' + e.message, 'error');
+        }
+    };
 
     // === 🛡️ КЛЮЧ АДМИНА для серверных функций ===
     const ADMIN_KEY = "MB-purge-9f4Kz72mQx";
