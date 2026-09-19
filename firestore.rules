@@ -12,13 +12,15 @@ service cloud.firestore {
     }
 
     // 🚫 БАН-ЛИСТ — забаненные Firebase Auth UID.
-    // Забаненный не может: создать/записать профиль, карточку Топа,
-    // архивную карточку, код восстановления, вызов на дуэль.
+    // Динамический список: админ банит через admin_panel → Cloud Function пишет
+    // в коллекцию banned_users/{authUID} → правила видят бан мгновенно.
+    // Старые хардкод-UID оставлены для надёжности (если коллекция недоступна).
     // Чтение не запрещаем (иначе у него крашится приложение, а нам это не нужно).
     function isBanned() {
       return request.auth != null && (
         request.auth.uid == '1rBstYZgAAR7YjhIGegcwT9kfPV2'
         || request.auth.uid == '2ocWWmfpANNmPk1vInBpnBHfUBH3'
+        || exists(/databases/$(database)/documents/banned_users/$(request.auth.uid))
       );
     }
 

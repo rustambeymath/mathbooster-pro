@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathBooster GOD MODE v4.0</title>
+    <style>
+        body { background: #0d1117; color: #c9d1d9; font-family: 'Segoe UI', monospace; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        h3 { margin-top: 0; color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+        
+        label { display: block; margin-top: 10px; color: #8b949e; font-size: 11px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-top: 5px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 6px; box-sizing: border-box; }
+        
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; border-radius: 6px; padding: 8px 15px; border: none; color: white; margin-top: 5px; }
+        button:hover { opacity: 0.9; }
+        
+        .btn-search { background: #1f6feb; width: 100%; margin-top: 10px; }
+        .btn-save { background: #238636; width: 100%; font-size: 16px; margin-top: 20px; padding: 12px; }
+        .btn-give { background: #8957e5; border: 1px solid #9970e8; width: 100%; }
+        .btn-danger { background: #da3633; width: 100%; }
+        .btn-moderate { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-moderate.ban { background: #f85149; color: #fff; }
+        .btn-moderate.unban { background: #2ea043; color: #fff; }
+        .btn-status { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-status.st-pro { background: #ffd700; color: #3d2b00; }
+        .btn-status.st-king { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #3d2b00; }
+        .btn-status.st-titan { background: linear-gradient(135deg, #00f0ff, #7000ff); color: #fff; }
+        #statusResult { padding: 8px 12px; margin-top: 10px; border-radius: 6px; display: none; font-size: 12px; font-weight: bold; }
+        #statusResult.ok { display: block; background: rgba(46,160,67,.15); color: #2ea043; border: 1px solid #2ea043; }
+        #statusResult.err { display: block; background: rgba(218,54,51,.15); color: #f85149; border: 1px solid #f85149; }
+        .btn-remove { background: #da3633; font-size: 10px; padding: 2px 6px; margin-left: 5px; }
+
+        /* Стили для генератора */
+        .btn-gen { 
+            background: #d29922; 
+            color: #000; 
+            width: 100%; 
+            font-size: 14px; 
+            margin-top: 15px;
+            padding: 12px;
+        }
+        .btn-gen:hover { background: #e3b341; }
+
+        .promo-result { 
+            margin-top: 15px; 
+            padding: 15px; 
+            background: #000; 
+            border: 1px dashed #d29922; 
+            border-radius: 8px; 
+            text-align: center; 
+            display: none; 
+        }
+        .promo-code-text { 
+            font-size: 24px; 
+            color: #d29922; 
+            font-weight: bold; 
+            cursor: pointer; 
+            letter-spacing: 2px;
+        }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .inventory-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .inv-item { background: #21262d; border: 1px solid #30363d; padding: 4px 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; }
+
+        .subject-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .subject-item { background: #21262d; padding: 8px; border-radius: 5px; border: 1px solid #30363d; }
+        
+        #log { font-size: 12px; color: #aaa; margin-top: 10px; white-space: pre-wrap; height: 150px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; border: 1px solid #30363d; }
+        .log-success { color: #3fb950; }
+        .log-error { color: #f85149; }
+        
+        .status-dot { height: 10px; width: 10px; background: red; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.active { background: #3fb950; box-shadow: 0 0 10px #3fb950; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin:0; color:white;">⚡️ GOD MODE <span style="font-size:12px; color:#58a6ff;">v4.0</span></h2>
+            <div id="authStatus"><span class="status-dot" id="dot"></span> <span id="authText">Подключение...</span></div>
+        </div>
+    </div>
+
+    <!-- 🔥 ГЕНЕРАТОР ПРОМОКОДОВ -->
+    <div class="card" style="border-color: #d29922;">
+        <h3 style="color: #d29922; margin-top: 0;">🎫 Генератор Промокодов</h3>
+        
+        <div class="grid-2">
+            <div>
+                <label>Сумма монет:</label>
+                <input type="number" id="promo_coins" value="1000">
+            </div>
+            <div>
+                <label>Свой код (необязательно):</label>
+                <input type="text" id="promo_custom" placeholder="Напр: SALE2026">
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Тип награды:</label>
+                <select id="promo_type" onchange="toggleTimeInput()">
+                    <option value="none">💰 Обычный (Монеты)</option>
+                    <option value="pro">⭐ PRO (+Монеты)</option> <!-- ДОБАВЛЕН PRO -->
+                    <option value="vip">💎 VIP (+Монеты)</option>
+                    <option value="king">👑 KING (+Монеты)</option>
+                    <option value="titan">🌌 TITAN (+Монеты)</option>
+                    <option value="time">⏳ Временный (Для группы)</option>
+                </select>
+            </div>
+            <div id="time_input_div" style="display: none;">
+                <label>Срок действия (минут):</label>
+                <input type="number" id="promo_minutes" value="60">
+            </div>
+        </div>
+
+        <button class="btn-gen" onclick="window.createPromoCode()">СГЕНЕРИРОВАТЬ КОД</button>
+
+        <!-- Результат -->
+        <div id="promoResult" class="promo-result">
+            <div style="font-size: 12px; color: #888; margin-bottom: 5px;">Нажми на код, чтобы скопировать:</div>
+            <div id="finalCode" class="promo-code-text" onclick="copyCode()">---</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <input type="text" id="searchName" placeholder="🔍 Введите имя игрока">
+        <button class="btn-search" onclick="window.searchUser()">НАЙТИ ИГРОКА</button>
+    </div>
+
+    <div id="statusResult"></div>
+    <div id="resultsArea"></div>
+
+    <div class="card">
+        <h3>📜 Лог</h3>
+        <div id="log"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    // ДОБАВЛЕН ИМПОРТ arrayRemove (чтобы предметы удалялись)
+    import { getFirestore, collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";    
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // 1. ТВОЙ КОНФИГ
+    const firebaseConfig = {
+        apiKey: "AIzaSyAK4kX2dl93WlpEFLg_eGvpvoeAAF935tQ",
+        authDomain: "mathbooster-pro.firebaseapp.com",
+        projectId: "mathbooster-pro",
+        storageBucket: "mathbooster-pro.firebasestorage.app",
+        messagingSenderId: "990295839020",
+        appId: "1:990295839020:web:ba5bb8cfa471c2c4a89c89",
+        measurementId: "G-8N8MYJPCHR"
+    };
+
+    // 2. ДАННЫЕ АДМИНА
+    const ADMIN_EMAIL = "mesropbek@gmail.com"; 
+    const ADMIN_PASS  = "Mesrop708"; 
+
+    // СПИСКИ ТОВАРОВ (Для расшифровки названий)
+    const ALL_ITEMS = {
+        'magma': '🔥 MAGMA', 'joker': '🃏 JOKER', 'galaxy': '🌌 GALAXY', 'gold': '🥇 Gold', 
+        'math': '💎 Diamond', 'neon': '🦄 Neon', 'forest': '🌲 Forest', 'pantone': '🍑 Pantone',
+        'lemon': '🍋 Logan', 'sakura': '🌸 Sakura', 'paper': '📝 Paper', 'standard': 'Standard', 'dark': 'Dark',
+        'cyber': '💻 Матрица',
+        'cat': '🐱 Cat', 'dog': '🐶 Dog', 'hamster': '🐹 Hamster', 'hacker': '🕵️ Hacker', 'elon': '🚀 Elon',
+        'king': '👑 King', 'queen': '👸 Queen', 'lion': '🦁 Lion', 'wolf': '🐺 Wolf', 'diamond': '💎 Diamond',
+        'astronaut': '👨‍🚀 Космонавт', 'god': '👁️ Абсолют', 'sigma': '🗿 Сигма',
+        'glitch': '👾 Хакер', 'royal': '👑 Корона', 'fire': '🔥 Огонь', 'neon': '🦄 Неон', 'titan': '🌌 Титан',
+        'sci-fi': '🚀 Космос', 'retro': '🕹 8-Bit', 'bubble': '🧼 Bubble', 'standard': 'Standard'
+    };
+
+    const ALL_SUBJECTS_LIST =['algebra', 'geometry', 'calculus', 'arithmetic', 'combinatorics', 'statistics', 'trigonometry', 'stereometry', 'physics', 'chemistry', 'biology', 'history', 'lit', 'eng'];
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    function log(msg, type="info") {
+        const el = document.getElementById('log');
+        const colorClass = type === 'success' ? 'log-success' : (type === 'error' ? 'log-error' : '');
+        el.innerHTML = `<div class="${colorClass}">> ${msg}</div>` + el.innerHTML;
+    }
+
+    signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASS)
+        .then(() => {
+            document.getElementById('dot').classList.add('active');
+            document.getElementById('authText').innerText = "Админ онлайн";
+        })
+        .catch((error) => log("Ошибка входа: " + error.message, "error"));
+
+    // Генерация списка инвентаря с кнопками удаления
+    function renderInventory(uid, type, items) {
+        if (!items || items.length === 0) return '<div style="color:#555">Пусто</div>';
+        
+        return items.map(id => {
+            const name = ALL_ITEMS[id] || id; 
+            return `
+            <div class="inv-item">
+                ${name} 
+                <button class="btn-remove" onclick="window.removeItem('${uid}', '${type}', '${id}')">X</button>
+            </div>`;
+        }).join('');
+    }
+
+    // --- ЛОГИКА ГЕНЕРАТОРА ---
+    window.toggleTimeInput = () => {
+        const type = document.getElementById('promo_type').value;
+        document.getElementById('time_input_div').style.display = (type === 'time') ? 'block' : 'none';
+    };
+
+    window.createPromoCode = async () => {
+        const coins = parseInt(document.getElementById('promo_coins').value);
+        let customCode = document.getElementById('promo_custom').value.trim().toUpperCase();
+        const type = document.getElementById('promo_type').value;
+        const minutes = parseInt(document.getElementById('promo_minutes').value);
+
+        if (!customCode) {
+            const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+            customCode = (type === 'none' ? 'PAY' : type.toUpperCase()) + "-" + randomPart;
+        }
+
+        // ДОБАВЛЕНО isPro
+        let isPro = false, isVip = false, isKing = false, isTitan = false, isTimeLimited = false, expiresAt = null, msg = "Пополнение баланса";
+
+        if (type === 'pro') { isPro = true; msg = "⭐ PRO Статус получен!"; }
+        if (type === 'vip') { isVip = true; msg = "💎 VIP Статус получен!"; }
+        if (type === 'king') { isKing = true; msg = "👑 KING Статус получен!"; }
+        if (type === 'titan') { isTitan = true; msg = "🌌 TITAN Статус получен!"; }
+        
+        if (type === 'time') {
+            isTimeLimited = true;
+            if (!minutes || minutes <= 0) return alert("Укажите минуты!");
+            expiresAt = new Date(Date.now() + minutes * 60000).toISOString();
+            msg = `⏳ Успел! Временный бонус: ${coins}`;
+        }
+
+        try {
+            await setDoc(doc(db, "promo_codes", customCode), {
+                coins: coins,
+                pro: isPro,     // Отправляем PRO в базу
+                vip: isVip,
+                isKing: isKing,
+                isTitan: isTitan,
+                isTimeLimited: isTimeLimited,
+                expiresAt: expiresAt,
+                isUsed: false,
+                createdAt: new Date().toISOString(),
+                msg: msg,
+                admin_secret: "Mesrop708" 
+            });
+
+            document.getElementById('promoResult').style.display = 'block';
+            document.getElementById('finalCode').innerText = customCode;
+            log(`✅ Код создан: ${customCode}`, "success");
+
+        } catch (e) {
+            log("Ошибка создания кода: " + e.message, "error");
+        }
+    };
+
+    window.copyCode = () => {
+        const code = document.getElementById('finalCode').innerText;
+        navigator.clipboard.writeText(code);
+        alert("Код скопирован: " + code);
+    };
+
+    // ПОИСК И ОТРИСОВКА
+    window.searchUser = async () => {
+        const name = document.getElementById('searchName').value.trim();
+        if(!name) return alert("Введите имя!");
+        
+        const results = document.getElementById('resultsArea');
+        results.innerHTML = '<div style="text-align:center; color:#aaa;">⏳ Поиск...</div>';
+        
+        try {
+            const q = query(collection(db, "users"), where("user.name", "==", name));
+            const querySnapshot = await getDocs(q);
+
+            results.innerHTML = '';
+            if (querySnapshot.empty) {
+                results.innerHTML = '<div class="card" style="text-align:center; color:red;">❌ Игрок не найден.</div>';
+                return;
+            }
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const u = data.user || {};
+                const s = data.subjects || {};
+                const uid = docSnap.id;
+                const authUid = data._ownerUID || '';
+                
+                let subjectsHtml = '';
+                ALL_SUBJECTS_LIST.forEach(key => {
+                    const sec = (s[key] && s[key].sec) ? s[key].sec : 0;
+                    const hours = (sec / 3600).toFixed(2);
+                    subjectsHtml += `<div class="subject-item"><span>${key.toUpperCase()}</span><input type="number" id="subj_${key}_${uid}" value="${hours}" step="0.5" placeholder="Часы"></div>`;
+                });
+
+                const html = `
+                <div class="card" style="border-color: #58a6ff;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                        <div style="flex:1; margin-right:20px;">
+                            <label style="margin:0;">Никнейм:</label>
+                            <input type="text" id="name_${uid}" value="${u.name}" style="font-size:18px; font-weight:bold;">
+                        </div>
+                        <small style="color:#555;">ID: ${uid}<br>Auth UID: ${authUid || '— нет'}</small>
+                    </div>
+                    
+                    <div class="grid-4">
+                        <div><label>Монеты 💰</label><input type="number" id="coins_${uid}" value="${u.coins || 0}" oninput="window.syncStatusFromCoins('${uid}')"></div>
+                        <div><label>Уровень 🆙</label><input type="number" id="level_${uid}" value="${u.level || 1}"></div>
+                        <div><label>XP ✨</label><input type="number" id="xp_${uid}" value="${u.xp || 0}"></div>
+                        <div><label>Всего часов</label><input type="number" value="${((u.totalSec || 0)/3600).toFixed(1)}" disabled style="opacity:0.5; border:none;"></div>
+                    </div>
+                    
+                    <div style="margin-top:15px; display:flex; gap:15px; flex-wrap: wrap;">
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="pro_${uid}" ${u.isPro ? 'checked' : ''} style="width:auto;margin:0;"> ⭐ PRO</label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="vip_${uid}" ${u.isVip ? 'checked' : ''} style="width:auto;margin:0;"> 💎 VIP</label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="king_${uid}" ${u.isKing ? 'checked' : ''} style="width:auto;margin:0;"> 👑 KING</label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="titan_${uid}" ${u.isTitan ? 'checked' : ''} style="width:auto;margin:0;"> 🌌 TITAN</label>
+                    </div>
+                    <div id="status-hint-${uid}" style="margin-top:8px; font-size:11px; color:#58a6ff; font-weight:bold;"></div>
+
+                    <div style="margin-top:20px; background:#21262d; padding:15px; border-radius:8px;">
+                        <label style="color:#fff;">🎒 Инвентарь (Удалить / Добавить):</label>
+                        
+                        <div style="margin-top:10px;">
+                            <label>🎨 Темы:</label>
+                            <div class="inventory-list">${renderInventory(uid, 'ownedThemes', u.ownedThemes)}</div>
+                            <div style="display:flex; gap:5px; margin-top:5px;">
+                                <input type="text" id="add_theme_${uid}" placeholder="ID темы (magma)">
+                                <button class="btn-give" style="width:auto; margin:0;" onclick="window.addItem('${uid}', 'ownedThemes', 'add_theme_${uid}')">+</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:10px;">
+                            <label>😎 Аватары:</label>
+                            <div class="inventory-list">${renderInventory(uid, 'ownedAvatars', u.ownedAvatars)}</div>
+                            <div style="display:flex; gap:5px; margin-top:5px;">
+                                <input type="text" id="add_avatar_${uid}" placeholder="ID аватара (hacker)">
+                                <button class="btn-give" style="width:auto; margin:0;" onclick="window.addItem('${uid}', 'ownedAvatars', 'add_avatar_${uid}')">+</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:10px;">
+                            <label>🖼️ Рамки:</label>
+                            <div class="inventory-list">${renderInventory(uid, 'ownedFrames', u.ownedFrames)}</div>
+                            <div style="display:flex; gap:5px; margin-top:5px;">
+                                <input type="text" id="add_frame_${uid}" placeholder="ID рамки (glitch)">
+                                <button class="btn-give" style="width:auto; margin:0;" onclick="window.addItem('${uid}', 'ownedFrames', 'add_frame_${uid}')">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px; background:#21262d; padding:15px; border-radius:8px;">
+                        <label style="margin-top:0; color:#fff;">✍️ Уникальный статус (в Топе):</label>
+                        <div style="display:flex; gap:10px; margin-top:5px;">
+                            <input type="text" id="custom_title_${uid}" value="${u.currentTitle || ''}" placeholder="Напр: ADMIN">
+                            <button class="btn-custom" style="margin:0; width:auto; padding: 0 15px; background: #58a6ff; color: black; font-weight: bold; border-radius: 6px; border: none;" onclick="window.setCustomTitle('${uid}')">УСТАНОВИТЬ</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <label style="color:#58a6ff; font-size:13px;">📚 Часы по предметам:</label>
+                        <div class="subject-grid">${subjectsHtml}</div>
+                    </div>
+
+                    <div style="margin-top:20px; background:#1c1917; padding:15px; border-radius:8px; border:1px solid #f85149;">
+                        <label style="margin-top:0; color:#f85149;">🛡️ МОДЕРАЦИЯ</label>
+                        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <button id="banbtn_${uid}" class="btn-moderate ban" onclick="window.banUser('${uid}', '${escQ(authUid)}', '${escQ(u.name)}')">🚫 ЗАБАНИТЬ</button>
+                            <button id="unbanbtn_${uid}" class="btn-moderate unban" onclick="window.unbanUser('${authUid}', '${escQ(u.name)}')" style="${authUid ? '' : 'display:none;'}">♻️ РАЗБАНИТЬ</button>
+                            <button class="btn-moderate" style="background:#da3633; color:#fff;" onclick="window.fullDelete('${uid}', '${escQ(authUid)}', '${escQ(u.name)}')">💀 FULL DELETE</button>
+                        </div>
+                        <small style="display:block; margin-top:8px; color:#8b949e; font-size:11px;" id="modinfo_${uid}">${authUid ? '' : '⚠️ Auth UID нет — бан по имени невозможно, используйте FULL DELETE'}</small>
+</div>
+
+                    <div style="margin-top:20px; background:#21262d; padding:15px; border-radius:8px;">
+                        <label style="margin-top:0; color:#ffd700;">🏆 СТАТУСЫ (PRO / VIP / KING / TITAN)</label>
+                        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+                            <button class="btn-status st-pro" onclick="window.setStatus('${uid}', 'pro')">⭐ PRO</button>
+                            <button class="status-btn" style="background:#1f6feb; color:#fff;" onclick="window.setStatus('${uid}', 'vip')">💎 VIP</button>
+                            <button class="btn-status st-king" onclick="window.setStatus('${uid}', 'king')">👑 KING</button>
+                            <button class="btn-status st-titan" onclick="window.setStatus('${uid}', 'titan')">🌌 TITAN</button>
+                            <button class="btn-status" style="background:#30363d; color:#8b949e;" onclick="window.setStatus('${uid}', 'none')">∅ Снять всё</button>
+                        </div>
+                        <small style="display:block; margin-top:8px; color:#8b949e; font-size:11px;">Мгновенно без пересохранения. «Снять всё» убирает PRO/VIP/KING/TITAN.</small>
+                    </div>
+
+                    <button class="btn-save" onclick="window.saveUser('${uid}')">💾 СОХРАНИТЬ ВСЁ</button>
+
+                    <div style="margin-top:30px; border-top:1px solid #30363d; padding-top:20px;">
+                        <button class="btn-danger" onclick="window.deleteUser('${uid}', '${u.name}')">💀 УДАЛИТЬ АККАУНТ</button>
+                    </div>
+                </div>`;
+                results.innerHTML += html;
+            });
+            // Синхронизируем статусы по монетам для всех найденных пользователей
+            querySnapshot.forEach((docSnap) => { window.syncStatusFromCoins(docSnap.id); });
+            log(`Найдено: ${querySnapshot.size}`, "success");
+        } catch (e) { log("Ошибка поиска: " + e.message, "error"); }
+    };
+
+    window.removeItem = async (uid, field, itemId) => {
+        if(!confirm(`Забрать предмет ${itemId}?`)) return;
+        try {
+            const userRef = doc(db, "users", uid);
+            const updateObj = {};
+            updateObj[`user.${field}`] = arrayRemove(itemId);
+            updateObj["user.forceUpdate"] = true; 
+
+            await updateDoc(userRef, updateObj);
+            log(`🗑️ Забрал ${itemId} у ${uid}`, "success");
+            window.searchUser(); 
+        } catch(e) { log("Ошибка: " + e.message, "error"); }
+    };
+
+    window.addItem = async (uid, field, inputId) => {
+        const itemId = document.getElementById(inputId).value.trim();
+        if(!itemId) return;
+        
+        try {
+            const userRef = doc(db, "users", uid);
+            const updateObj = {};
+            updateObj[`user.${field}`] = arrayUnion(itemId);
+            updateObj["user.forceUpdate"] = true;
+
+            await updateDoc(userRef, updateObj);
+            log(`🎁 Выдал ${itemId} игроку ${uid}`, "success");
+            window.searchUser(); 
+        } catch(e) { log("Ошибка: " + e.message, "error"); }
+    };
+
+    // === АВТО-СИНХРОНИЗАЦИЯ СТАТУСА ПО КОЛИЧЕСТВУ МОНЕТ ===
+    // Пакеты монет:
+    //   300  = ☕ Поддержка (нет статуса)
+    //   1000 = 🔥 Популярный (нет статуса)
+    //   2500 = 💎 VIP
+    //   5000 = ⭐ PRO
+    //   10000 = 👑 LEGEND (KING + TITAN)
+    window.syncStatusFromCoins = (uid) => {
+        const coins = parseInt(document.getElementById(`coins_${uid}`).value) || 0;
+        
+        let isPro = false, isVip = false, isKing = false, isTitan = false;
+        let hint = '';
+        
+        if (coins >= 10000) {
+            isPro = true; isVip = true; isKing = true; isTitan = true;
+            hint = '👑 LEGEND → PRO + VIP + KING + TITAN';
+        } else if (coins >= 5000) {
+            isPro = true; isVip = true;
+            hint = '⭐ PRO → PRO + VIP';
+        } else if (coins >= 2500) {
+            isVip = true;
+            hint = '💎 VIP → VIP';
+        } else {
+            hint = '';
+        }
+        
+        // Автоматически ставим галочки
+        document.getElementById(`pro_${uid}`).checked = isPro;
+        document.getElementById(`vip_${uid}`).checked = isVip;
+        document.getElementById(`king_${uid}`).checked = isKing;
+        document.getElementById(`titan_${uid}`).checked = isTitan;
+        
+        // Показываем подсказку
+        const hintEl = document.getElementById(`status-hint-${uid}`);
+        if (hintEl) hintEl.textContent = hint;
+    };
+
+    window.saveUser = async (uid) => {
+        try {
+            const name = document.getElementById(`name_${uid}`).value.trim();
+            const coins = parseInt(document.getElementById(`coins_${uid}`).value);
+            const level = parseInt(document.getElementById(`level_${uid}`).value);
+            const xp = parseInt(document.getElementById(`xp_${uid}`).value);
+            
+            // Синхронизируем статусы по монетам (автоматически)
+            window.syncStatusFromCoins(uid);
+            
+            // СЧИТЫВАЕМ ВСЕ СТАТУСЫ (теперь они синхронизированы с монетами)
+            const isPro = document.getElementById(`pro_${uid}`).checked;
+            const isVip = document.getElementById(`vip_${uid}`).checked;
+            const isKing = document.getElementById(`king_${uid}`).checked;
+            const isTitan = document.getElementById(`titan_${uid}`).checked;
+            
+            // Определяем титул по статусу
+            let currentTitle = '';
+            if (isKing || isTitan) currentTitle = 'LEGEND';
+            else if (isPro) currentTitle = 'PRO';
+            else if (isVip) currentTitle = 'VIP';
+            
+            const updatedSubjects = {};
+            let newTotalSec = 0;
+            ALL_SUBJECTS_LIST.forEach(key => {
+                const input = document.getElementById(`subj_${key}_${uid}`);
+                const hours = input ? parseFloat(input.value) : 0;
+                const sec = Math.floor(hours * 3600);
+                updatedSubjects[key] = { name: key.charAt(0).toUpperCase() + key.slice(1), icon: '📚', sec: sec };
+                newTotalSec += sec;
+            });
+
+            const userRef = doc(db, "users", uid);
+            await updateDoc(userRef, {
+                "user.name": name,
+                "user.coins": coins, 
+                "user.level": level, 
+                "user.xp": xp, 
+                "user.isPro": isPro,
+                "user.isVip": isVip, 
+                "user.isKing": isKing,
+                "user.isTitan": isTitan, 
+                "user.currentTitle": currentTitle, 
+                "user.totalSec": newTotalSec, 
+                "subjects": updatedSubjects, 
+                "user.forceUpdate": true,
+                "user.lastSaveTime": Date.now() + 100000
+            });
+
+            const topRef = doc(db, "leaderboard", uid);
+            await setDoc(topRef, {
+                name: name,
+                totalSec: newTotalSec,
+                level: level,
+                currentTitle: currentTitle,
+                isPro: isPro,
+                isVip: isVip,
+                isKing: isKing,
+                isTitan: isTitan, 
+                lastActive: Date.now()
+            }, { merge: true });
+
+            const statusText = currentTitle ? ` (${currentTitle})` : '';
+            log(`✅ ${name} обновлен: ${coins} 💰${statusText}`, "success");
+            alert(`Данные сохранены!\n\n💰 ${coins} монет${statusText}`);
+        } catch (e) { log("Ошибка сохранения: " + e.message, "error"); }
+    };
+    
+    window.setCustomTitle = async (uid) => {
+        const title = document.getElementById(`custom_title_${uid}`).value.trim();
+        try {
+            const userRef = doc(db, "users", uid);
+            await updateDoc(userRef, { "user.currentTitle": title, "user.forceUpdate": true });
+            
+            // Также обновляем статус в Топе
+            const topRef = doc(db, "leaderboard", uid);
+            await setDoc(topRef, { currentTitle: title }, { merge: true });
+            
+            log(`✅ Статус изменен: ${title}`, "success");
+        } catch(e) { log("Ошибка: " + e.message, "error"); }
+    };
+
+    window.deleteUser = async (uid, name) => {
+        if(!confirm(`⛔️ УДАЛИТЬ ${name}?\n\nУдалится только карточка из Топа и профиль.\nДля ПОЛНОГО удаления (включая Auth-аккаунт) используйте FULL DELETE.`)) return;
+        try {
+            await deleteDoc(doc(db, "users", uid));
+            // Также удаляем из таблицы лидеров
+            await deleteDoc(doc(db, "leaderboard", uid));
+            log(`💀 Удален: ${name}`, "success");
+            document.getElementById('resultsArea').innerHTML = '';
+        } catch(e) { log("Ошибка: " + e.message, "error"); }
+    }
+
+    // === 🛡️ КЛЮЧ АДМИНА для серверных функций ===
+    const ADMIN_KEY = "MB-purge-9f4Kz72mQx";
+    const FN_BASE = "https://us-central1-mathbooster-pro.cloudfunctions.net/adminAction";
+
+    // Экранирование для вставки в onclick-атрибут
+    window.escQ = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+    // === 🚫 BAN — по Auth UID (динамический список banned_users) ===
+    window.banUser = async (gameId, authUid, name) => {
+        if (!authUid) { alert("⚠️ Auth UID неизвестен — бан по имени невозможен.\nИспользуйте FULL DELETE (он удаляет Auth-аккаунт).\nЕсли игрок онлайн, его Auth UID появится после перезагрузки страницы."); return; }
+        const reason = prompt(`🚫 Бан игрока "${name}"\nAuth UID: ${authUid}\n\nПричина (необязательно):`, "");
+        if (reason === null) return;
+        if (!confirm(`Забанить ${name}?\nОн больше не сможет: создать профиль, играть, попасть в Топ.`)) return;
+        try {
+            const r = await fetch(`${FN_BASE}?key=${ADMIN_KEY}&action=ban&uid=${encodeURIComponent(authUid)}&reason=${encodeURIComponent(reason || "admin_panel")}`);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+            log(`🚫 ЗАБАНЕН: ${name} (${authUid})`, "success");
+            const b = document.getElementById(`banbtn_${gameId}`);
+            if (b) { b.textContent = "🚫 ЗАБАНЕН"; b.style.opacity = "0.6"; }
+        } catch (e) { log("Ошибка бана: " + e.message, "error"); alert("Ошибка бана: " + e.message); }
+    };
+
+    // === ♻️ UNBAN ===
+    window.unbanUser = async (authUid, name) => {
+        if (!authUid) { alert("⚠️ Auth UID неизвестен."); return; }
+        if (!confirm(`Разбанить ${name}? (${authUid})`)) return;
+        try {
+            const r = await fetch(`${FN_BASE}?key=${ADMIN_KEY}&action=unban&uid=${encodeURIComponent(authUid)}`);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+            log(`♻️ РАЗБАНЕН: ${name} (${authUid})`, "success");
+        } catch (e) { log("Ошибка разбана: " + e.message, "error"); alert("Ошибка разбана: " + e.message); }
+    };
+
+    // === 💀 FULL DELETE — серверное полное удаление (вкл. Auth-аккаунт) ===
+    window.fullDelete = async (gameId, authUid, name) => {
+        if (!confirm(`💀 ПОЛНОЕ УДАЛЕНИЕ ${name}\n\nБудет удалено:\n• Профиль и карточка Топа (все сезоны)\n• Коды восстановления и дуэли\n• Firebase Auth аккаунт (вход станет невозможен)\n\nПродолжить?`)) return;
+        if (!confirm(`Точно?! Это НЕОБРАТИМО. ${name} потеряет всё.`)) return;
+        try {
+            let url = `${FN_BASE}?key=${ADMIN_KEY}&action=fullDelete&name=${encodeURIComponent(name)}`;
+            if (authUid) url += `&uid=${encodeURIComponent(authUid)}`;
+            if (gameId) url += `&gameId=${encodeURIComponent(gameId)}`;
+            const r = await fetch(url);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+            log(`💀 ПОЛНОСТЬЮ УДАЛЁН: ${name} — ${j.deleted.length} объектов`, "success");
+            alert(`✅ ${name} полностью удалён.\nУдалено объектов: ${j.deleted.length}`);
+            document.getElementById('resultsArea').innerHTML = '';
+        } catch (e) { log("Ошибка удаления: " + e.message, "error"); alert("Ошибка удаления: " + e.message); }
+    };
+
+    // === 🏆 БЫСТРЫЕ СТАТУСЫ PRO/VIP/KING/TITAN ===
+    window.setStatus = async (gameId, kind) => {
+        const map = {
+            pro:   { pro: 1 },
+            vip:   { vip: 1 },
+            king:  { king: 1 },
+            titan: { titan: 1 },
+            none:  {}
+        };
+        const p = new URLSearchParams({ key: ADMIN_KEY, action: "status", gameId });
+        const st = map[kind] || {};
+        p.set("pro", st.pro ? "1" : "0");
+        p.set("vip", st.vip ? "1" : "0");
+        p.set("king", st.king ? "1" : "0");
+        p.set("titan", st.titan ? "1" : "0");
+        const label = { pro: "⭐ PRO", vip: "💎 VIP", king: "👑 KING (LEGEND)", titan: "🌌 TITAN (LEGEND)", none: "∅ без статуса" }[kind];
+        if (!confirm(`Выдать статус ${label}?`)) return;
+        try {
+            const r = await fetch(`${FN_BASE}?${p.toString()}`);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+            log(`🏆 ${gameId}: статус ${label} — выдан`, "success");
+            const el = document.getElementById('statusResult');
+            if (el) { el.textContent = `✅ ${label} — выдано игроку (обнови поиск, чтобы увидеть)`; el.className = "ok"; }
+        } catch (e) {
+            log("Ошибка статуса: " + e.message, "error");
+            const el = document.getElementById('statusResult');
+            if (el) { el.textContent = "❌ " + e.message; el.className = "err"; }
+        }
+    };
+</script>
+</body>
+</html>

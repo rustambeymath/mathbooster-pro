@@ -21,6 +21,7 @@ const admin = require("firebase-admin");
 // доступ только через deep-импорты
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getAuth } = require("firebase-admin/auth");
 
 // ⚡ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ — критично для деплоя!
 // admin.initializeApp() при загрузке модуля вешает проверку кода CLI
@@ -728,4 +729,176 @@ exports.purgeUser = functions.https.onRequest(async (req, res) => {
 
     console.log(`🧹 PURGE: удалено ${deleted.length}:`, deleted.join(", "));
     res.json({ ok: true, deleted });
+});
+
+/**
+ * 🛡️ ADMIN ACTION — серверные админ-действия для admin_panel.html.
+ * Делает то, что клиент по правилам Firestore не может:
+ *   action=ban        &uid=AUTH_UID              — 🚫 бан (динамический список banned_users)
+ *   action=unban      &uid=AUTH_UID              — ♻️ разбан
+ *   action=status     &gameId=..&pro=1&vip=1&king=0&titan=0[&title=TEXT]
+ *                                                — 🏆 выдать статусы PRO/VIP/KING/TITAN
+ *   action=fullDelete &uid=AUTH_UID[&name=NAME]  — 💀 полное удаление: профиль, Топ,
+ *                        архивы сезонов, дуэли, вызовы, коды восстановления + Auth-аккаунт
+ *
+ * Все вызовы требуют ключ: &key=ADMIN_SECRET
+ */
+const ADMIN_SECRET = "MB-purge-9f4Kz72mQx";
+
+exports.adminAction = functions.https.onRequest(async (req, res) => {
+    // CORS — панель открывается с file:// и с github.io
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Headers", "*");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+
+    if (req.query.key !== ADMIN_SECRET) {
+        res.status(403).json({ ok: false, error: "forbidden" });
+        return;
+    }
+
+    const { db } = getAdmin();
+    const action = req.query.action;
+    const authUid = req.query.uid;    // Firebase Auth UID
+    const gameId = req.query.gameId;  // игровой id (users/{gameId})
+    const name = req.query.name;      // имя игрока
+
+    try {
+        // ================= 🚫 BAN / ♻️ UNBAN =================
+        if (action === "ban" || action === "unban") {
+            if (!authUid) { res.status(400).json({ ok: false, error: "pass uid (Firebase Auth UID)" }); return; }
+            const ref = db.collection("banned_users").doc(authUid);
+            if (action === "ban") {
+                await ref.set({
+                    bannedAt: Date.now(),
+                    reason: req.query.reason || "admin_panel",
+                    by: "admin_panel"
+                });
+                console.log(`🚫 BAN: ${authUid}`);
+                res.json({ ok: true, action: "ban", authUid });
+            } else {
+                await ref.delete().catch(() => {});
+                console.log(`♻️ UNBAN: ${authUid}`);
+                res.json({ ok: true, action: "unban", authUid });
+            }
+            return;
+        }
+
+        // ================= 🏆 STATUS =================
+        if (action === "status") {
+            if (!gameId) { res.status(400).json({ ok: false, error: "pass gameId" }); return; }
+            const pro = req.query.pro === "1";
+            const vip = req.query.vip === "1";
+            const king = req.query.king === "1";
+            const titan = req.query.titan === "1";
+            const customTitle = (req.query.title || "").trim();
+
+            // Титул по статусу (если не задан вручную)
+            let title = customTitle;
+            if (!title) {
+                if (king || titan) title = "LEGEND";
+                else if (pro) title = "PRO";
+                else if (vip) title = "VIP";
+                else title = "";
+            }
+
+            await db.collection("users").doc(gameId).set({
+                "user.isPro": pro,
+                "user.isVip": vip,
+                "user.isKing": king,
+                "user.isTitan": titan,
+                "user.currentTitle": title,
+                "user.forceUpdate": true
+            }, { merge: true });
+
+            await db.collection("leaderboard").doc(gameId).set({
+                isPro: pro, isVip: vip, isKing: king, isTitan: titan, currentTitle: title
+            }, { merge: true });
+
+            console.log(`🏆 STATUS ${gameId}: pro=${pro} vip=${vip} king=${king} titan=${titan} title=${title}`);
+            res.json({ ok: true, action: "status", gameId, title });
+            return;
+        }
+
+        // ================= 💀 FULL DELETE =================
+        if (action === "fullDelete") {
+            if (!authUid && !name) { res.status(400).json({ ok: false, error: "pass uid or name" }); return; }
+
+            const deleted = [];
+            const gameIds = new Set();
+
+            // 1. Игровые id: auth UID сам часто является doc id (Топ/архивы)
+            if (authUid) gameIds.add(authUid);
+
+            // 2. Профили users, привязанные к этому auth UID (_ownerUID)
+            if (authUid) {
+                const us = await db.collection("users").where("_ownerUID", "==", authUid).get();
+                us.forEach(d => gameIds.add(d.id));
+            }
+
+            // 3. Профили по имени (на случай легаси без _ownerUID)
+            if (name) {
+                const byName = await db.collection("users").where("user.name", "==", name).get();
+                byName.forEach(d => {
+                    gameIds.add(d.id);
+                    const o = d.data()._ownerUID;
+                    if (o) gameIds.add(o);
+                });
+            }
+
+            // 4. Удаляем из основных коллекций по всем найденным id
+            for (const col of ["users", "leaderboard", "leaderboard_history_1", "leaderboard_history_2"]) {
+                for (const gid of gameIds) {
+                    try {
+                        await db.collection(col).doc(gid).delete();
+                        deleted.push(`${col}/${gid}`);
+                    } catch (e) { /* нет документа — норм */ }
+                }
+            }
+
+            // 5. Коды восстановления, дуэли, вызовы — по игровым id
+            for (const gid of gameIds) {
+                const t = await db.collection("transfers").where("userId", "==", gid).get();
+                for (const d of t.docs) {
+                    await d.ref.delete();
+                    deleted.push(`transfers/${d.id}`);
+                }
+                const b1 = await db.collection("battles_v2").where("p1_id", "==", gid).get();
+                const b2 = await db.collection("battles_v2").where("p2_id", "==", gid).get();
+                for (const d of [...b1.docs, ...b2.docs]) {
+                    await d.ref.delete();
+                    deleted.push(`battles_v2/${d.id}`);
+                }
+                try {
+                    await db.collection("pendingChallenges").doc(gid).delete();
+                    deleted.push(`pendingChallenges/${gid}`);
+                } catch (e) { /* нет — норм */ }
+                const ch = await db.collection("pendingChallenges").where("fromId", "==", gid).get();
+                for (const d of ch.docs) {
+                    await d.ref.delete();
+                    deleted.push(`pendingChallenges/${d.id}`);
+                }
+            }
+
+            // 6. Сам Firebase Auth аккаунт — самое главное, без него бан бесполезен
+            if (authUid) {
+                try {
+                    await getAuth().deleteUser(authUid);
+                    deleted.push(`auth/${authUid}`);
+                    console.log(`💀 Auth аккаунт удалён: ${authUid}`);
+                } catch (e) {
+                    console.log(`Auth удаление пропущено: ${e.message}`);
+                }
+            }
+
+            console.log(`💀 FULL DELETE: удалено ${deleted.length}:`, deleted.join(", "));
+            res.json({ ok: true, action: "fullDelete", deleted });
+            return;
+        }
+
+        res.status(400).json({ ok: false, error: "unknown action" });
+    } catch (e) {
+        console.error("adminAction error:", e);
+        res.status(500).json({ ok: false, error: e.message });
+    }
 });
