@@ -153,7 +153,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     // ДОБАВЛЕН ИМПОРТ arrayRemove (чтобы предметы удалялись)
-    import { getFirestore, collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";    
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";    
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     // 1. ТВОЙ КОНФИГ
@@ -378,6 +378,22 @@
                         </div>
                     </div>
 
+                    <div style="margin-top:20px; background:#21262d; padding:15px; border-radius:8px; border:1px solid #d29922;">
+                        <label style="margin-top:0; color:#ffd700;">⏱️ ЧАСЫ ПО СЕЗОНАМ</label>
+                        <div style="display:flex; gap:10px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+                            <select id="season_sel_${uid}" onchange="window.onSeasonSel('${uid}')" style="flex:1; padding:8px; background:#0d1117; color:#e6edf3; border:1px solid #30363d; border-radius:6px;">
+                                <option value="2">Сезон 2 — текущий</option>
+                                <option value="1">Сезон 1 — архив</option>
+                            </select>
+                            <span style="font-size:12px; color:#8b949e;" id="season_cur_${uid}">Сейчас: ${((u.totalSec || 0)/3600).toFixed(1)} ч</span>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
+                            <input type="number" id="season_hours_${uid}" step="0.1" min="0" placeholder="Новые часы (напр. 12.5)" style="flex:1;">
+                            <button class="btn-give" style="width:auto; margin:0; background:#d29922; color:#000; font-weight:bold; padding:8px 14px; border-radius:6px; border:none;" onclick="window.saveSeasonHours('${uid}')">💾</button>
+                        </div>
+                        <small style="display:block; margin-top:8px; color:#8b949e; font-size:11px;">Меняет часы выбранного сезона в карточке Топа (и в профиле — для текущего). Соседние сезоны не трогаются.</small>
+                    </div>
+
                     <div style="margin-top:20px;">
                         <label style="color:#58a6ff; font-size:13px;">📚 Часы по предметам:</label>
                         <div class="subject-grid">${subjectsHtml}</div>
@@ -559,6 +575,61 @@
         } catch (e) { log("Ошибка сохранения: " + e.message, "error"); }
     };
     
+    // === ЧАСЫ ПО СЕЗОНАМ ===
+    // Текущий сезон: leaderboard + users/{uid}.user.totalSec.
+    // Архивный сезон: только leaderboard_history_N (профиль не трогаем).
+    window.onSeasonSel = async (uid) => {
+        const sel = parseInt(document.getElementById(`season_sel_${uid}`).value, 10);
+        const span = document.getElementById(`season_cur_${uid}`);
+        const input = document.getElementById(`season_hours_${uid}`);
+        span.textContent = '⏳ ...';
+        try {
+            const colName = sel >= 2 ? 'leaderboard' : 'leaderboard_history_' + sel;
+            const snap = await getDoc(doc(db, colName, uid));
+            const sec = snap.exists() ? (Number(snap.data().totalSec) || 0) : 0;
+            span.textContent = 'Сейчас: ' + (sec / 3600).toFixed(1) + ' ч';
+            input.value = (sec / 3600).toFixed(1);
+        } catch (e) {
+            span.textContent = 'Нет данных';
+            input.value = '';
+        }
+    };
+
+    window.saveSeasonHours = async (uid) => {
+        const sel = parseInt(document.getElementById(`season_sel_${uid}`).value, 10);
+        const hours = parseFloat(document.getElementById(`season_hours_${uid}`).value);
+        if (isNaN(hours) || hours < 0) { log("❌ Введи корректное число часов", "error"); return; }
+        const sec = Math.floor(hours * 3600);
+        const colName = sel >= 2 ? 'leaderboard' : 'leaderboard_history_' + sel;
+        const seasonName = 'Сезон ' + sel + (sel >= 2 ? '' : ' (архив)');
+        if (!confirm(`Установить ${hours} ч (${seasonName}) игроку ${uid}?`)) return;
+        try {
+            const cardRef = doc(db, colName, uid);
+            const snap = await getDoc(cardRef);
+            if (!snap.exists()) { log(`❌ Карточка ${seasonName} не найдена — игрок не участвовал`, "error"); return; }
+            const card = snap.data();
+            // Карточка Топа выбранного сезона
+            const patch = { totalSec: sec, adminEdited: true, lastEditedBy: 'admin', lastEditedAt: Date.now() };
+            if (sel >= 2) {
+                patch.season = sel;
+                // Профиль игрока зеркалит только текущий сезон
+                const userRef = doc(db, "users", uid);
+                const uSnap = await getDoc(userRef);
+                if (uSnap.exists()) {
+                    const uData = uSnap.data() || {};
+                    const updates = { "user.totalSec": sec, "user.forceUpdate": true, "user.lastSaveTime": Date.now() + 100000 };
+                    if (uData.user && uData.user.currentSeason !== undefined && uData.user.currentSeason !== sel) {
+                        updates["user.currentSeason"] = sel;
+                    }
+                    await updateDoc(userRef, updates);
+                }
+            }
+            await setDoc(cardRef, patch, { merge: true });
+            log(`✅ ${seasonName}: ${hours} ч установлено (${card.name || uid})`, "success");
+            document.getElementById(`season_cur_${uid}`).textContent = 'Сейчас: ' + hours + ' ч';
+        } catch (e) { log("Ошибка: " + e.message, "error"); }
+    };
+
     window.setCustomTitle = async (uid) => {
         const title = document.getElementById(`custom_title_${uid}`).value.trim();
         try {
