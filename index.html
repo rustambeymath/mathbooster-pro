@@ -6262,6 +6262,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
             // XP, уровень, монеты, PVP, стрик и всё остальное — навсегда.
             DB.user.totalSec = 0;
             DB.user.currentSeason = CURRENT_SEASON;
+            delete DB.user.seasonHoursOverride; // 🔧 админ-правка часов не должна жить в новом сезоне
             
             // Предметы НЕ сбрасываем: их статистика по дисциплинам
             // копится всегда и стоит отдельно от сезонов
@@ -6340,6 +6341,22 @@ body.dark-mode .tier-name { color: #f7eecf; }
         // Сессии прошлых сезонов остаются в журнале навсегда, но в часы
         // текущего сезона не идут (иначе старые часы воскресают в новом).
         currentSessionSec() {
+            // 🔧 АДМИН-ПРАВКА ЧАСОВ: если админ ставил часы вручную (seasonHoursOverride),
+            // базой сезона считается ПРАВКА АДМИНА + все сессии, начавшиеся ПОСЛЕ неё.
+            // Старый журнал до правки не перетирает значение, новые сессии прибавляются честно.
+            const ov = DB && DB.user && DB.user.seasonHoursOverride;
+            if (ov && Number(ov.sec) > 0) {
+                let extra = 0;
+                (DB.sessions || []).forEach(s => {
+                    let t = Number(s.date);
+                    if (!t) {
+                        const p = Date.parse(s.date);
+                        if (!isNaN(p)) t = p; else t = 0;
+                    }
+                    if (t >= (Number(ov.at) || 0)) extra += (Number(s.sec) || 0);
+                });
+                return Math.max(0, (Number(ov.sec) || 0) + extra);
+            }
             const start = this.currentSeasonStart();
             let sum = 0;
             (DB.sessions || []).forEach(s => {

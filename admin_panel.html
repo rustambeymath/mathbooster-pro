@@ -617,7 +617,14 @@
                 const uSnap = await getDoc(userRef);
                 if (uSnap.exists()) {
                     const uData = uSnap.data() || {};
-                    const updates = { "user.totalSec": sec, "user.forceUpdate": true, "user.lastSaveTime": Date.now() + 100000 };
+                    // 🔧 База сезона: правка админа. Клиент считает «правка + сессии после правки»,
+                    // поэтому автосинхронизация часов больше не откатывает значение.
+                    const updates = {
+                        "user.totalSec": sec,
+                        "user.forceUpdate": true,
+                        "user.lastSaveTime": Date.now() + 100000,
+                        "user.seasonHoursOverride": { sec: sec, at: Date.now() }
+                    };
                     if (uData.user && uData.user.currentSeason !== undefined && uData.user.currentSeason !== sel) {
                         updates["user.currentSeason"] = sel;
                     }
