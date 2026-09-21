@@ -6403,7 +6403,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     snap.forEach(doc => {
                         if (top3.length >= 3) return;
                         const u = doc.data();
-                        if (u && u.name) top3.push({ name: u.name, avatar: u.avatar || '😎', totalSec: u.totalSec || 0 });
+                        if (u && u.name && !u.isBanned) top3.push({ name: u.name, avatar: u.avatar || '😎', totalSec: u.totalSec || 0 });
                     });
                     renderSeasonBanner(top3);
                 }
@@ -6425,9 +6425,10 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     const belongs = isCurrentView ? (docSeason === CURRENT_SEASON) : (docSeason === Number(season));
                     if (!belongs || shownCount >= 50) return;
                     shownCount++;
-                    const isOnline = (nowTime - (u.lastActive || 0)) < 300000;
+                    const isOnline = !u.isBanned && (nowTime - (u.lastActive || 0)) < 300000;
                     const frameClass = u.currentFrame ? `profile-img framed ${u.currentFrame}` : 'profile-img';
                     const isMe = (Auth.currentUser && Auth.currentUser.id === doc.id);
+                    const isBannedCard = !!u.isBanned;
                     
                     const prevRank = prevRanks[doc.id];
                     let arrowHtml = '';
@@ -6460,17 +6461,19 @@ body.dark-mode .tier-name { color: #f7eecf; }
                             </div>
                             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; margin-left: 12px;">
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <span style="font-size: 12px; flex-shrink: 0;">${u.isTitan ? '🌌' : (u.isKing ? '👑' : (u.isPro ? '⭐' : (u.isVip ? '💎' : '')))}</span>
-                                    <b style="font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.name}</b>
+                                    <span style="font-size: 12px; flex-shrink: 0;">${isBannedCard ? '🚫' : (u.isTitan ? '🌌' : (u.isKing ? '👑' : (u.isPro ? '⭐' : (u.isVip ? '💎' : ''))))}</span>
+                                    <b style="font-size: 13px; color: ${isBannedCard ? 'var(--accent)' : 'var(--text)'}; text-decoration: ${isBannedCard ? 'line-through' : 'none'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.name}</b>
                                 </div>
                                 <small style="font-size:10px; opacity:0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    Lvl ${u.level} • ${u.currentTitle || 'Участник'}
+                                    ${isBannedCard ? `<span style="color:var(--accent); font-weight:800;">🚫 ЗАБАНЕН${u.banReason ? ' • ' + u.banReason : ''}</span>` : `Lvl ${u.level} • ${u.currentTitle || 'Участник'}`}
                                 </small>
                             </div>
                             <div style="text-align:right; flex-shrink: 0; margin-left: 6px;">
-                                <b style="color:var(--primary); font-size: 12px; white-space:nowrap;">
-                                    ${Math.floor((u.totalSec||0)/3600)}ч ${Math.floor(((u.totalSec||0)%3600)/60)}м
-                                </b>
+                                ${isBannedCard
+                                    ? '<b style="color:var(--accent); font-size: 12px; white-space:nowrap;">0ч</b>'
+                                    : `<b style="color:var(--primary); font-size: 12px; white-space:nowrap;">
+                                        ${Math.floor((u.totalSec||0)/3600)}ч ${Math.floor(((u.totalSec||0)%3600)/60)}м
+                                    </b>`}
                             </div>
                         </div>`;
                     rank++;
