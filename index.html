@@ -104,17 +104,8 @@
         console.error("Критическая ошибка Firebase:", e);
     }
 
-    // Проверяем, не привязались ли переменные к window случайно
-    delete window.DB;
-    delete window.Data;
-    delete window._internalState; // Если переименовал
-    delete window._storageEngine; // Если переименовал
-
-    // Создаем поддельные переменные-пустышки. 
-    // Если хакер напишет DB.user.coins = 999, он изменит этот пустой объект, 
-    // а не реальные деньги в приложении.
-    window.DB = { user: { coins: 0, level: 0 }, msg: "Nice try, hacker!" };
-    window.Data = { save: () => console.log("Save blocked by security system 🛡️") };
+    // 🛡️ ЗАЩИТА УБРАНА: dummy window.DB/window.Data только мешали (ломали биндинг FCM-токена
+    // и вводили в заблуждение). Реальные данные защищают Firestore Rules + Cloud Functions.
 
 // === FIREBASE CLOUD MESSAGING (ЕДИНСТВЕННЫЙ БЛОК!) ===
 
@@ -175,13 +166,13 @@ window.addEventListener('load', () => {
                 console.log('✅ [FCM] Токен получен:', token);
                 localStorage.setItem('fcm_token', token);
                 
-                // Сохраняем токен в профиль игрока, если он вошел
-                if (window.DB && DB.user) {
+                // Привязываем токен к игровому профилю, если игрок уже вошёл
+                if (window._gameUserReady && typeof Data !== 'undefined' && DB && DB.user && DB.user.id) {
                     DB.user.fcmToken = token;
                     DB.user.fcmTokenDate = Date.now(); // Для Cloud Functions
                     // Сохраняем в облако через 2 секунды
                     setTimeout(() => {
-                        if (window.Data && typeof Data.save === 'function') {
+                        if (typeof Data !== 'undefined' && typeof Data.save === 'function') {
                             Data.save();
                             console.log('✅ [FCM] Токен привязан к аккаунту в БД');
                         }
@@ -4087,20 +4078,20 @@ body.dark-mode .tier-name { color: #f7eecf; }
     </style>
 
     <script>
-    // Жёсткая очистка кэша и перезапуск PWA (только для iOS)
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        // Очищаем кэш Service Worker
-        if ('caches' in window) {
-            caches.keys().then(keys => {
-                keys.forEach(key => caches.delete(key));
-            });
-        }
-        // Принудительный рефреш manifest
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(reg => reg.unregister());
-            });
-        }
+    // 🍎 iOS PWA: раньше здесь была жёсткая очистка ВСЕХ кэшей и разрегистрация SW
+    // при каждом открытии — из-за этого приложение на iOS работало медленно,
+    // оффлайн-режим не работал, а push-токены слетали.
+    // Теперь — одноразовая миграция (если SW устарел, он обновится сам): 
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && !localStorage.getItem('sw_migrated_v2')) {
+        try {
+            if ('caches' in window) {
+                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+            }
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister())));
+            }
+            localStorage.setItem('sw_migrated_v2', '1');
+        } catch(e) { /* не критично */ }
     }
 
     // Плавное исчезновение splash через 1.8 секунды после загрузки
@@ -5070,6 +5061,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 </div>
             </div>
             <select id="timezone-select" onchange="App.changeTimezone(this.value)" class="input-field" style="margin-bottom: 0; padding: 10px; background: var(--surface); border: 1px solid var(--primary); color: var(--text);">
+                <option value="auto">🌐 Автоматически (как на устройстве)</option>
                 <option value="Asia/Tashkent">🇺🇿 Узбекистан (GMT+5)</option>
                 <option value="Europe/Moscow">🇷🇺 Россия / Москва (GMT+3)</option>
                 <option value="Asia/Almaty">🇰🇿 Казахстан / Алматы (GMT+5)</option>
@@ -5927,7 +5919,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
             dailyStreak: 0, lastDailyClaim: null, 
             ownedThemes: ['standard'], ownedAvatars: [], 
             ownedTitles: [],
-            timezone: 'Asia/Tashkent', // По умолчанию Узбекистан
+            timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tashkent'), // Автоопределение по устройству; Ташкент — резерв
             currentTitle: null, // Если null, показываем Лигу
             lastSaveTime: 0,
             lifetimeStrictSec: 0,
@@ -6293,9 +6285,15 @@ body.dark-mode .tier-name { color: #f7eecf; }
                         isPro: !!DB.user.isPro,
                         isVip: !!DB.user.isVip,
                         season: userSeason,
+                        // 🔐 Владелец карточки — обязательно для Firestore Rules
+                        _ownerUID: window._firebaseUID || null,
+                        archivedSeason: userSeason,
                         archivedAt: Date.now()
                     }, { merge: true });
-                } catch(e) { console.error("Ошибка заморозки карточки сезона:", e); }
+                } catch(e) {
+                    console.warn("Заморозка карточки сезона пропущена:", e.code || e.message);
+                    App.toast("⚠️ Не удалось заархивировать прошлый сезон — попробуй позже");
+                }
             }
             
             // 4. Обновляем leaderboard в облаке
@@ -6555,25 +6553,31 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 const sn = s.season || 1;
                 if (sn >= CURRENT_SEASON) continue; // Архивируем только завершённые сезоны
                 try {
-                    await dbRef.setDoc(
-                        dbRef.doc(dbRef.db, "leaderboard_history_" + sn, Auth.currentUser.id),
-                        {
-                            name: DB.user.name,
-                            totalSec: s.totalSec || 0,
-                            avatar: DB.user.avatar,
-                            level: s.level || 1,
-                            currentTitle: DB.user.currentTitle || "",
-                            currentFrame: DB.user.currentFrame || null,
-                            isTitan: !!DB.user.isTitan,
-                            isKing: !!DB.user.isKing,
-                            isPro: !!DB.user.isPro,
-                            isVip: !!DB.user.isVip,
-                            season: sn,
-                            archivedAt: Date.now()
-                        },
-                        { merge: true }
-                    );
-                } catch(e) { console.error("Ошибка самоархивации сезона " + sn + ":", e); }
+                    // Идемпотентность: уже заархивировано (до конца) — не пишем снова
+                    const archRef = dbRef.doc(dbRef.db, "leaderboard_history_" + sn, Auth.currentUser.id);
+                    const archSnap = await dbRef.getDoc(archRef);
+                    if (archSnap.exists() && archSnap.data().archivedSeason === sn) continue;
+                    await dbRef.setDoc(archRef, {
+                        name: DB.user.name,
+                        totalSec: s.totalSec || 0,
+                        avatar: DB.user.avatar,
+                        level: s.level || 1,
+                        currentTitle: DB.user.currentTitle || "",
+                        currentFrame: DB.user.currentFrame || null,
+                        isTitan: !!DB.user.isTitan,
+                        isKing: !!DB.user.isKing,
+                        isPro: !!DB.user.isPro,
+                        isVip: !!DB.user.isVip,
+                        season: sn,
+                        // 🔐 Владелец карточки — обязательно для Firestore Rules
+                        _ownerUID: window._firebaseUID || null,
+                        archivedSeason: sn,
+                        archivedAt: Date.now()
+                    }, { merge: true });
+                } catch(e) {
+                    // Тихо: нет прав (чужой UID), офлайн и т.п. — не спамим в консоль
+                    console.warn("Архив сезона " + sn + " пропущен:", e.code || e.message);
+                }
             }
         },
         
@@ -6601,16 +6605,29 @@ body.dark-mode .tier-name { color: #f7eecf; }
                     if (u.archivedSeason === ds) return;        // Уже в архиве
                     writes.push(dbRef.setDoc(
                         dbRef.doc(dbRef.db, "leaderboard_history_" + ds, d.id),
-                        Object.assign({}, u, { archivedSeason: ds, archivedAt: Date.now() }),
-                        { merge: true }
-                    ));
+                        Object.assign({}, u, {
+                            archivedSeason: ds,
+                            archivedAt: Date.now(),
+                            // 🔐 Сохраняем исходного владельца карточки — иначе правила
+                            // отклонят запись (мы не можем писать в чужую карточку)
+                            _ownerUID: u._ownerUID || null
+                        }),
+                        { merge: true })
+                    .catch(() => {})); // чужая карточка → 403 → тихо пропускаем
                 });
                 sessionStorage.setItem('seasons_swept', '1');
                 if (writes.length) {
-                    console.log(`🧊 Заморозка Сезона 1: ${writes.length} карточек → архив`);
-                    Promise.all(writes).catch(e => console.error("Ошибка заморозки:", e));
+                    console.log(`🧊 Заморозка прошлых сезонов: ${writes.length} карточек → архив`);
+                    Promise.allSettled(writes).then(results => {
+                        const ok = results.filter(r => r.status === 'fulfilled').length;
+                        if (ok < results.length) {
+                            console.log(`🧊 Заморозка: ${ok}/${results.length} карточек (остальные — чужие, заархивируют их владельцы при входе)`);
+                        }
+                    });
                 }
-            } catch(e) { console.error("Ошибка заморозки сезонов:", e); }
+            } catch(e) {
+                console.warn("Заморозка сезонов пропущена:", e.code || e.message);
+            }
         },
         
         /**
@@ -6649,18 +6666,25 @@ body.dark-mode .tier-name { color: #f7eecf; }
     window.SeasonSystem = SeasonSystem;
 
 
-    // 🇺🇿 ФУНКЦИЯ ВРЕМЕНИ (UTC+5 Ташкент)
+    // 🌍 ФУНКЦИЯ ДАТЫ ЖУРНАЛА (ГГГГ-ММ-ДД в поясе пользователя)
+    // Пояс берётся из профиля (по умолчанию — пояс устройства), НЕ хардкод Ташкента.
+    // Ход времени не зависит от пояса — только группировка дней в журнале/статистике.
     const getUZDate = (dateObj = null) => {
-    // Если передали конкретную дату — используем её, иначе серверное время
-    const timestamp = dateObj ? dateObj.getTime() : TimeGuard.getTrueTime();
-    
-    // Добавляем смещение UTC+5 (Ташкент)
-    const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
-    const date = new Date(timestamp + UZ_OFFSET_MS);
-    
-    // Возвращаем ГГГГ-ММ-ДД (UTC формат, но с учётом смещения)
-    return date.toISOString().slice(0, 10);
-};
+        const timestamp = dateObj ? dateObj.getTime() : TimeGuard.getTrueTime();
+        const tz = (typeof DB !== 'undefined' && DB && DB.user && DB.user.timezone && DB.user.timezone !== 'auto')
+            ? DB.user.timezone
+            : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tashkent');
+        try {
+            // Форматируем дату в выбранной зоне и собираем ГГГГ-ММ-ДД из частей
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date(timestamp));
+            const get = t => (parts.find(p => p.type === t) || {}).value || '';
+            return `${get('year')}-${get('month')}-${get('day')}`;
+        } catch(e) {
+            return new Date(timestamp).toISOString().slice(0, 10);
+        }
+    };
 
     const NameGuard = {
         // Список запрещенных корней (RU, UZ, EN)
@@ -6959,6 +6983,17 @@ body.dark-mode .tier-name { color: #f7eecf; }
                 console.log("☁️ Синхронизация (Профиль + Топ) выполнена");
             } catch (e) { 
                 console.error("Ошибка сохранения:", e); 
+                // Понятное сообщение пользователю вместо тихой ошибки в консоли
+                const msg = (e && e.code === 'permission-denied')
+                    ? "⚠️ Нет доступа к облаку. Проверь интернет и перезайди"
+                    : (e && e.code === 'unavailable')
+                        ? "📴 Оффлайн — прогресс сохранён локально, отправим позже"
+                        : "⚠️ Не удалось синхронизировать — попробуй позже";
+                if (typeof App !== 'undefined' && App.toast && !this._lastSaveErrToast) {
+                    this._lastSaveErrToast = true;
+                    App.toast(msg);
+                    setTimeout(() => { this._lastSaveErrToast = false; }, 30000); // не чаще 1 раза в 30 сек
+                }
             }
         }
     },
@@ -7871,7 +7906,7 @@ body.dark-mode .tier-name { color: #f7eecf; }
         logout() { 
             if(confirm("Выйти из профиля?")) { 
                 if(window.Timer) Timer.stop(false);
-                if (window.Data) Data.stopListening();
+                if (typeof Data !== 'undefined' && Data.stopListening) Data.stopListening();
                 if (window.BattleSys) BattleSys.stopChallengeListener();
                 localStorage.removeItem('LastUserId'); 
                 location.reload(); 
@@ -11132,8 +11167,10 @@ else if (this.mode === 'fractions') {
     async sync() {
         this.isSyncing = true;
         
-        // 1. Берем пояс из настроек или ставим Ташкент по умолчанию
-        const userTZ = (window.DB && DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+        // 1. Берем пояс из настроек; 'auto' = не синхронизируемся по сетевой зоне, только точное время
+        const userTZ = (window.DB && DB.user && DB.user.timezone && DB.user.timezone !== 'auto')
+            ? DB.user.timezone
+            : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
         
         // 2. Вставляем этот пояс в ссылку
         const url = `https://timeapi.io/api/Time/current/zone?timeZone=${userTZ}`;
@@ -11468,7 +11505,8 @@ else if (this.mode === 'fractions') {
         if (Timer.active) {
             // Возвращаем селект к текущему значению
             const sel = document.getElementById('timezone-select');
-            if (sel) sel.value = DB.user.timezone || 'Asia/Tashkent';
+            const curTZ = DB.user.timezone || 'auto';
+            if (sel) sel.value = curTZ;
             return App.toast("⏱️ Сначала останови таймер — потом меняй пояс!");
         }
         
@@ -11546,6 +11584,8 @@ else if (this.mode === 'fractions') {
         },
         // ЛЕГКИЙ ВХОД (Без лагов)
         async initAfterLogin() {
+            // 🏁 Игровой профиль загружен в память — FCM может привязать токен
+            window._gameUserReady = true;
             // 🏆 Проверка сезона
             await SeasonSystem.checkAndReset();
             
@@ -12871,7 +12911,7 @@ renderCharts(weekSec) {
                 const dateObj = new Date(s.date);
 
                 // 2. Берем часовой пояс из настроек (или Ташкент по умолчанию)
-                const userTZ = (DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+                const userTZ = (DB.user && DB.user.timezone && DB.user.timezone !== 'auto') ? DB.user.timezone : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
 
                 // 3. Форматируем время СТРОГО по выбранному поясу
                 const dateStr = dateObj.toLocaleDateString('ru-RU', { 
@@ -13146,7 +13186,7 @@ renderCharts(weekSec) {
             el.innerHTML = '<div style="text-align:center;color:var(--text-light);font-size:13px;padding:15px;">Пока нет записей</div>';
             return;
         }
-        const userTZ = (DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+        const userTZ = (DB.user && DB.user.timezone && DB.user.timezone !== 'auto') ? DB.user.timezone : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
         el.innerHTML = days.map(day => {
             const dateStr = day.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: userTZ });
             const totalMin = Math.round(day.entries.reduce((s, e) => s + e.sec, 0) / 60);
@@ -14101,13 +14141,15 @@ setInterval(() => {
 
     const tashkentTimestamp = TimeGuard.getTrueTime();
     const now = new Date(tashkentTimestamp);
-    const userTZ = (window.DB && DB.user && DB.user.timezone) ? DB.user.timezone : 'Asia/Tashkent';
+    const userTZ = (window.DB && DB.user && DB.user.timezone && DB.user.timezone !== 'auto')
+        ? DB.user.timezone
+        : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     
     const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
                     now.getMinutes().toString().padStart(2, '0') + ":" + 
                     now.getSeconds().toString().padStart(2, '0');
                     
-    clockEl.innerText = `🕒 ${timeStr} (${userTZ.split('/')[1] || userTZ})`;
+    clockEl.innerText = `🕒 ${timeStr} (${userTZ.split('/').pop() || userTZ})`;
 }, 1000);  
     
     // 🔥 ГЕНЕРАЛЬНЫЙ НАСТРОЙЩИК СБОРА
@@ -14158,50 +14200,27 @@ App.switchTab = function(id, btn) {
         <div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.96);">
             <div class="modal-content" style="text-align: center; max-width: 360px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px; position: relative;">
                 
-                <!-- Индикатор шагов -->
+                <!-- Индикатор шагов (2 шага вместо 4 — короткий онбординг) -->
                 <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
                     <div class="tut-dot active" id="dot-1"></div>
                     <div class="tut-dot" id="dot-2"></div>
-                    <div class="tut-dot" id="dot-3"></div>
-                    <div class="tut-dot" id="dot-4"></div>
                 </div>
 
-                <!-- Слайд 1: Философия -->
+                <!-- Слайд 1: Суть (философия + механика + цели в одном) -->
                 <div class="tutorial-slide" id="tut-1">
-                    <div style="font-size: 64px; margin-bottom: 20px; filter: drop-shadow(0 0 15px var(--primary));">⏳</div>
-                    <h2 style="margin-bottom: 15px; font-size: 24px;">Твой труд станет видимым</h2>
-                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                        В обычной жизни учеба кажется бесконечной. <br>
-                        <b>MathBooster Pro</b> превращает каждую минуту твоего фокуса в реальный прогресс.
+                    <div style="font-size: 64px; margin-bottom: 15px; filter: drop-shadow(0 0 15px var(--primary));">⏳</div>
+                    <h2 style="margin-bottom: 12px; font-size: 24px;">Твой труд станет видимым</h2>
+                    <p style="font-size: 14px; line-height: 1.7; opacity: 0.9; margin-bottom: 20px; text-align: left;">
+                        • <b>⏱️ Таймер:</b> включай, когда садишься за уроки<br>
+                        • <b>💰 Монеты и XP:</b> капают за учёбу — качай уровень<br>
+                        • <b>🏆 Топ и дуэли:</b> соревнуйся с другими<br>
+                        • <b>🛍️ Магазин:</b> трать заработанное на аватары и темы
                     </p>
-                    <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Понятно, дальше! 👇</button>
+                    <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Дальше 👇</button>
                 </div>
 
-                <!-- Слайд 2: Механика -->
+                <!-- Слайд 2: Безопасность (КРИТИЧНО) -->
                 <div class="tutorial-slide" id="tut-2" style="display: none;">
-                    <div style="font-size: 64px; margin-bottom: 20px;">💰</div>
-                    <h2 style="margin-bottom: 15px; font-size: 24px;">Учись и зарабатывай</h2>
-                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px; text-align: left;">
-                        • <b>Таймер:</b> Включай, когда садишься за уроки.<br>
-                        • <b>Монеты:</b> Капают каждые 10 минут учебы.<br>
-                        • <b>Опыт (XP):</b> Повышает твой уровень и открывает новые Лиги.
-                    </p>
-                    <button class="btn btn-primary" onclick="Tutorial.next(3)" style="width: 100%;">Интересно... 👇</button>
-                </div>
-
-                <!-- Слайд 3: Магазин и Топ -->
-                <div class="tutorial-slide" id="tut-3" style="display: none;">
-                    <div style="font-size: 64px; margin-bottom: 20px;">🏆</div>
-                    <h2 style="margin-bottom: 15px; font-size: 24px;">Стань лучшим</h2>
-                    <p style="font-size: 15px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
-                        Трать заработанное в <b>Магазине</b> на редкие аватары и 3D-темы. <br><br>
-                        Сражайся в <b>PVP-дуэлях</b> и поднимись на вершину Глобального Топа!
-                    </p>
-                    <button class="btn btn-primary" onclick="Tutorial.next(4)" style="width: 100%;">Почти всё! 👇</button>
-                </div>
-
-                <!-- Слайд 4: Безопасность (КРИТИЧНО) -->
-                <div class="tutorial-slide" id="tut-4" style="display: none;">
                     <div style="font-size: 64px; margin-bottom: 20px;">🔐</div>
                     <h2 style="margin-bottom: 15px; font-size: 24px; color: #FFD700;">Важное правило!</h2>
                     <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
