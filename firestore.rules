@@ -11,11 +11,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // 🚫 БАН-ЛИСТ — забаненные Firebase Auth UID.
-    // Динамический список: админ банит через admin_panel → Cloud Function пишет
-    // в коллекцию banned_users/{authUID} → правила видят бан мгновенно.
-    // Старые хардкод-UID оставлены для надёжности (если коллекция недоступна).
-    // Чтение не запрещаем (иначе у него крашится приложение, а нам это не нужно).
+    // 🚫 БАН-ЛИСТ — динамический список banned_users/{authUID}
+    // + хардкод старых UID как страховка
     function isBanned() {
       return request.auth != null && (
         request.auth.uid == '1rBstYZgAAR7YjhIGegcwT9kfPV2'
@@ -27,8 +24,7 @@ service cloud.firestore {
     // ============================================
     // 📋 ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ
     // Профиль большой (сессии, предметы, квесты) — проверяем только
-    // владельца и разумный размер документа. Точную валидацию монет/часов
-    // делает Cloud Function onUserWrite (серверный анти-чит).
+    // владельца. Точную валидацию монет/часов делает Cloud Function onUserWrite.
     // ============================================
     match /users/{userId} {
       allow read: if true;
@@ -54,9 +50,9 @@ service cloud.firestore {
 
     // ============================================
     // 🏆 ТАБЛИЦА ЛИДЕРОВ (публичная визитка)
-    // Каждый пишет ТОЛЬКО в свою карточку и только разумные значения:
-    // totalSec — не больше реальных секунд с начала сезона (анти-фарм часов),
-    // name — не пустое, level — в разумных пределах.
+    // Каждый пишет ТОЛЬКО в свою карточку и только разумные значения.
+    // Анти-фарм: totalSec ограничен 13ч на одну запись (сессия + защита
+    // от склеенных сейвов); скорость прироста проверяет сервер (antiCheatLeaderboard).
     // ============================================
     match /leaderboard/{userId} {
       allow read: if true;
@@ -65,9 +61,6 @@ service cloud.firestore {
         request.resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
-      // ⏱️ анти-фарм часов: новая карточка не может появиться с большим запасом часов
-      // (13ч — максимум одной честной сессии; дальше часы растут только апдейтами,
-      //  которые ограничены дельтой и серверной проверкой скорости antiCheatLeaderboard)
       && (
         isAdmin()
         || (
@@ -87,8 +80,6 @@ service cloud.firestore {
         resource.data._ownerUID == request.auth.uid
         || isAdmin()
       )
-      // ⏱️ анти-фарм: прирост часов за одну запись не больше 13 часов
-      // (час в сессии + защита от склеенных сейвов)
       && (
         isAdmin()
         || (
@@ -110,7 +101,9 @@ service cloud.firestore {
     // ============================================
     // 🧊 АРХИВ СЕЗОНОВ (замороженные таблицы лидеров)
     // Читать — все. Писать карточку может ТОЛЬКО её владелец
-    // (иначе кто угодно переписывает чужие результаты прошлого сезона)
+    // (иначе кто угодно переписывает чужие результаты прошлого сезона).
+    // Клиент пишет _ownerUID при заморозке; чужие карточки пропускает тихо.
+    // Динамически поддерживаем сезоны 1..5 (на будущее).
     // ============================================
     match /leaderboard_history_1/{userId} {
       allow read: if true;
@@ -119,6 +112,7 @@ service cloud.firestore {
         || resource.data.get('_ownerUID', '') == request.auth.uid
         || isAdmin()
       );
+      allow delete: if isAdmin();
     }
 
     match /leaderboard_history_2/{userId} {
@@ -128,6 +122,17 @@ service cloud.firestore {
         || resource.data.get('_ownerUID', '') == request.auth.uid
         || isAdmin()
       );
+      allow delete: if isAdmin();
+    }
+
+    match /leaderboard_history_3/{userId} {
+      allow read: if true;
+      allow write: if isSignedIn() && !isBanned() && (
+        request.resource.data.get('_ownerUID', '') == request.auth.uid
+        || resource.data.get('_ownerUID', '') == request.auth.uid
+        || isAdmin()
+      );
+      allow delete: if isAdmin();
     }
 
     // ============================================
@@ -147,11 +152,11 @@ service cloud.firestore {
     }
 
     // ============================================
-    // 🎟️ ПРОМО-КОДЫ
+    // 🎟️ ПРОМО-КОДЫ (только админ)
     // ============================================
     match /promo_codes/{code} {
       allow read: if true;
-      allow write: if isAdmin();  // Только админ
+      allow write: if isAdmin();
     }
 
     // ============================================
@@ -171,17 +176,51 @@ service cloud.firestore {
 
     // ============================================
     // ⚔️ ВЫЗОВЫ НА ДУЭЛЬ (pendingChallenges)
-    // Документ адресуется по ИГРОВОМУ id игрока, который у легаси/
-    // восстановленных профилей НЕ совпадает с Firebase Auth UID —
-    // старое правило request.auth.uid == userId блокировало чтение
-    // вызова и его удаление. Документы одноразовые и содержат только
-    // имя/аватар/код комнаты, поэтому любому вошедшему можно читать.
+    // Документ адресуется по игровому id игрока, который у легаси/
+    // восстановленных профилей не совпадает с Firebase Auth UID.
+    // Документы одноразовые и содержат только имя/аватар/код комнаты.
     // ============================================
     match /pendingChallenges/{challengeId} {
       allow read: if isSignedIn() && !isBanned();
       allow create: if isSignedIn() && !isBanned();
       allow update: if isSignedIn() && !isBanned();
       allow delete: if isSignedIn() && !isBanned();
+    }
+
+    // ============================================
+    // 🎟️ FCM-ТОКЕНЫ РОДИТЕЛЕЙ (parentTokens/{childCode}/tokens/{fcmToken})
+    // Пишет родитель из режима родителя (привязка пушей к ребёнку).
+    // Читать может только Cloud Functions (клиентские правила запрещают).
+    // ============================================
+    match /parentTokens/{childCode} {
+      allow read: if false; // Cloud Functions (Admin SDK) игнорируют правила
+
+      match /tokens/{token} {
+        allow read: if false;
+        allow create: if isSignedIn() && !isBanned()
+          && request.resource.data.keys().hasAll(['token'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() <= 200;
+        allow update, delete: if isSignedIn() && !isBanned();
+      }
+    }
+
+    // ============================================
+    // ⏱️ АНТИ-АФК ТАЙМЕР (timerChecks / afk_checks)
+    // Запись о том, что игрок прошёл проверку «живости» во время длинной сессии.
+    // ============================================
+    match /timerChecks/{docId} {
+      allow read: if isSignedIn() && !isBanned();
+      allow create: if isSignedIn() && !isBanned();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /afk_checks/{docId} {
+      allow read: if isSignedIn() && !isBanned();
+      allow create: if isSignedIn() && !isBanned();
+      allow update: if false;
+      allow delete: if isAdmin();
     }
   }
 }
