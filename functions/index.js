@@ -768,18 +768,74 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
         if (action === "ban" || action === "unban") {
             if (!authUid) { res.status(400).json({ ok: false, error: "pass uid (Firebase Auth UID)" }); return; }
             const ref = db.collection("banned_users").doc(authUid);
+            const CARD_COLL = ["leaderboard", "leaderboard_history_1", "leaderboard_history_2", "leaderboard_history_3"];
             if (action === "ban") {
+                // 1. Находим все игровые id этого читера (auth UID + профили с _ownerUID)
+                const gameIds = new Set([authUid]);
+                try {
+                    const us = await db.collection("users").where("_ownerUID", "==", authUid).get();
+                    us.forEach(d => gameIds.add(d.id));
+                } catch (e) { console.warn("ban: users lookup fail", e.message); }
+
+                // 2. Снапшот карточек (для восстановления при разбане) + обнуление
+                const cardSnapshot = {};
+                let zeroed = 0;
+                for (const gid of gameIds) {
+                    for (const coll of CARD_COLL) {
+                        const cardRef = db.collection(coll).doc(gid);
+                        const card = await cardRef.get().catch(() => null);
+                        if (!card || !card.exists) continue;
+                        if (coll === "leaderboard" && !cardSnapshot[gid]) cardSnapshot[gid] = card.data();
+                        await cardRef.set({
+                            totalSec: 0,
+                            isBanned: true,
+                            banReason: req.query.reason || "admin_panel"
+                        }, { merge: true });
+                        zeroed++;
+                    }
+                    // 3. Профиль: часы в 0 + метка (игрок и так не может писать — он в бане)
+                    const profRef = db.collection("users").doc(gid);
+                    const prof = await profRef.get().catch(() => null);
+                    if (prof && prof.exists) {
+                        await profRef.set({
+                            "user.totalSec": 0,
+                            "user.isBanned": true,
+                            "user.forceUpdate": true
+                        }, { merge: true });
+                    }
+                }
+
                 await ref.set({
                     bannedAt: Date.now(),
                     reason: req.query.reason || "admin_panel",
-                    by: "admin_panel"
-                });
-                console.log(`🚫 BAN: ${authUid}`);
-                res.json({ ok: true, action: "ban", authUid });
+                    by: "admin_panel",
+                    cardSnapshot: cardSnapshot
+                }, { merge: true });
+                console.log(`🚫 BAN: ${authUid} — обнулено карточек: ${zeroed}`);
+                res.json({ ok: true, action: "ban", authUid, zeroedCards: zeroed });
             } else {
+                // UNBAN: восстанавливаем карточки из снапшота
+                const banDoc = await ref.get().catch(() => null);
+                const snap = (banDoc && banDoc.exists) ? (banDoc.data().cardSnapshot || {}) : {};
+                const gameIds = new Set([...Object.keys(snap), authUid]);
+                let restored = 0;
+                for (const gid of gameIds) {
+                    for (const coll of CARD_COLL) {
+                        // снимаем метку бана со всех карточек
+                        await db.collection(coll).doc(gid).set({ isBanned: false, banReason: "" }, { merge: true }).catch(() => {});
+                    }
+                    if (snap[gid] && typeof snap[gid].totalSec !== "undefined") {
+                        await db.collection("leaderboard").doc(gid).set(snap[gid], { merge: true });
+                        restored++;
+                    }
+                    await db.collection("users").doc(gid).set({
+                        "user.isBanned": false,
+                        "user.forceUpdate": true
+                    }, { merge: true }).catch(() => {});
+                }
                 await ref.delete().catch(() => {});
-                console.log(`♻️ UNBAN: ${authUid}`);
-                res.json({ ok: true, action: "unban", authUid });
+                console.log(`♻️ UNBAN: ${authUid} — восстановлено карточек: ${restored}`);
+                res.json({ ok: true, action: "unban", authUid, restoredCards: restored });
             }
             return;
         }
