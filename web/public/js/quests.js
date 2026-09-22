@@ -239,19 +239,3 @@ const WeeklyQuestSys = {
         App.toast(`🏆 Марафон недели пройден! +${reward} 💰`);
     }
 };
-    
-    const MathGame = { 
-        ans:0, show(isCheck=false) { 
-            const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*9)+2; this.ans = a*b; 
-            document.getElementById('math-problem').
-            innerText = `${a} x ${b} = ?`; 
-            document.getElementById('math-answer').value = ''; 
-            document.getElementById('modal-title').innerText = isCheck?"👮 Проверка":"🧠 Задача"; 
-            document.getElementById('modal-msg').innerText = isCheck?"Вы долго учились. Подтвердите присутствие.":""; 
-            document.getElementById('math-modal').classList.add('show'); 
-            document.getElementById('math-answer').focus(); }, 
-                check() { if(parseInt(document.getElementById('math-answer').value) === this.ans) { 
-                    document.getElementById('math-modal').classList.remove('show'); 
-                    Timer.start(); } else { 
-                        document.getElementById('math-answer').style.borderColor='red'; 
-                        SoundSys.play('error'); } } };

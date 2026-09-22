@@ -1,3 +1,5 @@
+// СЕЗОНЫ: архивация карточек при смене сезона, заморозка итогов,
+// расчёт часов текущего сезона (с учётом админ-правок seasonHoursOverride).
     function markSeasonButtons(season) {
         const b1 = document.getElementById('season-btn-1');
         const b2 = document.getElementById('season-btn-2');
