@@ -68,3 +68,7 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 web/dist/
+
+# Admin panel — только локально, не публиковать
+admin_panel.html
+get_admin_uid.html
