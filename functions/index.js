@@ -680,7 +680,7 @@ exports.antiCheatLeaderboard = functions.firestore
  *        /purgeUser?key=SECRET&name=HACKER   — найти и удалить по имени во всех коллекциях
  * После использования функцию удалить из кода.
  */
-const PURGE_SECRET = "MB-purge-9f4Kz72mQx";
+const PURGE_SECRET = process.env.ADMIN_KEY || ""; // тот же секрет, что и у adminAction
 exports.purgeUser = functions.https.onRequest(async (req, res) => {
     if (req.query.key !== PURGE_SECRET) {
         res.status(403).send("forbidden");
@@ -743,7 +743,9 @@ exports.purgeUser = functions.https.onRequest(async (req, res) => {
  *
  * Все вызовы требуют ключ: &key=ADMIN_SECRET
  */
-const ADMIN_SECRET = "MB-purge-9f4Kz72mQx";
+// 🔑 Секрет берётся из functions/.env (ADMIN_KEY=...) — задаётся при деплое,
+// в коде и в git НЕ хранится. Пустая строка = запретить все вызовы (fail-closed).
+const ADMIN_SECRET = process.env.ADMIN_KEY || "";
 
 exports.adminAction = functions.https.onRequest(async (req, res) => {
     // CORS — панель открывается с file:// и с github.io
