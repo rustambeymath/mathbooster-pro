@@ -1,3 +1,5 @@
+// АВТОРИЗАЦИЯ: профили учеников, вход, восстановление по коду.
+// Родительский режим (вход и список детей) — см. js/parent.js.
     const Auth = {
         users: [], currentUser: null,
         avatars: ['😎', '👩‍🎓', '👨‍🎓', '👱‍♀️', '👨', '🧕', '🧔', '🐱', '🦊', '⚽'],
@@ -81,32 +83,8 @@
         if (this.users.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Все профили повреждены. Создайте новый!</div>';
         }
-
-        // 2. ОТРИСОВКА СПИСКА ДЛЯ РОДИТЕЛЕЙ (Наблюдение)
-        const parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-        if (parentLinks.length > 0) {
-            const parentTitle = document.createElement('h3');
-            parentTitle.style.cssText = "margin-top:25px; margin-bottom:10px; font-size:12px; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; text-align:center;";
-            parentTitle.innerText = "🔎 Профили детей (Наблюдение)";
-            list.appendChild(parentTitle);
-
-            parentLinks.forEach(link => {
-                const pDiv = document.createElement('div');
-                pDiv.className = 'user-list-item';
-                pDiv.style.borderLeft = "4px solid #2ECC71";
-                
-                pDiv.innerHTML = `
-                    <div class="user-avatar">${link.avatar || '👦'}</div>
-                    <div style="flex-grow:1;" onclick="Auth.loginAsParent('${link.code}')">
-                        <div style="font-weight:bold">${link.name}</div>
-                        <div style="font-size:11px; color:#2ECC71">Режим просмотра (Online)</div>
-                    </div>
-                    <button class="delete-user-btn" style="background:#f39c12; margin-right:5px; font-size:12px;" onclick="Auth.updateParentCode('${link.id}', event)">🔄</button>
-                    <button class="delete-user-btn" onclick="Auth.removeParentLink('${link.id}', event)">✕</button>
-                `;
-                list.appendChild(pDiv);
-            });
-        }
+        // Секция родительских ссылок вынесена в js/parent.js (ParentUI.renderParentLinks)
+        if (window.ParentUI) ParentUI.renderParentLinks(list);
     },
         deleteUser(id, event) {
             event.stopPropagation();
@@ -190,13 +168,6 @@
             document.getElementById('role-select-view').style.display = 'block';
             SoundSys.play('click');
         },
-
-        showParentLogin() {
-            this._hideAllAuth();
-            document.getElementById('parent-login-view').style.display = 'block';
-            setTimeout(() => { const inp = document.getElementById('parent-code-input'); if(inp) inp.focus(); }, 100);
-        },
-
         showRegister() { 
             this._hideAllAuth();
             document.getElementById('register-view').style.display = 'block';
@@ -321,161 +292,6 @@
                 localStorage.removeItem('LastUserId'); 
                 location.reload(); 
             } 
-        },
-
-        parentLoginPrompt() {
-            const modal = document.createElement('div');
-            modal.className = 'modal show';
-            modal.style.zIndex = '15000';
-            modal.innerHTML = `
-                <div class="modal-content" style="text-align:center; max-width:340px;">
-                    <div style="font-size:48px; margin-bottom:10px;">👨‍👩‍👧</div>
-                    <h3 style="margin-bottom:5px;">Режим родителя</h3>
-                    <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Введи код восстановления ребенка<br>для просмотра его прогресса</p>
-                    <input type="text" id="parent-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="8" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
-                    <button class="btn btn-primary" id="parent-code-btn" style="margin-top:15px; width:100%;" onclick="Auth.parentLoginSubmit()">📡 Подключиться</button>
-                    <button class="btn btn-outline" style="margin-top:8px; width:100%;" onclick="this.closest('.modal').remove()">Отмена</button>
-                </div>`;
-            document.body.appendChild(modal);
-            setTimeout(() => { const inp = document.getElementById('parent-code-input'); if(inp) inp.focus(); }, 100);
-        },
-
-        parentLoginSubmit() {
-            const inp = document.getElementById('parent-code-input');
-            if (!inp) return;
-            const cleanID = inp.value.trim().toUpperCase();
-            if (cleanID.length < 4) return App.toast("❌ Слишком короткий код");
-            document.querySelector('.modal.show')?.remove();
-            // Сохраняем связь в список родителя
-            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-            if (!parentLinks.find(l => l.code === cleanID)) {
-                parentLinks.push({
-                    id: 'p' + Date.now(),
-                    code: cleanID,
-                    name: 'Ребенок (' + cleanID.slice(0,4) + ')',
-                    avatar: '👦',
-                    addedAt: Date.now()
-                });
-                localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
-            }
-            this.loginAsParent(cleanID);
-        },
-
-        async loginAsParent(code) {
-            App.toast("📡 Подключение к профилю ребенка...");
-            try {
-                let attempts = 0;
-                while (!window.DB_Online && attempts < 10) {
-                    await new Promise(r => setTimeout(r, 500));
-                    attempts++;
-                }
-                if (!window.DB_Online) {
-                    App.toast("❌ Сервер недоступен");
-                    return;
-                }
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                const docSnap = await window.DB_Online.getDoc(docRef);
-                if (docSnap.exists()) {
-                    isParentMode = true;
-                    DB = docSnap.data().data;
-                    Auth.currentUser = { 
-                        id: DB.user.id, 
-                        name: DB.user.name, 
-                        avatar: DB.user.avatar 
-                    };
-                    // Обновляем имя в parentLinks
-                    let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-                    const link = parentLinks.find(l => l.code === code);
-                    if (link) {
-                        link.name = DB.user.name;
-                        link.avatar = DB.user.avatar || '👦';
-                        localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
-                    }
-                    App.initParentView();
-                    DB.user.visitedParentMode = true;
-                    // Сохраняем FCM-токен родителя в Firebase (для серверных push-уведомлений)
-                    this._saveParentFcmToken(DB.user.id, DB.user.name);
-                } else {
-                    App.toast("❌ Код не найден или истёк");
-                }
-            } catch (e) {
-                console.error("Parent Login Error:", e);
-                App.toast("❌ Ошибка подключения");
-            }
-        },
-
-        // Сохраняем FCM-токен родителя в Firebase (для push-уведомлений)
-        // Храним по коду ребёнка: parentTokens/{childCode}/tokens/{fcmToken}
-        async _saveParentFcmToken(childUserId, childName) {
-            try {
-                let attempts = 0;
-                while (!window.DB_Online && attempts < 10) {
-                    await new Promise(r => setTimeout(r, 500));
-                    attempts++;
-                }
-                if (!window.DB_Online) return;
-
-                // Получаем FCM-токен родителя
-                let token = localStorage.getItem('fcm_token');
-                if (!token && window.DB_Online.messaging) {
-                    try {
-                        const { getToken } = window.DB_Online;
-                        token = await getToken(window.DB_Online.messaging, {
-                            vapidKey: 'BHMScHHyu4ovNRTDndNKTHovdL5SkrSRFjrkZ6GiTLATTDvir7mGp9iFFzZFpaFoVDhLCI7TPuOSZ08ZotWVBrw'
-                        });
-                        if (token) localStorage.setItem('fcm_token', token);
-                    } catch(e) { console.warn('FCM token error:', e); }
-                }
-                if (!token) return;
-
-                // Определяем код ребёнка из parentLinks
-                let childCode = '';
-                try {
-                    const parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-                    const link = parentLinks.find(l => l.name?.includes(childName) || true);
-                    if (link) childCode = link.code;
-                } catch(e) {}
-                if (!childCode) { console.warn('Нет кода ребёнка для сохранения FCM-токена'); return; }
-
-                // Сохраняем в parentTokens/{childCode}/tokens/{fcmToken}
-                const { doc, setDoc, db } = window.DB_Online;
-                const tokenDoc = doc(db, 'parentTokens', childCode, 'tokens', token);
-                await setDoc(tokenDoc, {
-                    token: token,
-                    parentName: (() => { try { return JSON.parse(localStorage.getItem('MathUsers') || '[]').find(u => u.id === Auth.currentUser?.id)?.name || 'Родитель'; } catch(e) { return 'Родитель'; } })(),
-                    childName: childName || 'Ребёнок',
-                    childUserId: childUserId || '',
-                    createdAt: Date.now(),
-                    lastSeen: Date.now(),
-                    userAgent: navigator.userAgent.substring(0, 100)
-                });
-                console.log('✅ FCM-токен родителя сохранён в Firebase для push-уведомлений');
-            } catch(e) {
-                console.error('Ошибка сохранения parent FCM token:', e);
-            }
-        },
-
-        removeParentLink(id, event) {
-            event.stopPropagation();
-            if(!confirm("Прекратить наблюдение за этим профилем?")) return;
-            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-            parentLinks = parentLinks.filter(link => link.id !== id);
-            localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
-            this.renderUserList();
-        },
-
-        updateParentCode(id, event) {
-            event.stopPropagation();
-            const newCode = window.prompt("Ребенок обновил код? Введите новый:");
-            if (!newCode) return;
-            let parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-            const index = parentLinks.findIndex(l => l.id === id);
-            if (index !== -1) {
-                parentLinks[index].code = newCode.trim().toUpperCase();
-                localStorage.setItem('ParentLinks', JSON.stringify(parentLinks));
-                this.renderUserList();
-                App.toast("✅ Код обновлен");
-            }
         },
 
         resetData() {

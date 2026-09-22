@@ -216,6 +216,9 @@
 
         // ПРОВЕРКА ПРИ ВХОДЕ
         async check() {
+            // Защита от гонки: DB.user может быть ещё не готов при первом
+            // снапшоте Firestore (иначе — TypeError в консоли у новичков).
+            if (!DB || !DB.user) return;
             const today = getUZDate(); // Текущая дата по Ташкенту
             const last = DB.user.lastDailyClaim; // Когда забирал последний раз
 
