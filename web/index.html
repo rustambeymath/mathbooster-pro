@@ -1,0 +1,1764 @@
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <!-- Адаптация под мобильные устройства и iPhone (челка) -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        <title>MathBooster Pro</title>
+        <!-- ССЫЛКА В ТЕЛЕГРАМЕ И ИНСТЕ  -->
+        <meta property="og:title" content="MathBooster Pro: Оцифруй свой интеллект 🧠">
+        <meta property="og:description" content="Путь к 10,000 часам мастерства начинается здесь. MathBooster Pro — это твой личный бухгалтер знаний, который делает интеллектуальный труд видимым. Учись, побеждай в дуэлях и качай свой мозг.">
+        <meta property="og:image" content="https://rustambeymath.github.io/mathbooster-pro/preview.png">
+        <meta property="og:url" content="https://rustambeymath.github.io/mathbooster-pro/">
+        <meta property="og:type" content="website">
+        <!-- PWA настройки -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6C63FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MathBooster Pro">
+
+    <!-- Иконки -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+        <!-- Библиотека QR -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+        <!-- Библиотека графиков -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+        <!-- YANDEX METRIKA -->
+        <script type="text/javascript" >
+        (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+        (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+        
+
+        
+
+        ym(105919372, "init", { // <-- ВСТАВЬ СВОЙ ID СЧЕТЧИКА
+                clickmap:true,
+                trackLinks:true,
+                accurateTrackBounce:true,
+                webvisor:true
+        });
+        
+        </script>
+    
+
+        <!-- FIREBASE (База Данных) -->
+        <script type="module" src="/src/firebase-init.js"></script>
+        
+<link rel="stylesheet" href="styles/main.css">
+        
+    </head>
+    <body>
+    <noscript><div><img src="https://mc.yandex.ru/watch/105919372" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+    <!-- PREMIUM SPLASH SCREEN -->
+    <div id="splash-screen">
+        <!-- Фоновые круги для красоты -->
+        <div class="splash-bg-circle c1"></div>
+        <div class="splash-bg-circle c2"></div>
+
+        <div class="splash-content">
+            <!-- Логотип с пульсацией -->
+            <div class="splash-logo-wrapper">
+                <img src="logo.png" alt="Logo" class="splash-logo-img">
+                <div class="splash-glow"></div>
+            </div>
+
+            <!-- Название -->
+            <h1 class="splash-title">MathBooster <span class="splash-badge">PRO</span></h1>
+
+            <!-- Полоска загрузки -->
+            <div class="splash-progress-container">
+                <div class="splash-progress-bar" id="splash-bar"></div>
+            </div>
+
+            <!-- Меняющийся текст -->
+            <div class="splash-text" id="splash-text">Загрузка модулей...</div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="styles/dashboard.css">
+
+    <script src="ios-pwa.js"></script>
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen">
+
+        <!-- 1. ВЫБОР РОЛИ: Ученик или Родитель -->
+        <div class="auth-card" id="role-select-view" style="text-align:center;">
+            <img src="logo.png" alt="Logo" class="app-logo" onclick="SecretSys.handleLogoClick()">
+            <h2 style="margin-bottom:5px; color:var(--primary);">MathBooster PRO</h2>
+            <p style="color:var(--text-light); font-size:14px; margin-bottom:30px;">Твой путь к знаниям</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <button class="role-btn" onclick="Auth.showLogin()">
+                    <div class="role-btn-icon">🎓</div>
+                    <div class="role-btn-title">Ученик</div>
+                    <div class="role-btn-sub">Учись и побеждай</div>
+                </button>
+                <button class="role-btn role-btn-parent" onclick="Auth.showParentLogin()">
+                    <div class="role-btn-icon">👨‍👩‍👧</div>
+                    <div class="role-btn-title">Родитель</div>
+                    <div class="role-btn-sub">Наблюдай за прогрессом</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. ВХОД УЧЕНИКА -->
+        <div class="auth-card" id="login-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showRoleSelect()">← Назад</button>
+            <img src="logo.png" alt="Logo" class="app-logo" onclick="SecretSys.handleLogoClick()">
+            <h2 style="margin-bottom:5px; color:var(--primary);">Ученик</h2>
+            <p style="color:var(--text-light); font-size:14px; margin-bottom:20px;">Выбери профиль</p>
+            <div id="user-list"></div>
+            <button class="btn btn-primary" onclick="Auth.showRegister()" style="margin-top:10px;">+ Создать профиль</button>
+
+            <div style="display:flex; align-items:center; gap:12px; margin:20px 0 12px;">
+                <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
+                <span style="font-size:11px; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; white-space:nowrap;">или</span>
+                <div style="flex:1; height:1px; background:var(--text-light); opacity:0.3;"></div>
+            </div>
+
+            <button class="btn" onclick="Auth.showTransfer()" style="background:var(--surface); border:2px solid var(--primary); color:var(--primary); font-weight:600; font-size:13px; padding:14px 8px; border-radius:15px; width:100%;">
+                📥 Код восстановления
+            </button>
+        </div>
+
+        <!-- 3. РЕГИСТРАЦИЯ — ПРЕМИУМ -->
+        <div class="auth-card" id="register-view" style="display:none; padding:30px 24px;">
+            <button class="auth-back-btn" onclick="Auth.showLogin()">← Назад</button>
+
+            <!-- Превью аватарки -->
+            <div id="reg-preview-avatar" style="width:80px; height:80px; border-radius:50%; background:var(--bg); border:4px solid var(--primary); margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:44px; position:relative; overflow:hidden; box-shadow:0 8px 25px rgba(108,99,255,0.2); transition:0.3s;">😎</div>
+            <h2 style="margin-bottom:2px; font-size:20px;">Новый профиль</h2>
+            <p style="color:var(--text-light); font-size:12px; margin-bottom:20px;">Выбери аватар и введи имя</p>
+
+            <!-- Шаг 1: Аватар -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">1</span> Аватар</div>
+                <div class="avatar-grid" id="avatar-selector" style="grid-template-columns: repeat(5, 1fr); gap:8px;"></div>
+            </div>
+
+            <!-- Шаг 2: Имя -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">2</span> Имя</div>
+                <div style="position:relative;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:18px; opacity:0.5;">✏️</span>
+                    <input type="text" id="reg-name" class="input-field" placeholder="Как тебя зовут?" maxlength="12" style="padding-left:42px; margin-bottom:0; font-size:15px; border-radius:14px;">
+                </div>
+            </div>
+
+            <!-- Шаг 3: Пол -->
+            <div class="reg-step">
+                <div class="reg-step-label"><span class="reg-step-num">3</span> Пол</div>
+                <div class="gender-toggle">
+                    <button class="gender-toggle-btn active" id="gender-male" onclick="Auth.setGender('male')">
+                        <span class="gt-icon">👨</span>
+                        <span class="gt-text">Парень</span>
+                    </button>
+                    <button class="gender-toggle-btn" id="gender-female" onclick="Auth.setGender('female')">
+                        <span class="gt-icon">👩</span>
+                        <span class="gt-text">Девушка</span>
+                    </button>
+                    <div class="gender-toggle-slider"></div>
+                </div>
+            </div>
+
+            <!-- Кнопка создать -->
+            <button class="btn reg-create-btn" onclick="Auth.createAccount()">
+                <span>Создать профиль</span>
+                <span style="font-size:18px;">🚀</span>
+            </button>
+        </div>
+
+        <!-- 4. ВХОД РОДИТЕЛЯ -->
+        <div class="auth-card" id="parent-login-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showRoleSelect()">← Назад</button>
+            <div style="font-size:48px; margin-bottom:10px;">👨‍👩‍👧</div>
+            <h2 style="margin-bottom:5px; color:#2ECC71;">Родитель</h2>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:20px;">Введи код восстановления ребенка<br>для просмотра его прогресса</p>
+            <input type="text" id="parent-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="8" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
+            <button class="btn" onclick="Auth.parentLoginSubmit()" style="margin-top:15px; width:100%; background:#2ECC71; color:white; font-weight:700; font-size:15px; padding:15px; border-radius:15px;">📡 Подключиться</button>
+        </div>
+
+        <!-- 5. КОД ВОССТАНОВЛЕНИЯ -->
+        <div class="auth-card" id="transfer-view" style="display:none;">
+            <button class="auth-back-btn" onclick="Auth.showLogin()">← Назад</button>
+            <div style="font-size:48px; margin-bottom:10px;">📥</div>
+            <h2 style="margin-bottom:5px;">Код восстановления</h2>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:20px;">Введи код восстановления профиля<br>чтобы войти на другом устройстве</p>
+            <input type="text" id="transfer-code-input" class="input-field" placeholder="XXXX-XXXX" maxlength="20" style="text-align:center; font-size:20px; font-family:monospace; letter-spacing:3px; text-transform:uppercase; font-weight:bold;">
+            <button class="btn" onclick="Auth.transferSubmit()" style="margin-top:15px; width:100%; background:var(--primary); color:white; font-weight:700; font-size:15px; padding:15px; border-radius:15px;">🔄 Восстановить</button>
+        </div>
+    </div>
+
+    <!-- PARENT DASHBOARD SCREEN -->
+    <div id="parent-screen" style="display:none;">
+        <div class="parent-header">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div class="parent-header-avatar" id="parent-header-avatar">😎</div>
+                <div>
+                    <div class="mode-label">👨‍👩‍👧 Родительский режим</div>
+                    <div class="child-name" id="parent-child-name">Загрузка...</div>
+                </div>
+            </div>
+            <button class="parent-exit-btn" onclick="App.exitParentMode()">❌ Выйти</button>
+        </div>
+
+        <!-- ГЛАВНЫЙ СТАТУС -->
+        <div class="parent-status-card">
+            <div class="parent-status-icon" id="parent-status-icon">😴</div>
+            <div class="parent-status-text" id="parent-status-text" style="color:var(--text-light);">Загрузка...</div>
+            <div class="parent-status-sub" id="parent-status-sub">Подключение к серверу...</div>
+            <div class="parent-status-time" id="parent-timer-display" style="display:none;">00:00:00</div>
+            <div class="parent-online-badge offline" id="parent-online-badge">
+                <span id="parent-online-dot">🔴</span> <span id="parent-online-text">ВНЕ СЕТИ</span>
+            </div>
+        </div>
+
+        <!-- МИНИ КАРТОЧКИ -->
+        <div class="parent-grid">
+            <div class="parent-mini-card">
+                <div class="pmc-icon">⏱️</div>
+                <div class="pmc-val" id="parent-today-time">0 мин</div>
+                <div class="pmc-label">Сегодня</div>
+            </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">🔥</div>
+                <div class="pmc-val" id="parent-streak">0</div>
+                <div class="pmc-label">Дней подряд</div>
+ </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">🏆</div>
+                <div class="pmc-val" id="parent-level">1</div>
+                <div class="pmc-label">Уровень</div>
+            </div>
+            <div class="parent-mini-card">
+                <div class="pmc-icon">💰</div>
+                <div class="pmc-val" id="parent-coins">0</div>
+                <div class="pmc-label">Монет</div>
+            </div>
+        </div>
+
+        <!-- ПРОГРЕСС-БАР ДНЯ -->
+        <div class="parent-section-card">
+            <h3>📅 Прогресс дня</h3>
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-light); margin-bottom:4px;">
+                <span id="parent-progress-label">0 мин из 60 мин</span>
+                <span id="parent-progress-pct">0%</span>
+            </div>
+            <div class="parent-progress-bar">
+                <div class="parent-progress-fill" id="parent-progress-fill" style="width:0%;"></div>
+            </div>
+        </div>
+
+        <!-- НЕДЕЛЯ -->
+        <div class="parent-section-card">
+            <h3>📊 За неделю</h3>
+            <div id="parent-week-chart">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ТЕПЛОВАЯ КАРТА -->
+        <div class="parent-section-card">
+            <h3>🗓️ Тепловая карта (30 дней)</h3>
+            <div id="parent-heatmap"></div>
+        </div>
+
+        <!-- ПРЕДМЕТЫ -->
+        <div class="parent-section-card">
+            <h3>🎓 Предметы</h3>
+            <div id="parent-subjects">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ИСТОРИЯ ЗАНЯТИЙ -->
+        <div class="parent-section-card">
+            <h3>📜 История занятий</h3>
+            <div id="parent-history">
+                <div style="text-align:center; color:var(--text-light); font-size:13px; padding:10px;">Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- ПРОГРЕСС -->
+        <div class="parent-section-card">
+            <h3>📈 Прогресс</h3>
+            <div class="parent-month-summary" id="parent-month-summary"></div>
+            <div class="parent-chart-wrap">
+                <canvas id="parent-week-canvas"></canvas>
+            </div>
+            <div class="parent-chart-wrap" style="margin-top:15px;">
+                <canvas id="parent-month-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="container" id="app-container" style="display: none;"> 
+        <div class="header-card">
+            <div class="profile-mini" onclick="App.switchTab('profile')">
+                <div class="profile-img" id="header-avatar-box"><div id="header-avatar">😎</div></div>
+                <div>
+                    <div style="font-weight: bold; font-size: 18px;" id="header-name">Игрок</div>
+                    <div style="font-size: 12px; color: var(--text-light);" id="header-league">Новичок</div>
+                </div>
+            </div>
+            <div class="currency-block">
+                <div class="currency-item"><span>💰</span> <span id="coin-display">0</span></div>
+                <div class="currency-item" style="color:#FF7675;"><span>🔥</span> <span id="streak-display">0</span></div>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="dashboard" onclick="App.switchTab('dashboard', this)">
+                <span class="nav-icon">⏱️</span>
+                <span class="nav-label">Учеба</span>
+            </button>
+            <button class="nav-btn" data-tab="trainer" onclick="App.switchTab('trainer', this)">
+                <span class="nav-icon">🧠</span>
+                <span class="nav-label">Тренажер</span>
+            </button>
+            <button class="nav-btn" data-tab="stats" onclick="App.switchTab('stats', this)">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Статистика</span>
+            </button>
+            <button class="nav-btn" data-tab="leaderboard" onclick="App.switchTab('leaderboard', this)">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">Топ</span>
+            </button>
+            <button class="nav-btn" data-tab="shop" onclick="App.switchTab('shop', this)">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label">Магазин</span>
+            </button>
+            <button class="nav-btn" data-tab="achievements" onclick="App.switchTab('achievements', this)">
+                <span class="nav-icon">🏅</span>
+                <span class="nav-label">Награды</span>
+            </button>
+            <button class="nav-btn" data-tab="settings" onclick="App.switchTab('settings', this)">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Опции</span>
+            </button>
+        </nav>
+
+        <!-- 1. DASHBOARD -->
+        <section id="dashboard" class="section active">
+    <div class="grid">
+        <!-- ЛЕВАЯ КОЛОНКА: ТАЙМЕР -->
+        <div class="card zen-target" style="text-align: center; position: relative;">
+            <!-- TOOLS -->
+            <div style="position: absolute; top: 15px; right: 15px; display:flex; gap:5px;">
+                <button onclick="Whiteboard.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Черновик">✏️</button>
+                <button onclick="Calc.toggle()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Калькулятор">🧮</button>
+                <button onclick="App.toggleEcoMode(true)" style="background: transparent; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;" title="Эко режим (черный экран)">🔋</button>
+            </div>
+            
+<!-- Временные отладочные часы -->
+<div id="debug-clock" style="font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 5px; background: rgba(108, 99, 255, 0.05); padding: 5px 10px; border-radius: 10px; display: inline-block;">
+    🕒 Загрузка времени...
+</div>
+
+<h3 style="color: var(--text-light); font-size: 12px; text-transform: uppercase;">Фокус</h3>            <h2 id="subject-title" style="font-size: 28px; color: var(--primary); margin-bottom: 10px;">Алгебра</h2>
+            
+            <div id="timer" class="timer-display">00:00:00</div>
+            
+            <!-- ИНФО О МОНЕТАХ (КЛИКАБЕЛЬНАЯ ПОДСКАЗКА) -->
+            <div class="card" style="background: rgba(108, 99, 255, 0.05); border: 1px dashed var(--primary); padding: 10px; margin-bottom: 15px; cursor: pointer; display: inline-block; box-shadow: none;" onclick="document.getElementById('timer-rules-modal').classList.add('show')">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 18px;">💡</span>
+                    <span style="font-size: 12px; font-weight: bold; color: var(--text);">Как начисляются монеты?</span>
+                </div>
+            </div>
+            
+            <!-- 3. ЦИТАТА ДНЯ -->
+            <div id="daily-quote" style="font-size: 11px; font-style: italic; color: var(--text); opacity: 0.6; margin-bottom: 20px; padding: 0 30px; line-height: 1.4;">
+                "Загрузка мудрости..."
+            </div>
+
+            <div class="zen-controls" style="position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                <button id="btn-start" class="btn btn-primary" onclick="Timer.preStart()">🚀 СТАРТ</button>
+                <button class="btn btn-outline" onclick="Timer.stop()">⏹ СТОП</button>
+            </div>
+        </div>
+        
+        <!-- ПРАВАЯ КОЛОНКА: РАДИО И ПРЕДМЕТЫ (Теперь они вместе) -->
+        <div class="dashboard-right-col">
+            <!-- БЛОК РАДИО -->
+            <div id="radio-widget-container"></div>
+
+            <!-- Скрытый элемент аудио (пусть лежит здесь, он не мешает) -->
+            <audio id="lofi-stream" crossorigin="anonymous" preload="none"></audio>
+
+            <!-- БЛОК ПРЕДМЕТОВ -->
+            <div class="card" style="margin-top: 20px;">
+                <h3>📚 Предметы</h3>
+                <div id="subjects-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:15px; justify-items:center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- НИЖНЯЯ ЧАСТЬ: КВЕСТЫ И ПЛАН -->
+    <div style="margin-top: 25px;">
+        <h3 style="margin-bottom: 10px;">🎯 Квесты на сегодня</h3>
+        <div id="quests-container"></div>
+        <div id="weekly-quest-container"></div>
+    </div>
+
+    <div class="card" onclick="App.editMonthlyGoal()" style="margin-top: 20px; cursor: pointer; background: linear-gradient(135deg, var(--surface), #f0f3ff);">
+        <h3 style="margin-bottom: 15px; font-size: 14px;">📅 План на месяц</h3>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
+                <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="3" />
+                    <path id="goal-circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--primary)" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round" style="transition: stroke-dasharray 1s ease;" />
+                </svg>
+                <div id="goal-pct" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 14px; color: var(--primary);">0%</div>
+            </div>
+            
+            <div>
+                <div id="goal-text" style="font-weight: bold; font-size: 16px; color: var(--text);">0 / 40 ч</div>
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">Нажми, чтобы изменить цель</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+    <!-- 8. ABOUT SECTION (Новый красивый раздел) -->
+        <section id="about" class="section">
+        <!-- Главный баннер -->
+        <div class="card" style="background: linear-gradient(135deg, #6C63FF, #4834d4); color: white; text-align: center; padding: 40px 20px; position: relative; overflow: hidden; border: none; border-radius: 30px;">
+            <div style="position: absolute; top: -20px; right: -20px; font-size: 150px; opacity: 0.1;">📈</div>
+            <img src="logo.png" alt="MathBooster" style="width: 90px; height: 90px; background: white; border-radius: 22px; padding: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); margin-bottom: 15px; position: relative; z-index: 2;">
+            <h2 style="font-size: 28px; margin: 0; font-weight: 800; position: relative; z-index: 2;">MathBooster PRO</h2>
+            <div style="opacity: 0.9; font-size: 14px; margin-top: 5px; font-weight: 500; position: relative; z-index: 2;">Твоё время — твой главный ресурс 🇺🇿</div>
+        </div>
+
+        <!-- Философия -->
+        <!-- Улучшенная Философия: Математика Усилий -->
+        <div class="card" style="margin-top: 20px; border-left: 5px solid var(--primary); background: linear-gradient(to right, rgba(108, 99, 255, 0.05), transparent);">
+            <h3 style="color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                🎯 Твой капитал — это твои часы
+            </h3>
+            <p style="color: var(--text); line-height: 1.7; margin-top: 15px; font-size: 15px;">
+                Самая большая ловушка в учёбе — это <b>иллюзия продуктивности</b>. Можно просидеть за столом весь день, но так и не понять, сколько реальной работы было сделано.
+                <br><br>
+                <b>Основная цель MathBooster Pro</b> — сделать твой труд видимым. Мы верим в простое правило: <i>"То, что нельзя измерить — нельзя улучшить"</i>. 
+                <br><br>
+                Это приложение — твой личный <b>бухгалтер знаний</b>. Оно фиксирует каждую секунду твоего фокуса, превращая абстрактное "я учился" в конкретные цифры:
+            </p>
+            
+            <div style="margin-top: 15px; background: var(--surface); padding: 15px; border-radius: 15px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 20px;">📜</span>
+                    <span style="font-size: 13px;"><b>Доказательство работы:</b> В конце месяца ты увидишь не просто оценки, а 100+ часов чистого времени, вложенного в себя.</span>
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 20px;">⚖️</span>
+                    <span style="font-size: 13px;"><b>Баланс знаний:</b> Ты точно будешь знать, что уделил Алгебре 40 часов, а Геометрии всего 5. Это позволит тебе вовремя закрыть пробелы.</span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">💎</span>
+                    <span style="font-size: 13px;"><b>Цена успеха:</b> Каждая заработанная монета в приложении — это прямое отражение твоей усидчивости. Чем больше часов, тем богаче твой профиль.</span>
+                </div>
+            </div>
+
+            <p style="color: var(--text-light); font-size: 13px; margin-top: 15px; font-style: italic;">
+                Мы не просто считаем время. Мы помогаем тебе осознать цену твоего будущего мастерства.
+            </p>
+        </div>
+
+        <!-- Список плюсов (Сетка) -->
+        <div class="grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 30px; margin-bottom: 10px;">🛡️</div>
+                <div style="font-weight: bold; font-size: 14px;">Дисциплина</div>
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 5px;">Хардкор-режим приучает не отвлекаться на соцсети.</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 30px; margin-bottom: 10px;">🧠</div>
+                <div style="font-weight: bold; font-size: 14px;">Мастерство</div>
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 5px;">Раздельная прокачка каждого предмета.</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 30px; margin-bottom: 10px;">⚔️</div>
+                <div style="font-weight: bold; font-size: 14px;">Соревнование</div>
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 5px;">Дуэли и глобальный топ мотивируют быть первым.</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 30px; margin-bottom: 10px;">📊</div>
+                <div style="font-weight: bold; font-size: 14px;">Аналитика</div>
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 5px;">Подробные отчеты и цели на месяц.</div>
+            </div>
+        </div>
+
+        <!-- Мотивационный блок -->
+        <!-- Мотивационный блок (Секретный) -->
+        <div class="card" style="margin-top: 20px; background: #FFF9E6; border: 2px dashed #FFD700; text-align: center;">
+            <h3 style="color: #B8860B; cursor: pointer; user-select: none;" onclick="SecretSys.claimMotivationReward()">
+                💎 Стань лучшей версией себя
+            </h3>
+            <p style="font-size: 13px; color: #5D4037; margin-top: 10px;">
+                Помни: пока ты отдыхаешь, кто-то другой качает свой интеллект. <br>
+                <b>Начни сессию прямо сейчас!</b>
+            </p>
+        </div>
+
+        
+
+            <!-- Разработчик -->
+            <div class="card" style="margin-top: 20px;">
+                <h3>👨‍🏫 Разработчик</h3>
+                <div style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
+                    <div style="width: 60px; height: 60px; background: #eee; border-radius: 50%; font-size: 30px; display: flex; align-items: center; justify-content: center;">👨‍💻</div>
+                    <div>
+                        <div style="font-weight: bold; font-size: 16px;">Мансуров Рустам Уктамович</div>
+                        <div style="color: var(--text-light); font-size: 12px;">Math Teacher</div>
+                        <div style="color: var(--primary); font-size: 12px; font-weight: bold; margin-top: 3px;">Bukhara, Uzbekistan</div>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; font-size: 13px; color: var(--text-light);">
+                    "Я создал это приложение, чтобы доказать: учиться можно с удовольствием. Спасибо, что вы с нами!"
+                </p>
+                
+                <!-- Кнопка Телеграм -->
+                <a href="https://t.me/mathboosterpro" target="_blank" style="text-decoration: none;">
+                    <button class="btn" style="background: #0088cc; color: white; margin-top: 15px; width: 100%;">
+                        ✈️ Написать в Telegram
+                    </button>
+                </a>
+            </div>
+
+            <!-- Кнопка Назад -->
+            <button class="btn btn-outline" style="margin-top: 30px; margin-bottom: 30px;" onclick="App.switchTab('settings')">
+                ⬅️ Вернуться в настройки
+            </button>
+        </section>
+
+    <!-- 2. TRAINER (Мульти-режим) -->
+        <section id="trainer" class="section">
+    <!-- 1. МЕНЮ ВЫБОРА -->
+    <div class="card" id="trainer-menu" style="text-align: center; padding: 25px 15px;">
+        <div style="font-size: 50px; margin-bottom: 10px;">🧠</div>
+        <h2 style="margin-bottom: 20px;">Тренажер Мозга</h2>
+        
+        <div class="mode-grid">
+            <div class="trainer-mode-card active" onclick="Trainer.selectMode('standard', this)">
+                <div class="icon-circle">🔢</div>
+                <div style="font-weight: 800; font-size: 13px;">Классика</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('sign', this)">
+                <div class="icon-circle">🧩</div>
+                <div style="font-weight: 800; font-size: 13px;">Найди знак</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('square', this)">
+                <div class="icon-circle">📐</div>
+                <div style="font-weight: 800; font-size: 13px;">Степени</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('fractions', this)">
+                <div class="icon-circle">🍰</div>
+                <div style="font-weight: 800; font-size: 13px;">Дроби</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('percent', this)">
+                <div class="icon-circle">📊</div>
+                <div style="font-weight: 800; font-size: 13px;">Проценты</div>
+            </div>
+            <div class="trainer-mode-card" onclick="Trainer.selectMode('fsu', this)">
+                <div class="icon-circle">🧮</div>
+                <div style="font-weight: 800; font-size: 13px;">ФСУ</div>
+            </div>
+        </div>
+
+        <button class="btn" onclick="BattleSys.openMenu()" style="background: linear-gradient(45deg, #FF416C, #FF4B2B); color: white; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3); border: none; width: 100%;">
+            ⚔️ PVP ДУЭЛЬ (15 💰)
+        </button>
+
+        <div style="margin-bottom: 10px; font-size: 11px; font-weight: bold; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px;">Сложность</div>
+        <div class="diff-switch" style="margin-bottom: 25px;">
+            <div class="diff-btn active" onclick="Trainer.setDiff('easy', this)">Легко</div>
+            <div class="diff-btn" onclick="Trainer.setDiff('medium', this)">Средне</div>
+            <div class="diff-btn" onclick="Trainer.setDiff('hard', this)">Сложно</div>
+        </div>
+
+        <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="font-size: 10px; color: var(--text-light); text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Ваш рекорд</div>
+            <div style="font-size: 28px; font-weight: 900; color: var(--primary);" id="trainer-high-score">0</div>
+            <div style="font-size: 11px; opacity: 0.7;" id="record-mode-label">Классика</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="Trainer.start()" style="margin-top: 20px; width: 100%; padding: 18px; font-size: 18px; border-radius: 20px;">🚀 НАЧАТЬ ИГРУ</button>
+    </div>
+
+    <!-- 2. ИГРОВОЙ ЭКРАН -->
+    <div class="card" id="trainer-game" style="display: none; text-align: center; padding: 20px 15px;">
+
+        <!-- === BATTLE HUD (виден только в дуэли) === -->
+        <div class="battle-hud" id="battle-hud">
+            <div class="battle-players">
+                <!-- МОЙ АВАТАР -->
+                <div class="battle-player me">
+                    <div class="battle-avatar" id="battle-me-avatar">😎</div>
+                    <div class="battle-name" id="battle-me-name">Я</div>
+                    <div class="battle-hp-bar">
+                        <div class="battle-hp-fill" id="battle-me-hp" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- СЧЁТ -->
+                <div class="battle-score-center">
+                    <span class="battle-score-num" id="battle-me-score">0</span>
+                    <span class="battle-vs">VS</span>
+                    <span class="battle-score-num" id="battle-rival-score">0</span>
+                </div>
+
+                <!-- АВАТАР СОПЕРНИКА -->
+                <div class="battle-player rival">
+                    <div class="battle-avatar" id="battle-rival-avatar">😈</div>
+                    <div class="battle-name" id="battle-rival-name">Соперник</div>
+                    <div class="battle-hp-bar">
+                        <div class="battle-hp-fill" id="battle-rival-hp" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === ОБЫЧНЫЙ СТАТ (без дуэли) === -->
+        <div class="trainer-stats" id="normal-stats" style="margin-bottom: 10px;">
+            <div style="color: var(--primary);">✅ <span id="game-score" style="font-weight: 900;">0</span></div>
+            <div style="color: var(--accent);">⏳ <span id="game-time" style="font-weight: 900;">60</span>s</div>
+        </div>
+
+        <div class="timer-bar-container" style="width: 100%; height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; margin-bottom: 20px; overflow: hidden;">
+            <div id="timer-bar-fill" style="height: 100%; background: var(--primary); width: 100%; transition: width 1s linear;"></div>
+        </div>
+
+        <!-- Flash-эффект атаки -->
+        <div class="battle-flash" id="battle-flash"></div>
+
+        <div class="problem-container" id="problem-box" style="background: var(--bg); border-radius: 25px; padding: 40px 20px; margin: 20px 0;">
+            <div class="trainer-problem" id="game-problem" style="font-weight: 900;">2 x 2</div>
+        </div>
+
+        <div id="input-area" style="max-width: 320px; margin: 0 auto; display: block !important; flex: none !important;">
+            <!-- Отображение текущего ввода -->
+            <div id="numpad-display">0</div>
+            <!-- Скрытый input для совместимости -->
+            <input type="hidden" id="game-input" value="">
+            <!-- Нумпад 3x4 -->
+            <div id="numpad-grid">
+                <button class="num-btn" onclick="Trainer.numpad('1')">1</button>
+                <button class="num-btn" onclick="Trainer.numpad('2')">2</button>
+                <button class="num-btn" onclick="Trainer.numpad('3')">3</button>
+                <button class="num-btn" onclick="Trainer.numpad('4')">4</button>
+                <button class="num-btn" onclick="Trainer.numpad('5')">5</button>
+                <button class="num-btn" onclick="Trainer.numpad('6')">6</button>
+                <button class="num-btn" onclick="Trainer.numpad('7')">7</button>
+                <button class="num-btn" onclick="Trainer.numpad('8')">8</button>
+                <button class="num-btn" onclick="Trainer.numpad('9')">9</button>
+                <button class="num-func" onclick="Trainer.toggleMinus()">±</button>
+                <button class="num-btn" onclick="Trainer.numpad('0')">0</button>
+                <button class="num-func" onclick="Trainer.numpadBack()">⌫</button>
+            </div>
+            <!-- Нижняя панель: дробь + отправить -->
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 10px; width: 100%;">
+                <button class="num-func" onclick="Trainer.addSlash()" style="font-size:24px;">/</button>
+                <button class="num-submit" onclick="Trainer.check()">✓ Ответить</button>
+            </div>
+        </div>
+
+        <div id="sign-area" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button class="btn" onclick="Trainer.checkSign('+')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">+</button>
+            <button class="btn" onclick="Trainer.checkSign('-')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">−</button>
+            <button class="btn" onclick="Trainer.checkSign('*')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">×</button>
+            <button class="btn" onclick="Trainer.checkSign('/')" style="font-size: 30px; height: 80px; border-radius: 20px; background: var(--bg); color: var(--primary); border: 2px solid var(--primary);">÷</button>
+        </div>
+
+        <button class="btn btn-outline" style="margin-top: 30px; border: none; color: var(--text-light);" onclick="Trainer.end()">🏁 Сдаться</button>
+    </div>
+
+    <!-- 3. ЭКРАН РЕЗУЛЬТАТОВ (ВОТ ЭТОТ БЛОК БЫЛ УДАЛЕН) -->
+    <div class="card" id="trainer-result" style="display: none; text-align: center; padding: 30px 20px;">
+        <div style="font-size: 60px; margin-bottom: 10px;">🏆</div>
+        <h2 id="result-title">Время вышло!</h2>
+        
+        <div style="margin: 25px 0;">
+            <div style="font-size: 12px; color: var(--text-light); text-transform: uppercase; font-weight: bold;">Ваш счет</div>
+            <div style="font-size: 56px; font-weight: 900; color: var(--primary);" id="result-score">0</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+                <div style="font-size: 18px; font-weight: bold; color: #6C63FF;" id="result-xp">+0 XP</div>
+            </div>
+            <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
+                <div style="font-size: 18px; font-weight: bold; color: #FFD700;" id="result-coins">+0 💰</div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="Trainer.init()" style="width: 100%; padding: 15px; border-radius: 15px;">В меню</button>
+    </div>
+</section>
+
+        <!-- 3. STATS -->
+        <section id="stats" class="section">
+            <!-- Верхние карточки статистики (уже есть) -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h3>📊 Детальная статистика</h3>
+                <div class="stat-detail-grid">
+                    <div class="stat-detail-card">
+                        <div class="stat-detail-title">За неделю</div>
+                        <div id="stat-week-time" class="stat-detail-value">0ч</div>
+                    </div>
+                    <div class="stat-detail-card">
+                        <div class="stat-detail-title">За месяц</div>
+                        <div id="stat-month-time" class="stat-detail-value">0ч</div>
+                    </div>
+                    <div class="stat-detail-card">
+                        <div class="stat-detail-title">Все время</div>
+                        <div id="stat-total-time" class="stat-detail-value">0ч</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🏆 ИСТОРИЯ СЕЗОНОВ (стоит отдельно от предметов) -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h3>🏆 История сезонов</h3>
+                <div id="season-history"></div>
+            </div>
+
+            <!-- ГЛАВНАЯ СЕТКА (Теперь тут 3 карточки на одном уровне) -->
+            <div class="grid">
+                <!-- 1. Активность -->
+                <div class="card">
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🔥 Активность</span>
+                            <span id="heatmap-info" style="font-size: 11px; font-weight: normal; color: var(--primary); opacity: 0.8;">нажми на квадрат</span>
+                        </h3>                    
+                    <div id="heatmap" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px;"></div>
+                </div>
+
+                <!-- 2. Журнал занятий -->
+                <div class="card">
+                    <h3>📜 Журнал занятий</h3>
+                    <div id="session-log" class="history-list" style="max-height: 300px; overflow-y: auto; margin-top: 15px;"></div>
+                </div>
+
+                <!-- 3. Твои предметы (ПЕРЕМЕЩЕНО СЮДА И ДОБАВЛЕН СКРОЛЛ) -->
+                <div class="card">
+                    <h3>🎓 Твои предметы</h3>
+                    <p style="font-size:11px; color:var(--text-light); margin-bottom:10px;">Статистика по дисциплинам</p>
+        <div id="subject-breakdown" style="max-height: 250px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Сюда JS вставит список -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Графики ниже (если нужны) -->
+            <div class="grid" style="margin-top: 20px;">
+               <div class="card">
+                    <h3>📈 История (Неделя)</h3>
+                    <!-- Обертка с фиксированной высотой предотвращает прыжки -->
+                    <div style="position: relative; height: 220px; width: 100%;">
+                        <canvas id="weekChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>🧩 Распределение</h3>
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. LEADERBOARD -->
+        <section id="leaderboard" class="section">
+            <div class="card">
+                <h3>🏆 Глобальный Топ</h3>
+                <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Глобальный рейтинг (требует интернет)</p>
+                <div id="total-players-count" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;"></div>
+                <div id="season-switcher" style="display:flex; justify-content:center; margin:14px 0 4px;">
+                    <div style="display:flex; background:var(--bg); border-radius:22px; padding:3px;">
+                        <div id="season-btn-2" onclick="SeasonSystem.switchSeason(2)" style="cursor:pointer; border:none; background:var(--primary); color:#fff; padding:7px 20px; border-radius:19px; font-weight:700; font-size:13px; letter-spacing:.3px;">🏆 Сезон 2</div>
+                        <div id="season-btn-1" onclick="SeasonSystem.switchSeason(1)" style="cursor:pointer; border:none; background:transparent; color:var(--text-light); padding:7px 20px; border-radius:19px; font-weight:500; font-size:13px; letter-spacing:.3px;">📜 Сезон 1</div>
+                    </div>
+                </div>
+                <div id="season1-banner" style="display:none; margin:10px 0 4px; padding:16px 14px; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(108,99,255,.12), rgba(108,99,255,.03)); border:1.5px solid var(--primary); border-radius:18px; text-align:center;">
+                    <div id="season1-banner-inner" style="position:relative; z-index:1;"></div>
+                </div>
+                <button class="btn btn-primary" onclick="Online.loadLeaderboard()">🔄 Обновить</button>
+                <div id="leaderboard-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="text-align:center; color:gray;">Нажми обновить...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. SHOP -->
+        <section id="shop" class="section">
+            <div class="card">
+                <h3>🎨 Темы оформления</h3>
+                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Покупайте новые стили за 💰 монеты!</p>
+                <div id="theme-list" class="shop-grid"></div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>😎 Аватары</h3>
+                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Выделитесь из толпы!</p>
+                <div id="avatar-shop-list" class="shop-grid"></div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>⚡ Усилители</h3>
+                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Полезные вещи для выживания.</p>
+                <div id="item-shop-list" class="shop-grid"></div>
+            </div>        
+            <div class="card" style="margin-top: 20px;">
+                <h3>🖼️ Рамки</h3>
+                <div id="frame-shop-list" class="shop-grid"></div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>📻 Радиостанции</h3>
+                <div id="radio-shop-list" class="shop-grid"></div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>🔊 Звуковые паки</h3>
+                <div id="sound-shop-list" class="shop-grid"></div>
+            </div>
+            <!-- Блок Статусов -->
+            <div class="card" style="margin-top: 20px;">
+                <h3>🏷️ Статусы</h3>
+                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px;">Установи крутую подпись под именем!</p>
+                <div id="title-shop-list" class="shop-grid" style="grid-template-columns: 1fr 1fr;"></div>
+            </div>
+        </section>
+
+        <!-- 6. SETTINGS & DONATION -->
+        <section id="settings" class="section">
+            <!-- Кнопка установки (видна только в браузере) -->
+    <div id="install-promo-card" class="card" style="background: linear-gradient(135deg, #00d26a, #00b894); color: white; display: none; margin-bottom: 20px; cursor: pointer;" onclick="InstallSys.startFlow()">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 30px;">📲</div>
+            <div>
+                <div style="font-weight: bold; font-size: 16px;">Установить приложение</div>
+                <div style="font-size: 12px; opacity: 0.9;">Сохранить прогресс и убрать рамки</div>
+            </div>
+        </div>
+    </div>
+            
+    <!-- Кнопка Поделиться -->
+    <div class="card" onclick="App.shareApp()" style="margin-top: 10px; display: flex; align-items: center; gap: 15px; cursor: pointer; background: linear-gradient(135deg, #6C63FF, #8B7EFF); color: white;">
+        <div style="font-size: 26px;">🚀</div>
+        <div>
+            <div style="font-weight: bold; font-size: 16px;">Позвать друзей</div>
+            <div style="font-size: 12px; opacity: 0.9;">Скинуть ссылку на игру</div>
+        </div>
+        <div style="margin-left: auto; font-size: 20px;">➜</div>
+    </div>
+    <!-- КНОПКА ТЕЛЕГРАМ БОТА -->
+    <a href="https://t.me/mathboosterpro" target="_blank" style="text-decoration: none;">
+        <div class="card" style="margin-top: 10px; display: flex; align-items: center; gap: 15px; cursor: pointer; background: #2AABEE; color: white;">
+            <div style="font-size: 26px;">🤖</div>
+            <div>
+                <div style="font-weight: bold; font-size: 16px;">Поддержка / Донат</div>
+                <div style="font-size: 12px; opacity: 0.9;">Скинуть чек или идею</div>
+            </div>
+            <div style="margin-left: auto; font-size: 20px;">➜</div>
+        </div>
+    </a>
+    <!-- 💎 Поддержка проекта (сворачиваемый блок) -->
+<div class="premium-outer">
+    <div class="premium-inner-v2">
+
+        <!-- Сворачиваемый заголовок -->
+        <div onclick="document.getElementById('premium-body').classList.toggle('hidden');document.getElementById('premium-arrow').textContent=document.getElementById('premium-arrow').textContent==='▶'?'▼':'▶'" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:5px 0;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">☕</span>
+                <div style="text-align:left;">
+                    <div style="font-size:14px; font-weight:800; color:var(--text);">Поддержать проект</div>
+                    <div style="font-size:10px; color:var(--text-light); opacity:0.7;">Помоги сделать приложение лучше</div>
+                </div>
+            </div>
+            <span id="premium-arrow" style="font-size:12px; color:var(--text-light); transition:0.3s; padding:8px 12px; border-radius:8px; background:var(--bg);">▶</span>
+        </div>
+
+        <!-- Скрытое тело -->
+        <div id="premium-body" class="hidden">
+
+            <!-- 🎯 Google Play Progress -->
+            <div class="funding-dashboard">
+                <div class="funding-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="text-align: left;">
+                        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-weight: 900; color:var(--text-light);">Цель сообщества</div>
+                        <div style="font-size: 14px; font-weight: 900; margin-top: 2px; color:var(--text);">Google Play App 🎮</div>
+                    </div>
+                    <div class="funding-chip" id="funding-pct-text" style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 50px; font-weight: 900; font-size: 12px;">0%</div>
+                </div>
+                
+                <div class="custom-progress-bg" style="height: 18px; background: rgba(0,0,0,0.08); border-radius: 10px; padding: 3px;">
+                    <div id="funding-bar-fill" class="custom-progress-fill" style="width: 0%; height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--primary), var(--accent));"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color:var(--text-light);">
+                    <span id="funding-sum-text">0 UZS</span>
+                    <span style="opacity: 0.5;">Target: 500 000 UZS</span>
+                </div>
+            </div>
+
+            <h3 style="margin: 0 0 15px 0; font-weight: 800; font-size: 16px; text-align: center; color:var(--text); opacity:0.8;">Пакеты поддержки</h3>
+
+            <!-- Пакеты -->
+            <div class="premium-tiers">
+
+                <!-- 1. START -->
+                <div class="tier-row">
+                    <div class="tier-info" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">☕</span>
+                        <div style="text-align: left;">
+                            <div class="tier-name">300 💰</div>
+                            <div class="tier-sub" style="font-size: 9px; opacity: 0.5;">Поддержка</div>
+                        </div>
+                    </div>
+                    <div class="tier-price">3 000 UZS</div>
+                </div>
+
+                <!-- 2. HIT -->
+                <div class="tier-row hit">
+                    <div class="tier-info" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">🔥</span>
+                        <div style="text-align: left;">
+                            <div class="tier-name" style="color:#FF416C;">1 000 💰</div>
+                            <div class="tier-sub" style="font-size: 9px; opacity: 0.5; color:#FF416C;">Популярный</div>
+                        </div>
+                    </div>
+                    <div class="tier-price" style="background:#FF416C; color:white; border:none;">8 000 UZS</div>
+                </div>
+
+                <!-- 3. VIP -->
+                <div class="tier-row">
+                    <div class="tier-info" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">💎</span>
+                        <div style="text-align: left;">
+                            <div class="tier-name">2 500 💰</div>
+                            <div class="tier-sub" style="font-size: 9px; opacity: 0.5;">VIP статус</div>
+                        </div>
+                    </div>
+                    <div class="tier-price">15 000 UZS</div>
+                </div>
+
+                <!-- 4. PRO -->
+                <div class="tier-row" style="border: 1px solid #2ECC71; background: rgba(46, 204, 113, 0.05);">
+                    <div class="tier-info" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">⭐</span>
+                        <div style="text-align: left;">
+                            <div class="tier-name" style="color:#27AE60;">5 000 💰</div>
+                            <div class="tier-sub" style="font-size: 9px; opacity: 0.5; color:#27AE60;">PRO статус</div>
+                        </div>
+                    </div>
+                    <div class="tier-price" style="background:#2ECC71; color:white; border:none;">25 000 UZS</div>
+                </div>
+
+                <!-- 5. LEGEND -->
+                <div class="tier-row" style="background: linear-gradient(90deg, rgba(108, 99, 255, 0.08), transparent); border-color: var(--primary);">
+                    <div class="tier-info" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">👑</span>
+                        <div style="text-align: left;">
+                            <div class="tier-name" style="color:var(--primary);">10 000 💰</div>
+                            <div class="tier-sub" style="font-size: 9px; opacity: 0.5;">LEGEND статус</div>
+                        </div>
+                    </div>
+                    <div class="tier-price" style="background: var(--primary); color: white; border:none;">45 000 UZS</div>
+                </div>
+
+            </div>
+
+            <!-- Кнопки Оплаты -->
+            <div style="margin-top: 20px; padding-top: 15px;">
+                <div style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 12px; margin-bottom: 12px; font-size: 11px; text-align: left; line-height: 1.4; color:var(--text-light);">
+                    📸 Скинь скриншот чека: <a href="https://t.me/mathboosterpro" style="color: var(--primary); font-weight: 800; text-decoration: none;">@mathboosterpro</a>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <button class="btn" style="background:var(--primary); color:white; font-size:11px; height:42px;" onclick="Donation.payUz()">💳 UZCARD</button>
+                    <button class="btn" style="background:rgba(0,0,0,0.05); color:var(--text); font-size:11px; height:42px;" onclick="Donation.payWorld()">🌍 VISA</button>
+                </div>
+                
+                <button class="btn" style="width:100%; margin-top:8px; background:transparent; border:1px solid var(--primary); color:var(--primary); font-weight: 700; height: 42px; font-size:12px;" onclick="Donation.enterCode()">🔑 Промокод</button>
+            </div>
+
+        </div><!-- /premium-body -->
+
+    </div>
+</div>
+
+    <!-- Кнопка вызова соглашения -->
+    <div class="card" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="document.getElementById('terms-modal').classList.add('show')">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 20px;">⚖️</span>
+            <span style="font-weight: bold; font-size: 14px;">Пользовательское соглашение</span>
+        </div>
+        <div style="color: var(--text-light);">➜</div>
+    </div>
+            
+    <div class="card">
+        <h3>⚙️ Опции</h3>
+        
+        <!-- 1. ЗВУКИ -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 22px;">🔊</span>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text);">Звуковые эффекты</div>
+                    <div style="font-size: 11px; opacity: 0.6; color: var(--text);">Звуки кликов</div>
+                </div>
+            </div>
+            <input type="checkbox" id="sfx-toggle" onchange="SoundSys.toggleSFX(this.checked)" checked style="transform: scale(1.4);">
+        </div>
+
+        <!-- 2. ТЕМНЫЙ РЕЖИМ -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 22px;">🌙</span>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text);">Тёмный режим</div>
+                    <div style="font-size: 11px; opacity: 0.6; color: var(--text);">Ночная тема</div>
+                </div>
+            </div>
+            <input type="checkbox" id="dark-toggle" onchange="App.toggleDarkMode(this.checked)" style="transform: scale(1.4);">
+        </div>
+
+        <!-- 3. УВЕДОМЛЕНИЯ -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 22px;">🔔</span>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text);">Уведомления</div>
+                    <div style="font-size: 11px; opacity: 0.6; color: var(--text);">Напоминания</div>
+                </div>
+            </div>
+            <input type="checkbox" id="notify-toggle" onchange="Notify.toggle(this.checked)" style="transform: scale(1.4);">
+        </div>
+
+        
+        <div style="margin-bottom: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                <span style="font-size: 22px;">🌐</span>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text);">Часовой пояс</div>
+                    <div style="font-size: 11px; opacity: 0.6; color: var(--text);">Для точности Журнала занятий</div>
+                </div>
+            </div>
+            <select id="timezone-select" onchange="App.changeTimezone(this.value)" class="input-field" style="margin-bottom: 0; padding: 10px; background: var(--surface); border: 1px solid var(--primary); color: var(--text);">
+                <option value="auto">🌐 Автоматически (как на устройстве)</option>
+                <option value="Asia/Tashkent">🇺🇿 Узбекистан (GMT+5)</option>
+                <option value="Europe/Moscow">🇷🇺 Россия / Москва (GMT+3)</option>
+                <option value="Asia/Almaty">🇰🇿 Казахстан / Алматы (GMT+5)</option>
+            </select>
+
+        </div>
+
+        <!-- Управление предметами -->
+        <div style="margin-bottom: 20px; margin-top: 20px;">
+            <h4 style="margin-bottom: 10px;">📚 Мои предметы</h4>
+            <div id="my-subjects-list" class="subject-manage-grid"></div>
+
+            <h4 style="margin-top: 30px; margin-bottom: 10px;">Доступные для добавления</h4>
+            <div id="available-subjects-list" class="subject-manage-grid"></div>
+        </div>    
+        
+        <!-- 🛡️ БЛОК БЕЗОПАСНОСТИ (NEW) -->
+        <div class="card" style="border: 2px solid #FF4757; background: rgba(255, 71, 87, 0.05);">
+            <h3 style="color: #FF4757; display: flex; align-items: center; gap: 10px;">
+                ☁️ Смена устройства
+            </h3>
+            
+            <p style="font-size: 13px; line-height: 1.5; margin: 10px 0;">
+                Твой аккаунт хранится в <b>облаке (Firebase)</b>. Войти с нового устройства можно по Коду Восстановления.<br>
+                <b style="color: #FF4757;">БЕЗ КОДА ТЫ НЕ СМОЖЕШЬ ВОЙТИ НА НОВОМ УСТРОЙСТВЕ!</b>
+            </p>
+
+            <div style="background: var(--bg); padding: 15px; border-radius: 12px; border: 1px dashed var(--primary); margin: 15px 0;">
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: bold;">Твой Код Спасения (Скриншоть!)</div>
+        <div id="rescue-code-display" style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-top: 5px; user-select: all;">
+            ...
+        </div>
+    </div>
+
+            <button class="btn" onclick="App.copyRescueCode()" style="background: #2B3674; color: white; width: 100%;">
+                📋 Скопировать и сохранить
+            </button>
+
+            <button class="btn" onclick="App.regenerateRescueCode()" style="background: var(--surface); border: 2px solid #FF4757; color: #FF4757; font-weight: 600; font-size: 13px; width: 100%; margin-top: 8px;">
+                🔄 Создать новый код
+            </button>
+            
+            <p style="font-size: 11px; color: var(--text-light); margin-top: 10px; text-align: center;">
+                Сохрани код в Заметки или Telegram. Он нужен только при входе с нового устройства.
+            </p>
+        </div>
+        <div class="card" style="margin-top: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('about-modal').classList.add('show')">
+                <h3>ℹ️ О приложении</h3>
+                    <div style="margin-top: 20px; text-align: center; opacity: 0.5; font-size: 10px;" onclick="SecretSys.triggerPrompt()">
+                        Версия 1.0 PRO (Active)
+                    </div>        
+                </div>
+        </div>
+        <!-- КНОПКА СБРОСА -->
+        <div class="card" style="margin-top: 20px; border: 1px solid #ff4757; background: rgba(255, 71, 87, 0.05);">
+            <h3 style="color: #ff4757;">🧨 Опасная зона</h3>
+            <p style="font-size: 12px; color: var(--text-light); margin-bottom: 15px;">
+                Это действие полностью обнулит твои монеты, уровень, время, историю и удалит тебя из Топа.
+            </p>
+            <button class="btn" onclick="App.resetAllProgress()" style="background: #ff4757; color: white; width: 100%;">
+                Сбросить весь прогресс
+            </button>
+        </div>
+        </section>
+        
+        <!-- 7. ACHIEVEMENTS -->
+        <section id="achievements" class="section">
+            <div class="card">
+                <h3>🏅 Награды</h3>
+                <div id="ach-list" class="ach-list"></div>
+            </div>
+        </section>
+        
+        <!-- PROFILE -->
+        <section id="profile" class="section">
+            <div class="card" style="text-align: center;">
+                <div class="profile-img" id="profile-avatar-box" style="width: 80px; height: 80px; margin: 0 auto; font-size: 40px; border-width: 6px;">
+                    <div id="profile-avatar-big">😎</div>
+                </div>
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:10px;">
+        <h2 id="profile-name-big" style="margin:0;">Игрок</h2>
+        <button onclick="App.changeNickname()" style="background:none; border:none; font-size:18px; cursor:pointer; opacity:0.6;">✏️</button>
+    </div>            
+    <div onclick="App.copyId()" style="font-size: 11px; color: var(--text-light); margin-top: 5px; cursor: pointer; opacity: 0.7; background: rgba(0,0,0,0.05); display: inline-block; padding: 4px 10px; border-radius: 10px;">
+        ID: <span id="profile-id-text">...</span> 📋
+    </div>
+            <div style="color: var(--primary); font-weight: bold; margin-bottom: 20px; font-size: 18px;" id="profile-league-big">🥉 Бронзовая Лига</div>    
+                <div id="league-progress-info" style="font-size: 11px; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; font-weight: bold; text-transform: uppercase;">Загрузка прогресса...</div>
+            <div class="stats-row">
+                    <div class="stat-pill"><div class="stat-val" id="prof-lvl">1</div><div class="stat-label">Уровень</div></div>
+                    <div class="stat-pill"><div class="stat-val" id="prof-xp">0</div><div class="stat-label">Опыт</div></div>
+                    <div class="stat-pill"><div class="stat-val" id="prof-coins">0</div><div class="stat-label">Монеты</div></div>
+                </div>
+                <div style="margin-top: 20px; text-align: left;">
+                    <p style="font-size: 12px; color: var(--text-light); margin-bottom: 5px;">
+                        Прогресс уровня: 
+                        <span id="xp-progress-text" style="float:right; font-weight:bold;">0 / 500 XP</span>
+                    </p>
+                    <div style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden;">
+                        <div id="prof-xp-bar" style="height: 100%; width: 0%; background: var(--primary);"></div>
+                    </div>
+                </div>
+                <button class="btn btn-outline" style="margin-top: 30px; border-color: #FF7675; color: #FF7675;" onclick="Auth.logout()">🚪 Выйти из аккаунта</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- MODALS -->
+    <div id="calc-modal" class="modal">
+        <div class="modal-content calc-box">
+            <div class="calc-header">
+                <h3>🔢 Калькулятор</h3>
+                <div class="calc-mode-toggle">
+                    <button class="calc-mode-btn active" onclick="Calc.setMode('basic')">Обычный</button>
+                    <button class="calc-mode-btn" onclick="Calc.setMode('sci')">Научный</button>
+                    <button class="calc-mode-btn" onclick="Calc.toggle()" title="Закрыть" style="font-size: 14px; padding: 5px 10px;">✕</button>
+                </div>
+            </div>
+            <div class="calc-display-area">
+                <div id="calc-expression" class="calc-expression"></div>
+                <div id="calc-display" class="calc-display">0</div>
+            </div>
+            <!-- Scientific buttons -->
+            <div id="calc-sci" class="calc-sci">
+                <button class="calc-btn fn" onclick="Calc.insertFn('sin(')">sin</button>
+                <button class="calc-btn fn" onclick="Calc.insertFn('cos(')">cos</button>
+                <button class="calc-btn fn" onclick="Calc.insertFn('tan(')">tan</button>
+                <button class="calc-btn fn" onclick="Calc.insertFn('sqrt(')">√</button>
+                <button class="calc-btn fn" onclick="Calc.insertFn('log(')">log</button>
+                <button class="calc-btn fn" onclick="Calc.insertFn('ln(')">ln</button>
+                <button class="calc-btn fn" onclick="Calc.append('Math.PI')">π</button>
+                <button class="calc-btn fn" onclick="Calc.append('Math.E')">e</button>
+                <button class="calc-btn fn" onclick="Calc.append('^2')">x²</button>
+                <button class="calc-btn fn" onclick="Calc.append('^')">xʸ</button>
+                <button class="calc-btn fn" onclick="Calc.append('%')">%</button>
+                <button class="calc-btn fn" onclick="Calc.negate()">±</button>
+            </div>
+            <!-- Basic buttons -->
+            <div id="calc-grid" class="calc-grid">
+                <button class="calc-btn clr" onclick="Calc.clear()">C</button>
+                <button class="calc-btn back" onclick="Calc.backspace()">⌫</button>
+                <button class="calc-btn" onclick="Calc.append('(')">(</button>
+                <button class="calc-btn op" onclick="Calc.append('/')">÷</button>
+                <button class="calc-btn" onclick="Calc.append('7')">7</button>
+                <button class="calc-btn" onclick="Calc.append('8')">8</button>
+                <button class="calc-btn" onclick="Calc.append('9')">9</button>
+                <button class="calc-btn op" onclick="Calc.append('*')">×</button>
+                <button class="calc-btn" onclick="Calc.append('4')">4</button>
+                <button class="calc-btn" onclick="Calc.append('5')">5</button>
+                <button class="calc-btn" onclick="Calc.append('6')">6</button>
+                <button class="calc-btn op" onclick="Calc.append('-')">−</button>
+                <button class="calc-btn" onclick="Calc.append('1')">1</button>
+                <button class="calc-btn" onclick="Calc.append('2')">2</button>
+                <button class="calc-btn" onclick="Calc.append('3')">3</button>
+                <button class="calc-btn op" onclick="Calc.append('+')">+</button>
+                <button class="calc-btn" onclick="Calc.append(')')">)</button>
+                <button class="calc-btn" onclick="Calc.append('0')">0</button>
+                <button class="calc-btn" onclick="Calc.append('.')">.</button>
+                <button class="calc-btn eq" onclick="Calc.solve()">=</button>
+            </div>
+            <!-- History -->
+            <div id="calc-history" class="calc-history">
+                <div id="calc-history-list"></div>
+            </div>
+            <!-- Footer -->
+            <div class="calc-footer">
+                <button class="btn btn-outline" onclick="Calc.toggleHistory()">📜 История</button>
+                <button class="btn btn-outline" onclick="Calc.toggle()">✕ Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wb-modal" class="modal">
+        <div class="modal-content" style="width:95%;">
+            <h3>Черновик</h3>
+            <div style="border:2px solid var(--text-light); border-radius:15px; overflow:hidden;">
+                <canvas id="wb-canvas" class="canvas-box" height="350"></canvas>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-outline" style="color:#FF7675;" onclick="Whiteboard.clear()">Очистить</button>
+                <button class="btn btn-primary" onclick="Whiteboard.close()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="daily-modal" class="modal">
+        <div class="modal-content" style="background:linear-gradient(135deg,var(--surface),var(--bg)); border:2px solid var(--gold);">
+            <h2 style="color:var(--gold);">🎁 Ежедневный Бонус!</h2>
+            <div class="daily-grid" id="daily-grid"></div>
+            <div style="margin:20px 0; font-size:40px;">💰 <span id="daily-reward-amount">10</span></div>
+            <button class="btn btn-primary" style="background:var(--gold); color:#333;" onclick="DailySys.claim()">Забрать Награду</button>
+        </div>
+    </div>
+
+    <div id="ach-details-box" class="modal">
+        <div class="modal-content">
+            <h2 id="ach-title"></h2>
+            <p id="ach-desc" style="color:var(--text-light); margin-bottom:10px;"></p>
+            <div id="ach-status" style="font-weight:bold;"></div>
+            <button class="btn btn-primary" style="margin-top:20px;" onclick="document.getElementById('ach-details-box').classList.remove('show')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- ABOUT MODAL (Финальная адаптивная версия) -->
+<div id="about-modal" class="modal">
+    <!-- Добавлен overflow-y: auto и max-height для прокрутки -->
+    <div class="modal-content" style="padding: 0; max-width: 360px; border-radius: 30px; border: none; position: relative; max-height: 90vh; overflow-y: auto; overflow-x: hidden; display: block;">
+        
+        <!-- КРЕСТИК (Фиксированный сверху справа) -->
+        <div style="position: sticky; top: 0; width: 100%; height: 0; z-index: 100;">
+            <button onclick="document.getElementById('about-modal').classList.remove('show')" 
+                    style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+                ✕
+            </button>
+        </div>
+
+        <!-- Шапка -->
+        <div style="background: linear-gradient(135deg, #6C63FF, #8B7EFF); padding: 40px 20px 30px 20px; color: white; text-align: center;">
+            <div style="width: 70px; height: 70px; background: white; border-radius: 22px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); animation: float 3s infinite ease-in-out;">
+                🚀
+            </div>
+            <h2 style="margin: 0; font-size: 24px; font-weight: 900;">MathBooster Pro</h2>
+            <div style="opacity: 0.9; font-size: 13px; font-weight: 500;">Твой личный бухгалтер знаний</div>
+        </div>
+
+        <!-- Контент -->
+        <div style="padding: 25px; background: var(--surface);">
+            <h4 style="margin-bottom: 15px; color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Возможности системы:</h4>
+            
+            <div style="text-align: left; display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">🛡️</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Контроль:</b> Умный таймер с защитой от читов.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">💰</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Экономика:</b> Зарабатывай на своем интеллекте.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">⚔️</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Арена:</b> PVP дуэли в реальном времени.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">🔐</span>
+                    <span style="font-size: 13px; color: var(--text);"><b>Безопасность:</b> Облако и коды спасения.</span>
+                </div>
+            </div>
+
+            <!-- Инфо-бокс -->
+            <div style="background: var(--bg); border-radius: 20px; padding: 15px; text-align: left; font-size: 12px; border: 1px solid rgba(0,0,0,0.03); margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: var(--text-light);">Разработчик:</span>
+                    <span style="font-weight: 800; color: var(--text);">Mansurov Rustam</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-light);">Статус:</span>
+                    <span style="font-weight: 800; color: var(--success);">PRO Active ✅</span>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 10px;">
+                <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="App.switchTab('about'); document.getElementById('about-modal').classList.remove('show')">
+                    📖 Подробная философия
+                </button>
+                
+                <button class="btn btn-outline" style="width: 100%; padding: 15px; border: 2px solid var(--primary); color: var(--primary); background: transparent;" 
+                        onclick="document.getElementById('about-modal').classList.remove('show'); Tutorial.start()">
+                    🎓 Посмотреть обучение заново
+                </button>
+
+                <button class="btn" style="width: 100%; background: #eee; color: #333; padding: 15px; font-weight: bold;" 
+                        onclick="document.getElementById('about-modal').classList.remove('show')">
+                    Закрыть окно
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- LEVEL UP MODAL (Новое красивое окно) -->
+    <div id="levelup-modal" class="modal" style="z-index: 10000;">
+        <div class="modal-content" style="text-align: center; background: linear-gradient(135deg, #FFD700, #FFA500); color: #2B3674; border: 4px solid white; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); max-width: 320px; padding: 30px 20px;">
+            
+            <!-- Иконка вылетает сверху -->
+    <div style="font-size: 80px; margin-top: -60px; margin-bottom: 10px; text-shadow: 0 5px 10px rgba(0,0,0,0.2); animation: bounce 2s infinite;">🚀</div>        
+            <h2 style="font-weight: 900; font-size: 32px; text-transform: uppercase; margin: 0;">Level Up!</h2>
+            
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 20px; opacity: 0.9;">
+                Новый уровень: <span id="lvl-up-new-level" style="font-size: 28px; color: white; text-shadow: 1px 1px 0 rgba(0,0,0,0.3);">2</span>
+            </div>
+
+            <!-- Карточка с наградой -->
+            <div style="background: rgba(255,255,255,0.9); padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 5px;">Твоя награда</div>
+                <div style="font-size: 28px; font-weight: 800; color: #00d26a;">+50 💰</div>
+            </div>
+
+            <button class="btn" onclick="document.getElementById('levelup-modal').classList.remove('show')" style="background: #2B3674; color: white; width: 100%; font-weight: bold; box-shadow: 0 5px 15px rgba(43, 54, 116, 0.4);">
+                Круто! 🚀
+            </button>
+        </div>
+    </div>
+    <!-- INSTALL INSTRUCTION MODAL -->
+    <div id="install-modal" class="modal" style="z-index: 15000;">
+        <div class="modal-content" style="text-align: left; max-width: 340px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 50px; margin-bottom: 10px;">📲</div>
+                <h3 style="margin: 0;">Как установить?</h3>
+                <p style="font-size: 12px; color: var(--success); margin-top: 5px; font-weight: bold;">✅ Код восстановления скопирован!</p>
+            </div>
+
+            <!-- Инструкция для iPhone (iOS) -->
+            <div id="ios-instruction" style="display: none; background: #F2F2F7; padding: 15px; border-radius: 15px; color: black;">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #007AFF;">🍎 Для iPhone (Safari):</div>
+                <div style="font-size: 13px; line-height: 1.6;">
+                    1. Нажми кнопку <b>"Поделиться"</b> <span style="font-size: 18px;">⎋</span> внизу экрана.<br>
+                    2. Прокрути список вниз.<br>
+                    3. Нажми <b>"На экран «Домой»"</b> <span style="font-size: 16px;">➕</span>.<br>
+                    4. Нажми "Добавить".
+                </div>
+            </div>
+
+            <!-- Инструкция для Android -->
+            <div id="android-instruction" style="display: none; background: #F1F8E9; padding: 15px; border-radius: 15px; color: black;">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #4CAF50;">🤖 Для Android (Chrome):</div>
+                <div style="font-size: 13px; line-height: 1.6;">
+                    1. Нажми <b>три точки</b> <span style="font-size: 18px;">⋮</span> в правом верхнем углу.<br>
+                    2. Выбери <b>"Установить приложение"</b> или <b>"Добавить на гл. экран"</b>.<br>
+                    3. Нажми "Установить".
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: var(--text-light); margin-top: 20px; text-align: center;">
+                После установки откройте приложение и нажмите кнопку <b>"📥 У меня есть код"</b>.
+            </div>
+
+            <button class="btn btn-primary" onclick="document.getElementById('install-modal').classList.remove('show')" style="margin-top: 15px; width: 100%;">Понятно</button>
+        </div>
+    </div>
+    <!-- TERMS MODAL (Пользовательское соглашение) -->
+    <div id="terms-modal" class="modal">
+        <div class="modal-content" style="text-align: left; padding: 0; overflow: hidden; max-height: 85vh; display: flex; flex-direction: column;">
+            
+            <!-- Шапка -->
+            <div style="background: var(--surface); padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">📄 Соглашение</h3>
+                <button onclick="document.getElementById('terms-modal').classList.remove('show')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">×</button>
+            </div>
+
+            <!-- Текст (с прокруткой) -->
+            <div style="padding: 20px; overflow-y: auto; font-size: 13px; color: var(--text); line-height: 1.6;">
+                <p style="color: var(--text-light); margin-bottom: 15px;">Последнее обновление: Январь 2026</p>
+
+                <h4 style="margin-top: 15px; color: var(--primary);">1. Общие положения</h4>
+                <p>Добро пожаловать в MathBooster Pro. Используя данное приложение, вы автоматически соглашаетесь с условиями данного соглашения. Приложение разработано Мансуровым Рустамом (далее — Разработчик) и предназначено для повышения личной продуктивности.</p>
+
+                <h4 style="margin-top: 15px; color: var(--primary);">2. Интеллектуальная собственность</h4>
+                <p>Все права на исходный код, дизайн, логотип, название "MathBooster Pro", а также игровые механики принадлежат Разработчику. <br>⛔️ <b>Запрещено:</b> копирование, декомпиляция, модификация или распространение приложения без письменного разрешения автора. Нарушение преследуется по Закону РУз «Об авторском праве».</p>
+
+                <h4 style="margin-top: 15px; color: var(--primary);">3. Виртуальные товары и Донат</h4>
+                <p>Приложение распространяется бесплатно (Freeware). Пользователь может совершать добровольные пожертвования (донаты) для поддержки разработки.</p>
+                <ul>
+                    <li><b>Монеты (Coins)</b> — это виртуальная игровая единица, не имеющая реальной денежной стоимости.</li>
+                    <li>Монеты нельзя обменять обратно на деньги (сумы, доллары и т.д.).</li>
+                    <li>Совершая перевод (через Click, Payme, Visa), вы совершаете <b>безвозмездное пожертвование</b>. Возврат средств не предусмотрен.</li>
+                </ul>
+
+                <h4 style="margin-top: 15px; color: var(--primary);">4. Отказ от ответственности</h4>
+                <p>Приложение предоставляется по принципу "как есть" (As Is). Разработчик не несет ответственности за сбои в работе устройства, потерю игрового прогресса из-за очистки кэша или отсутствия интернет-соединения при синхронизации.</p>
+
+                <h4 style="margin-top: 15px; color: var(--primary);">5. Конфиденциальность</h4>
+                <p>Мы уважаем вашу приватность. Приложение не собирает личные данные (номера телефонов, геолокацию), кроме тех, что вы вводите сами (Имя). Данные хранятся на вашем устройстве и в защищенной облачной базе.</p>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(108, 99, 255, 0.1); border-radius: 10px; text-align: center;">
+                    <b>MathBooster Pro</b><br>
+                    Bukhara, Uzbekistan 🇺🇿
+                </div>
+            </div>
+
+            <!-- Кнопка внизу -->
+            <div style="padding: 15px; border-top: 1px solid rgba(0,0,0,0.1); background: var(--surface);">
+                <button id="terms-accept-btn" class="btn btn-primary" onclick="document.getElementById('terms-modal').classList.remove('show')">
+                    Я понимаю и принимаю
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DUEL CHALLENGE MODAL -->
+    <div id="duel-challenge-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="padding: 0;">
+            <div class="duel-header">
+                <div class="duel-icon">⚔️</div>
+                <div style="font-size: 18px; font-weight: 900;">ВЫЗОВ НА ДУЭЛЬ!</div>
+            </div>
+            <div class="duel-players">
+                <div class="duel-player">
+                    <div class="avatar" id="dc-from-avatar">😎</div>
+                    <div class="name" id="dc-from-name">Игрок</div>
+                </div>
+                <div class="duel-vs">⚡VS⚡</div>
+                <div class="duel-player">
+                    <div class="avatar" id="dc-my-avatar">😎</div>
+                    <div class="name" id="dc-my-name">Ты</div>
+                </div>
+            </div>
+            <div class="duel-info">
+                <div class="info-row">
+                    <span class="info-label">🎮 Режим</span>
+                    <span class="info-value" id="dc-mode">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value" id="dc-diff">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Ставка</span>
+                    <span class="info-value">15 монет</span>
+                </div>
+            </div>
+            <div class="duel-timer">
+                Авто-отказ через: <span id="dc-countdown">30</span>с
+            </div>
+            <div class="duel-buttons">
+                <button class="duel-btn duel-btn-decline" id="dc-decline-btn">🚫 Отказ</button>
+                <button class="duel-btn duel-btn-accept" id="dc-accept-btn">⚔️ Принять!</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="toast-container"></div>
+    <script src="app-core.js"></script>
+
+    <!-- ECO MODE OVERLAY -->
+        <div id="eco-overlay" onclick="App.toggleEcoMode(false)">
+            <div class="eco-floater">
+                <div id="eco-timer-display">00:00:00</div>
+                <div class="eco-text">
+                    🔋 Режим энергосбережения<br>
+                    Таймер работает<br>
+                    Нажми, чтобы разбудить
+                </div>
+            </div>
+        </div>
+
+    <!-- TUTORIAL MODAL (Улучшенное обучение) -->
+        <div id="tutorial-modal" class="modal" style="z-index: 20000; background: rgba(0,0,0,0.96);">
+            <div class="modal-content" style="text-align: center; max-width: 360px; background: linear-gradient(145deg, #1e1e2e, #2d2d44); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 30px 20px; position: relative;">
+                
+                <!-- Индикатор шагов (2 шага вместо 4 — короткий онбординг) -->
+                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
+                    <div class="tut-dot active" id="dot-1"></div>
+                    <div class="tut-dot" id="dot-2"></div>
+                </div>
+
+                <!-- Слайд 1: Суть (философия + механика + цели в одном) -->
+                <div class="tutorial-slide" id="tut-1">
+                    <div style="font-size: 64px; margin-bottom: 15px; filter: drop-shadow(0 0 15px var(--primary));">⏳</div>
+                    <h2 style="margin-bottom: 12px; font-size: 24px;">Твой труд станет видимым</h2>
+                    <p style="font-size: 14px; line-height: 1.7; opacity: 0.9; margin-bottom: 20px; text-align: left;">
+                        • <b>⏱️ Таймер:</b> включай, когда садишься за уроки<br>
+                        • <b>💰 Монеты и XP:</b> капают за учёбу — качай уровень<br>
+                        • <b>🏆 Топ и дуэли:</b> соревнуйся с другими<br>
+                        • <b>🛍️ Магазин:</b> трать заработанное на аватары и темы
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.next(2)" style="width: 100%; box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);">Дальше 👇</button>
+                </div>
+
+                <!-- Слайд 2: Безопасность (КРИТИЧНО) -->
+                <div class="tutorial-slide" id="tut-2" style="display: none;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">🔐</div>
+                    <h2 style="margin-bottom: 15px; font-size: 24px; color: #FFD700;">Важное правило!</h2>
+                    <p style="font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 25px;">
+                        Твой прогресс привязан к устройству. <br><br>
+                        Обязательно сохрани <b>Код Спасения</b> в настройках. Только он поможет вернуть аккаунт при смене телефона.
+                    </p>
+                    <button class="btn btn-primary" onclick="Tutorial.close()" style="width: 100%; background: #00d26a; box-shadow: 0 5px 15px rgba(0, 210, 106, 0.4);">Начать путь 🚀</button>
+                </div>
+
+            </div>
+        </div>
+
+        <link rel="stylesheet" href="styles/tutorial.css">
+
+    <!-- BATTLE MODAL (Обновленный с раздельными кнопками) -->
+        <div id="battle-modal" class="modal" style="z-index: 12000;">
+            <div class="modal-content" style="text-align: center; position: relative;">
+                
+                <!-- КНОПКА ЗАКРЫТЬ -->
+                <button onclick="document.getElementById('battle-modal').classList.remove('show')" 
+                        style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer;">
+                    ✕
+                </button>
+
+                <h2 style="color: #FF4B2B; margin-top: 0;">⚔️ Арена PVP</h2>
+                
+                <!-- ЭКРАН 1: ВХОД / СОЗДАНИЕ -->
+                <div id="battle-login-view">
+                    
+                    <!-- ВЫБОР РЕЖИМА -->
+                    <div style="background: var(--bg); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                        <label style="font-size: 12px; color: var(--text); font-weight: bold; display: block; margin-bottom: 8px;">Режим битвы:</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <button class="battle-mode-btn active" data-mode="standard" onclick="BattleSys.selectMode('standard', this)" style="padding: 10px; border-radius: 8px; border: 2px solid var(--primary); background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🔢</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Классика</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="sign" onclick="BattleSys.selectMode('sign', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🧩</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Найди знак</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="square" onclick="BattleSys.selectMode('square', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">📐</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Степени</div>
+                            </button>
+                            <button class="battle-mode-btn" data-mode="fractions" onclick="BattleSys.selectMode('fractions', this)" style="padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; transition: 0.2s; color: var(--text);">
+                                <div style="font-size: 18px;">🍰</div>
+                                <div style="font-size: 11px; font-weight: bold; color: var(--text);">Дроби</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ВЫБОР СЛОЖНОСТИ -->
+                    <div style="background: var(--bg); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                        <label style="font-size: 12px; color: var(--text); font-weight: bold; display: block; margin-bottom: 8px;">Сложность:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="battle-diff-btn active" data-diff="easy" onclick="BattleSys.selectDiff('easy', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid var(--success); background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🟢 Легко
+                            </button>
+                            <button class="battle-diff-btn" data-diff="medium" onclick="BattleSys.selectDiff('medium', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🟡 Средне
+                            </button>
+                            <button class="battle-diff-btn" data-diff="hard" onclick="BattleSys.selectDiff('hard', this)" style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid transparent; background: var(--surface); cursor: pointer; font-size: 11px; font-weight: bold; color: var(--text);">
+                                🔴 Сложно
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p style="font-weight: bold; color: var(--gold); margin: 15px 0;">Ставка: 15 💰</p>
+
+                    <!-- СОЗДАТЬ БОЙ -->
+                    <div style="background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 14px;">🎲 Создать бой</h4>
+                        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 10px;">Сгенерируй код и отправь другу</p>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="battle-code-create" class="input-field" placeholder="Код" readonly style="text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 2px; margin: 0; background: var(--surface);">
+                            <button class="btn btn-outline" onclick="BattleSys.generateCode()" style="padding: 0 15px; border-color: var(--primary); color: var(--primary);">
+                                🎲
+                            </button>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="BattleSys.createBattle()" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 16px;">
+                            🚀 Создать бой
+                        </button>
+                    </div>
+
+                    <!-- ПРИСОЕДИНИТЬСЯ -->
+                    <div style="background: var(--bg); padding: 15px; border-radius: 12px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--text); font-size: 14px;">🔗 Присоединиться</h4>
+                        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 10px;">Введи код друга</p>
+                        
+                        <input type="number" id="battle-code-join" class="input-field" placeholder="123" style="text-align: center; font-size: 20px; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px;">
+                        
+                        <button class="btn btn-primary" onclick="BattleSys.joinBattle()" style="width: 100%; padding: 12px; font-size: 16px; background: #2ECC71;">
+                            ⚔️ Присоединиться
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ЭКРАН 2: ЛОББИ -->
+                <div id="battle-lobby-view" style="display: none;">
+                    <div class="loader" style="margin: 20px auto; border-top-color: #FF4B2B;"></div>
+                    <h3 style="color: var(--text);">Ожидание соперника...</h3>
+                    
+                    <div style="background: var(--bg); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left;">
+                        <div style="margin-bottom: 5px; color: var(--text);">🔴 Игрок 1: <b id="p1-name">...</b></div>
+                        <div style="margin-bottom: 10px; color: var(--text);">🔵 Игрок 2: <b id="p2-name">...</b></div>
+                        <div style="font-size: 12px; color: var(--text-light); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bg);">
+                            <div style="color: var(--text);">Режим: <b id="lobby-mode-display" style="color: var(--primary);">---</b></div>
+                            <div style="color: var(--text);">Сложность: <b id="lobby-diff-display" style="color: var(--accent);">---</b></div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: var(--text-light); margin-top: 15px;">
+                        Код комнаты: <b id="lobby-code-display" style="font-size: 16px; color: var(--text);">---</b>
+                    </p>
+
+                    <button class="btn btn-outline" onclick="BattleSys.leaveLobby()" style="margin-top: 20px; color: #FF4B2B; border-color: #FF4B2B;">
+                        ❌ Выйти
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    <script src="app-boot.js"></script>
+    <!-- TRANSFER CODE MODAL (Окно переноса) -->
+    <div id="transfer-modal" class="modal" style="z-index: 20000;">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="margin-bottom: 10px;">📦 Перенос</h2>
+            <p style="color: var(--text-light); font-size: 13px;">Введи этот код на новом устройстве:</p>
+            
+            <div id="transfer-code-display" style="background: #f0f0f0; color: #333; font-family: monospace; font-size: 32px; font-weight: bold; padding: 15px; border-radius: 10px; margin: 20px 0; border: 2px dashed var(--primary); user-select: all;">
+                ---
+            </div>
+
+            <button class="btn btn-primary" onclick="document.getElementById('transfer-modal').classList.remove('show')" style="width: 100%;">
+                Закрыть
+            </button>
+        </div>
+    </div>
+    <div id="weekly-modal" class="modal" style="z-index: 25000;">
+        <div class="modal-content" style="background: linear-gradient(135deg, var(--surface), #fff9e6); border: 3px solid #FFD700;">
+            <h2 style="color: #DAA520; margin-bottom: 5px;">📊 Итоги недели</h2>
+            <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Твой прогресс за прошлые 7 дней</p>
+            
+            <div class="grid" style="grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px;">
+                <div class="stat-pill" style="background: white; border: 1px solid #eee;">
+                    <div class="stat-label">Чистое время</div>
+                    <div class="stat-val" id="wr-time" style="font-size: 24px;">0ч 0м</div>
+                </div>
+                <div class="stat-pill" style="background: white; border: 1px solid #eee;">
+                    <div class="stat-label">Любимый предмет</div>
+                    <div class="stat-val" id="wr-subject" style="color: var(--primary);">—</div>
+                </div>
+                <div class="stat-pill" style="background: white; border: 1px solid #eee;">
+                    <div class="stat-label">Опыта получено</div>
+                    <div class="stat-val" id="wr-xp" style="color: var(--success);">+0 XP</div>
+                </div>
+            </div>
+
+            <p style="font-size: 13px; font-style: italic; margin-bottom: 20px;">"Ты молодец! Новая неделя — новые рекорды. 🚀"</p>
+            
+            <button class="btn btn-primary" style="background: #FFD700; color: #333; border: none;" onclick="document.getElementById('weekly-modal').classList.remove('show')">Погнали в новую неделю! ⚡</button>
+        </div>
+    </div>
+    <!-- TIMER RULES MODAL (Объяснение экономики) -->
+<div id="timer-rules-modal" class="modal" style="z-index: 25000;">
+    <div class="modal-content" style="text-align: left; max-width: 340px;">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <div style="font-size: 40px; margin-bottom: 5px;">⏱️</div>
+            <h3 style="margin: 0; color: var(--primary);">Как начисляются монеты?</h3>
+        </div>
+        
+        <p style="font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 15px;">
+            Монеты начисляются <b>каждые 10 минут</b> непрерывной работы. Чем дольше ты сидишь без пауз, тем больше награда!
+        </p>
+
+        <!-- Таблица наград -->
+        <div style="background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 3px solid var(--primary);">
+            <div style="font-weight: bold; margin-bottom: 10px; color: var(--primary); font-size: 13px;">
+                💰 Награды (Обычный режим):
+            </div>
+            <div style="font-size: 12px; line-height: 2;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>10 минут:</span> <b style="color: var(--primary);">+5 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>20 минут:</span> <b style="color: var(--primary);">+6 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>30 минут:</span> <b style="color: var(--primary);">+7 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>40 минут:</span> <b style="color: var(--primary);">+8 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>50 минут:</span> <b style="color: var(--primary);">+9 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>60 минут:</span> <b style="color: var(--primary);">+10 💰</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-light); font-style: italic; margin-top: 5px;">
+                    <span>... и так далее</span> <b>до +20 💰 макс</b>
+                </div>
+            </div>
+        </div>
+
+        <!-- Хардкор бонус -->
+        <div style="background: linear-gradient(135deg, rgba(255, 77, 43, 0.1), rgba(255, 77, 43, 0.05)); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(255, 77, 43, 0.3);">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #FF4B2B; font-size: 12px;">
+                🔥 Режим ХАРДКОР: награда ×1.5
+            </div>
+            <div style="font-size: 11px; color: var(--text); line-height: 1.4;">
+                В хардкоре нельзя ставить на паузу, зато награды в полтора раза больше! (7-30 💰)
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div style="background: rgba(108, 99, 255, 0.05); padding: 12px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--primary);">
+            <div style="font-size: 11px; color: var(--text); line-height: 1.6;">
+                <b>⚠️ Важно:</b><br>
+                • <b>Проверка реальности:</b> каждый час появится пример (60 сек на решение)<br>
+                • <b>Анти-АФК:</b> если не касаться экрана 35+ минут — таймер остановится<br>
+                • <b>Минимум:</b> 1 минута для сохранения сессии
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="document.getElementById('timer-rules-modal').classList.remove('show')" style="width: 100%;">
+            Всё понятно! 🚀
+        </button>
+    </div>
+</div>
+    </body>
+    </html>
+
