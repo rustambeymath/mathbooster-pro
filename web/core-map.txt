@@ -1,0 +1,89 @@
+  0 L5-55 (51ln) [VariableDeclar] FX | const FX = {
+  1 L60-85 (26ln) [VariableDeclar] PWA | const PWA = {
+  2 L86-138 (53ln) [VariableDeclar] MusicPlayer | const MusicPlayer = {
+  3 L140-338 (199ln) [VariableDeclar] SoundSys | const SoundSys = {
+  4 L342-408 (67ln) [VariableDeclar] GenAch | const GenAch = () => {
+  5 L410-479 (70ln) [VariableDeclar] DefaultDB | const DefaultDB = {
+  6 L483-516 (34ln) [VariableDeclar] THEMES | const THEMES = [
+  7 L518-573 (56ln) [VariableDeclar] SHOP_AVATARS | const SHOP_AVATARS = [
+  8 L575-578 (4ln) [VariableDeclar] SHOP_ITEMS | const SHOP_ITEMS = [
+  9 L580-607 (28ln) [VariableDeclar] SHOP_TITLES | const SHOP_TITLES = [
+ 10 L610-617 (8ln) [VariableDeclar] SHOP_FRAMES | const SHOP_FRAMES = [
+ 11 L620-626 (7ln) [VariableDeclar] SHOP_SOUNDS | const SHOP_SOUNDS = [
+ 12 L628-634 (7ln) [VariableDeclar] SHOP_RADIOS | const SHOP_RADIOS = [
+ 13 L636-643 (8ln) [VariableDeclar] LEAGUES | const LEAGUES = [
+ 14 L647-647 (1ln) [VariableDeclar] CURRENT_SEASON | const CURRENT_SEASON = 2;
+ 15 L648-648 (1ln) [VariableDeclar] SEASON_NAMES | const SEASON_NAMES = { 1: 'Сезон 1', 2: 'Сезон 2' };
+ 16 L651-665 (15ln) [FunctionDeclar] fn:markSeasonButtons | function markSeasonButtons(season) {
+ 17 L672-718 (47ln) [FunctionDeclar] fn:renderSeasonBanner | function renderSeasonBanner(top3) {
+ 18 L720-1167 (448ln) [VariableDeclar] SeasonSystem | const SeasonSystem = {
+ 19 L1169-1169 (1ln) [ExpressionStat] window.SeasonSystem= | window.SeasonSystem = SeasonSystem;
+ 20 L1175-1190 (16ln) [VariableDeclar] getUZDate | const getUZDate = (dateObj = null) => {
+ 21 L1192-1221 (30ln) [VariableDeclar] NameGuard | const NameGuard = {
+ 22 L1223-1223 (1ln) [VariableDeclar] DB | let DB = null;
+ 23 L1224-1224 (1ln) [VariableDeclar] isParentMode | let isParentMode = false;
+ 24 L1226-1507 (282ln) [VariableDeclar] Data | const Data = {
+ 25 L1512-1530 (19ln) [VariableDeclar] Whiteboard | const Whiteboard = {
+ 26 L1532-1700 (169ln) [VariableDeclar] Calc | const Calc = {
+ 27 L1703-1719 (17ln) [VariableDeclar] SubjectSys | const SubjectSys = {
+ 28 L1722-1808 (87ln) [VariableDeclar] DailySys | const DailySys = {
+ 29 L1811-1949 (139ln) [VariableDeclar] Donation | const Donation = {
+ 30 L1951-2089 (139ln) [VariableDeclar] Online | const Online = {
+ 31 L2094-2582 (489ln) [VariableDeclar] Auth | const Auth = {
+ 32 L2584-2644 (61ln) [VariableDeclar] Tutorial | const Tutorial = {
+ 33 L2646-3590 (945ln) [VariableDeclar] Timer | const Timer = {
+ 34 L3591-3591 (1ln) [ExpressionStat] window.Timer= | window.Timer = Timer;
+ 35 L3593-3736 (144ln) [VariableDeclar] QuestSys | const QuestSys = {
+ 36 L3738-3833 (96ln) [VariableDeclar] WeeklyQuestSys | const WeeklyQuestSys = {
+ 37 L3835-3849 (15ln) [VariableDeclar] MathGame | const MathGame = {
+ 38 L3852-4364 (513ln) [VariableDeclar] BattleSys | const BattleSys = {
+ 39 L4366-5518 (1153ln) [VariableDeclar] Trainer | const Trainer = {
+ 40 L5520-5573 (54ln) [VariableDeclar] AchievementSys | const AchievementSys = {
+ 41 L5574-5662 (89ln) [VariableDeclar] WeeklyReportSys | const WeeklyReportSys = {
+ 42 L5666-5751 (86ln) [VariableDeclar] TimeGuard | const TimeGuard = {
+ 43 L5753-5883 (131ln) [VariableDeclar] SecretSys | const SecretSys = {
+ 44 L5885-7975 (2091ln) [VariableDeclar] App | const App = {
+ 45 L7977-8166 (190ln) [VariableDeclar] Transfer | const Transfer = {
+ 46 L8167-8240 (74ln) [VariableDeclar] InstallSys | const InstallSys = {
+ 47 L8243-8288 (46ln) [VariableDeclar] Notify | const Notify = {
+ 48 L8290-8290 (1ln) [ExpressionStat] window.App= | window.App = App;
+ 49 L8291-8291 (1ln) [ExpressionStat] window.Auth= | window.Auth = Auth;
+ 50 L8292-8292 (1ln) [ExpressionStat] window.Timer= | window.Timer = Timer;
+ 51 L8293-8293 (1ln) [ExpressionStat] window.Trainer= | window.Trainer = Trainer;
+ 52 L8294-8294 (1ln) [ExpressionStat] window.QuestSys= | window.QuestSys = QuestSys;
+ 53 L8295-8295 (1ln) [ExpressionStat] window.DailySys= | window.DailySys = DailySys;
+ 54 L8296-8296 (1ln) [ExpressionStat] window.BattleSys= | window.BattleSys = BattleSys;
+ 55 L8297-8297 (1ln) [ExpressionStat] window.Donation= | window.Donation = Donation;
+ 56 L8298-8298 (1ln) [ExpressionStat] window.Transfer= | window.Transfer = Transfer;
+ 57 L8299-8299 (1ln) [ExpressionStat] window.Whiteboard= | window.Whiteboard = Whiteboard;
+ 58 L8300-8300 (1ln) [ExpressionStat] window.Calc= | window.Calc = Calc;
+ 59 L8301-8301 (1ln) [ExpressionStat] window.SecretSys= | window.SecretSys = SecretSys;
+ 60 L8302-8302 (1ln) [ExpressionStat] window.WeeklyReportSys= | window.WeeklyReportSys = WeeklyReportSys;
+ 61 L8303-8303 (1ln) [ExpressionStat] window.AchievementSys= | window.AchievementSys = AchievementSys;
+ 62 L8306-8362 (57ln) [ExpressionStat] window.onload= | window.onload = () => {
+ 63 L8365-8365 (1ln) [VariableDeclar] afkTimer | let afkTimer = null;
+ 64 L8366-8366 (1ln) [VariableDeclar] afkPromptActive | let afkPromptActive = false;
+ 65 L8367-8367 (1ln) [VariableDeclar] AFK_INTERVAL | const AFK_INTERVAL = 35 * 60 * 1000; // 35 минут
+ 66 L8368-8368 (1ln) [VariableDeclar] PROMPT_TIMEOUT | const PROMPT_TIMEOUT = 30 * 1000;    // 30 секунд на ответ
+ 67 L8370-8373 (4ln) [FunctionDeclar] fn:startAfkCheck | function startAfkCheck() {
+ 68 L8375-8382 (8ln) [FunctionDeclar] fn:stopAfkCheck | function stopAfkCheck() {
+ 69 L8384-8414 (31ln) [FunctionDeclar] fn:showAfkPrompt | function showAfkPrompt() {
+ 70 L8416-8421 (6ln) [FunctionDeclar] fn:confirmAfk | function confirmAfk() {
+ 71 L8423-8428 (6ln) [FunctionDeclar] fn:pauseAfk | function pauseAfk() {
+ 72 L8430-8433 (4ln) [FunctionDeclar] fn:hideAfkPrompt | function hideAfkPrompt() {
+ 73 L8436-8454 (19ln) [IfStatement]  | if (typeof Timer !== 'undefined') {
+ 74 L8460-8460 (1ln) [VariableDeclar] isSubjectProcessing | let isSubjectProcessing = false; // Флаг блокировки спама
+ 75 L8462-8493 (32ln) [FunctionDeclar] fn:moveSubject | function moveSubject(id, isAlreadyAdded) {
+ 76 L8496-8519 (24ln) [FunctionDeclar] fn:updateSubjectLists | function updateSubjectLists() {
+ 77 L8522-8547 (26ln) [FunctionDeclar] fn:cleanSubjects | function cleanSubjects() {
+ 78 L8553-8568 (16ln) [VariableDeclar] ALL_SUBJECTS | const ALL_SUBJECTS = [
+ 79 L8571-8571 (1ln) [IfStatement]  | if (!DB) DB = {};
+ 80 L8572-8572 (1ln) [IfStatement]  | if (!DB.subjects) DB.subjects = {};
+ 81 L8589-8593 (5ln) [ExpressionStat] Call | setTimeout(() => {
+ 82 L8604-8609 (6ln) [FunctionDeclar] fn:manualQRTransfer | function manualQRTransfer() {
+ 83 L8610-8637 (28ln) [ExpressionStat] Transfer.pasteCode= | Transfer.pasteCode = function(code) {
+ 84 L8641-8656 (16ln) [ExpressionStat] Call | setInterval(() => {
+ 85 L8659-8678 (20ln) [FunctionDeclar] fn:updateFundraiser | function updateFundraiser() {
+ 86 L8681-8681 (1ln) [ExpressionStat] Call | window.addEventListener('load', updateFundraiser);
+ 87 L8683-8683 (1ln) [VariableDeclar] originalSwitchTabFund | const originalSwitchTabFund = App.switchTab;
+ 88 L8684-8687 (4ln) [ExpressionStat] App.switchTab= | App.switchTab = function(id, btn) {
