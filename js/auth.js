@@ -83,10 +83,12 @@
         if (this.users.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:20px;">Все профили повреждены. Создайте новый!</div>';
         }
-        // Секция родительских ссылок вынесена в js/parent.js (ParentUI.renderParentLinks)
+
+        // 2. Список профилей детей для родителя — js/parent.js (ParentUI.renderParentLinks)
         if (window.ParentUI) ParentUI.renderParentLinks(list);
     },
-        deleteUser(id, event) {
+
+    deleteUser(id, event) {
             event.stopPropagation();
             if(!confirm("Точно удалить этот профиль? Он пропадет с телефона и из Топа!")) return;
             
@@ -168,6 +170,9 @@
             document.getElementById('role-select-view').style.display = 'block';
             SoundSys.play('click');
         },
+
+        // Экран входа родителя перенесён в js/parent.js (ParentUI)
+
         showRegister() { 
             this._hideAllAuth();
             document.getElementById('register-view').style.display = 'block';
@@ -274,6 +279,9 @@
             document.getElementById('app-container').style.display = 'block'; 
             
             await App.initAfterLogin();
+            // 😴 Хук восстановления таймера после сна/блокировки телефона и
+            // перезагрузки страницы (visibilitychange/focus/pageshow)
+            if (window.Timer && Timer.initBackgroundRecovery) Timer.initBackgroundRecovery();
             Data.startListening(id);
             
         } catch (e) {
