@@ -1,5 +1,6 @@
 // ТАЙМЕР: запуск/пауза/стоп, автостановка по часу, анти-АФК проверка,
-// восстановление после перезагрузки страницы, защита от скачков времени.
+// восстановление после перезагрузки страницы и после сна телефона,
+// защита от скачков времени.
 const Timer = {
     active: false,
     isRunning: false,
@@ -18,10 +19,17 @@ const Timer = {
     checkShown: false,
     hardcoreTimeout: null, 
     hardcoreListenerAdded: false, // Флаг, чтобы не дублировать слушателя
+    _pageWasHidden: false,        // страница была скрыта (сон телефона) — «прыжок» времени при возврате честный
 
     CHECK_AFTER_SECONDS: 3600,
     CHECK_TIMEOUT: 60,
     REWARD_INTERVAL: 600,
+
+    // 😴 СОН ТЕЛЕФОНА: до 3 часов отсутствия считаем нормальной учёбой
+    // (экран погас, приложение свернуто — время честно идёт). Грейс 5 минут
+    // после 3ч. Больше 4ч — сессия закрыта с сохранением времени под пульсом.
+    MAX_SLEEP_MS: 4 * 3600 * 1000,
+    SLEEP_GRACE_MS: 5 * 60 * 1000,
 
     async requestWakeLock() {
         if ('wakeLock' in navigator) {
@@ -56,6 +64,8 @@ const Timer = {
                     }
                     // Сбрасываем флаг офлайна
                     this._offlineToastShown = false;
+                    // Кнопки могут «отвалиться» после сна — синхронизируем
+                    this.syncTimerButtons();
                     // Перезапрашиваем WakeLock (без async — fire and forget)
                     this.requestWakeLock();
                 }
@@ -121,14 +131,7 @@ const Timer = {
                 timerEl.classList.add('timer-active-anim');
             }
             this.tick();
-            const btn = document.getElementById('btn-start');
-            if (btn) {
-                btn.innerText = '⏸ ПАУЗА';
-                btn.style.fontSize = '14px';
-                btn.style.opacity = '1';
-                btn.disabled = false;
-                btn.onclick = () => this.pause();
-            }
+            this.syncTimerButtons();
 
             // Освежаем пульс и перевзводим push-напоминание, если проверка ещё впереди
             if (window.DB_Online && Auth.currentUser) {
@@ -148,8 +151,8 @@ const Timer = {
             }
 
             const h = Math.floor(elapsed / 3600), m = Math.floor((elapsed % 3600) / 60);
-            App.toast(`⏱️ Сессия восстановлена после перезагрузки: ${h}ч ${m}м на счету — таймер идёт дальше!`);
-            console.log('⚡️ Таймер восстановлен после перезагрузки,Elapsed сек:', elapsed);
+            App.toast(`⏱️ Сессия восстановлена: ${h}ч ${m}м на счету — таймер идёт дальше!`);
+            console.log('⚡️ Таймер восстановлен, elapsed сек:', elapsed);
             return true;
         } catch (e) {
             console.warn('resumeInterrupted error:', e);
@@ -195,6 +198,189 @@ const Timer = {
         } catch (e) {
             console.warn('closeInterrupted error:', e);
         }
+    },
+
+    // === 🎛️ СИНХРОНИЗАЦИЯ КНОПОК С РЕАЛЬНЫМ СОСТОЯНИЕМ ТАЙМЕРА ===
+    // Один источник правды: onclick и надпись кнопки всегда соответствуют
+    // this.active / this.isRunning / this.isPaused. Лечит «мёртвый СТОП»
+    // после сна телефона (когда interval умер, а стейт остался).
+    syncTimerButtons() {
+        const btn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        if (!btn) return;
+
+        if (!this.active) {
+            btn.innerText = '🚀 СТАРТ';
+            btn.style.fontSize = '14px';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.onclick = () => Timer.preStart();
+            return;
+        }
+        // Сессия жива — СТОП всегда доступен
+        if (stopBtn) stopBtn.disabled = false;
+
+        if (this.isPaused) {
+            btn.innerText = '▶️ ПРОДОЛЖИТЬ';
+            btn.style.fontSize = '12px';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.onclick = () => this.resume();
+        } else {
+            btn.disabled = this.isStrict;             // в хардкоре пауза запрещена
+            btn.style.opacity = this.isStrict ? '0.5' : '1';
+            if (this.isStrict) {
+                btn.innerText = '🔥 ХАРДКОР';
+            } else {
+                btn.innerText = '⏸ ПАУЗА';
+                btn.style.fontSize = '14px';
+                btn.onclick = () => this.pause();
+            }
+        }
+    },
+
+    // === 😴 ВОССТАНОВЛЕНИЕ ПОСЛЕ СНА/БЛОКИРОВКИ ТЕЛЕФОНА ===
+    // Вызывается из initBackgroundRecovery (visibilitychange/focus/pageshow),
+    // когда сессия активна. iOS/Android замораживают setInterval в фоне —
+    // таймер «догоняет» реальное время по getTrueTime(), UI и кнопки чинятся.
+    recoverAfterSleep() {
+        if (!this.active) return;
+        const now = this.getTrueTime();
+        const elapsed = Math.floor((now - this.startTime - this.totalPausedDuration) / 1000);
+
+        if (this.isPaused) {
+            // На паузе время не идёт — просто чиним UI
+            this.syncTimerButtons();
+            this.updateDisplay();
+            return;
+        }
+
+        if (elapsed > this.realSec + 5) {
+            this.realSec = elapsed;
+            this.visualSec = elapsed;
+            this.updateDisplay();
+            console.log('⏱️ Таймер догнал время после сна:', elapsed, 'сек');
+        }
+
+        // Гарантия: interval должен жить. Если фон его убил — пересоздаём.
+        if (!this.interval) this.tick();
+
+        // 🛡️ Сразу пульс, чтобы stop() не аннулировал сессию
+        if (window.DB_Online && Auth.currentUser) {
+            const ping = Number(now);
+            if (DB && DB.user) DB.user.lastPing = ping;
+            try {
+                const docRef = window.DB_Online.doc(window.DB_Online.db, 'users', Auth.currentUser.id);
+                window.DB_Online.updateDoc(docRef, { 'user.lastPing': ping }).catch(() => {});
+            } catch(e) {}
+        }
+        this._offlineToastShown = false;
+        this.syncTimerButtons();
+    },
+
+    // === 📡 ЕДИНЫЙ HOOK ВОЗВРАЩЕНИЯ В ПРИЛОЖЕНИЕ ===
+    // visibilitychange + focus + pageshow (iOS PWA не всегда даёт visibilitychange).
+    // Три сценария: (1) сессия активна — recoverAfterSleep; (2) сессии нет, но в
+    // Firebase остался незакрытый якорь (сон/перезагрузка) — resumeInterrupted или
+    // закрытие; (3) ничего нет — ничего не делаем.
+    initBackgroundRecovery() {
+        if (this._recoveryHooked) return;
+        this._recoveryHooked = true;
+
+        let lastHandled = 0;
+        const handle = () => {
+            const t = Date.now();
+            if (t - lastHandled < 1500) return; // антиспам: событие может прийти пачкой
+            lastHandled = t;
+            this._onAppReturn();
+        };
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { this._pageWasHidden = true; return; }
+            handle();
+        });
+        window.addEventListener('focus', handle);
+        window.addEventListener('pageshow', handle);
+    },
+
+    async _onAppReturn() {
+        try {
+            if (!Auth || !Auth.currentUser) return;
+
+            // ── 1. Сессия уже активна в памяти — догоняем время и чиним UI ──
+            if (this.active) {
+                this.recoverAfterSleep();
+                this._notifySessionActive();
+                return;
+            }
+
+            // ── 2. Сессии нет, но в Firebase — незакрытый якорь (сон телефона,
+            //      перезагрузка). Пытаемся продолжить. Однократно за открытие
+            //      приложения, чтобы не мешать пользователю. ──
+            if (this._returnRecoveryTried) return;
+            this._returnRecoveryTried = true;
+
+            if (!navigator.onLine || !window.DB_Online) return;
+            const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
+            const snap = await window.DB_Online.getDoc(docRef);
+            const data = snap.data();
+            const serverStart = Number(data?.user?.activeSessionStart || 0);
+            if (!serverStart) return;
+
+            const pausedAt = Number(data?.user?.pausedAt || 0);
+            if (pausedAt > 0) {
+                // Пауза + сон: закрываем с сохранением наработанного (как при старте)
+                await this.closeInterrupted(serverStart, pausedAt);
+                App.toast("⏹️ Сессия закрыта и сохранена (была на паузе).");
+                return;
+            }
+
+            // Долгий сон (> MAX_SLEEP_MS) — продолжать нельзя: закрываем честно
+            const lpCheck = Number(data?.user?.lastPing || 0);
+            const gapMs = this.getTrueTime() - (lpCheck > 0 ? lpCheck : serverStart);
+            if (gapMs > this.MAX_SLEEP_MS) {
+                await this.closeInterrupted(serverStart, this.getTrueTime());
+                App.toast("⏹️ Прошлая сессия закрыта и сохранена.");
+                return;
+            }
+
+            if (this.resumeInterrupted(serverStart, lpCheck)) {
+                this._notifySessionActive();
+            }
+        } catch (e) {
+            console.warn('onAppReturn error:', e);
+        }
+    },
+
+    // === 🔔 УМНОЕ УВЕДОМЛЕНИЕ ПРИ ВОЗВРАЩЕНИИ (однократно за открытие) ===
+    // Показываем только если пользователь реально уходил из приложения
+    // (страница была hidden), уведомления разрешены и сессия жива.
+    _notifySessionActive() {
+        try {
+            if (!this.active || this.isPaused) return;
+            if (!document.hidden) return;                    // пользователь уже внутри
+            if (!(window.Notify && Notify.isSupported)) return;
+            if (Notification.permission !== 'granted') return;
+            if (!DB || !DB.settings || !DB.settings.notifications) return;
+            if (this._sessionNotifyShown) return;            // не спамим
+            this._sessionNotifyShown = true;
+
+            const sec = this.realSec;
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+            const subject = (DB.subjects && DB.user && DB.subjects[DB.user.subject])
+                ? DB.subjects[DB.user.subject].name : '';
+            const body = subject ? `${subject} • нажми, чтобы открыть` : 'Нажми, чтобы открыть';
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification('⏱ Сессия идёт: ' + (h > 0 ? `${h} ч ${m} мин` : `${m} мин`), {
+                    body: body,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: 'session-active',   // заменяет предыдущее, не плодит дубли
+                    silent: true,            // без звука — пользователь уже вернулся
+                    data: { url: '/' }
+                });
+            }).catch(() => {});
+        } catch(e) {}
     },
 
     // === PUSH-УВЕДОМЛЕНИЕ: отправляем когда пора проходить проверку ===
@@ -362,6 +548,8 @@ const Timer = {
         // Проверяем что Firebase подключён
         if (!window.DB_Online) return App.toast("❌ Сервер недоступен. Попробуйте позже.");
 
+        this._sessionNotifyShown = false; // разрешаем уведомление для новой сессии
+
         // ⚡️ ВОССТАНОВЛЕНИЕ: если в Firebase жива незакрытая сессия (случайная
         // перезагрузка страницы) — продолжаем её, а не начинаем с нуля.
         try {
@@ -472,8 +660,12 @@ const Timer = {
 
             // 🛡️ ДЕТЕКТОР ПРЫЖКОВ (АНТИ-ЧИТ)
             // Если время прыгнуло вперёд более чем на 3 секунды за 1 секунду реальности —
-            // значит подменяли часы или сбился офсет
-            if (this.realSec > 0 && calculatedSec - this.realSec > 3) {
+            // значит подменяли часы или сбился офсет. Исключение: страница была
+            // скрыта (сон телефона / свёрнутое приложение) — фон замораживает
+            // setInterval, и «прыжок» при возвращении — это честно отработанное
+            // время, его засчитываем.
+            const sleepJump = this._pageWasHidden && calculatedSec - this.realSec > 3;
+            if (this.realSec > 0 && !sleepJump && calculatedSec - this.realSec > 3) {
                 console.warn('⚠️ Обнаружен скачок времени! Перепроверка...');
                 // Синхронизируем OFSET (fire-and-forget, без await)
                 TimeGuard.sync().then(() => {
@@ -493,6 +685,8 @@ const Timer = {
             } else {
                 this.realSec = calculatedSec;
             }
+            // «Сонный» прыжок обработан — сбрасываем флаг
+            if (sleepJump) this._pageWasHidden = false;
             this.visualSec = this.realSec;
 
             // === ФОНОВЫЙ РЕЖИМ: сохраняем состояние каждые 10 сек ===
@@ -767,6 +961,7 @@ const Timer = {
         if (this.hardcoreTimeout) clearTimeout(this.hardcoreTimeout);
 
         clearInterval(this.interval);
+        this.interval = null;
         this.active = false;
         this.isRunning = false;
         this.releaseWakeLock();
@@ -774,16 +969,24 @@ const Timer = {
         try { localStorage.setItem('MathTimerLastStop', String(Date.now())); } catch(e) {}
 
         const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-        const snap = await window.DB_Online.getDoc(docRef);
-        const data = snap.data();
-        
-        const serverStart = Number(data.user.activeSessionStart || 0);
+        let serverStart = 0;
+        try {
+            const snap = await window.DB_Online.getDoc(docRef);
+            const data = snap.data();
+            serverStart = Number(data.user.activeSessionStart || 0);
+        } catch (e) {
+            // Сеть/Firestore недоступны — СТОП всё равно должен сработать:
+            // считаем по локальному якорю старта (анти-чит дальше не страдает:
+            // realSec уже ограничен детектором скачков и lastPing-логикой)
+            console.warn('stop: Firestore read failed, using local anchor:', e);
+            serverStart = Number(this.startTime || 0);
+        }
         const stopTime = this.getTrueTime();
 
         // 🛡️ Доверяем клиентскому realSec (анти-чит уже работает в tick())
         // Но проверяем что сессия не дольше чем реальное время с момента старта
-        const maxAllowed = Math.floor((stopTime - serverStart) / 1000) + 10; // +10 сек на задержку сети
-        const verifiedSec = Math.min(this.realSec, maxAllowed);
+        const maxAllowed = serverStart > 0 ? Math.floor((stopTime - serverStart) / 1000) + 10 : Infinity; // +10 сек на задержку сети
+        const verifiedSec = serverStart > 0 ? Math.min(this.realSec, maxAllowed) : this.realSec;
 
         // 💾 Записываем только НЕЗАПИСАННУЮ часть: часы, уже сохранённые
         // чекпоинтами после пройденных проверок, повторно не начисляются
@@ -805,7 +1008,7 @@ const Timer = {
             DB.user.lastPing = null;
             DB.user.pausedAt = null;
         }
-        await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null, "user.pausedAt": null });
+        await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null, "user.lastPing": null, "user.pausedAt": null }).catch(() => {});
         this.resetTimerUI();
     },
 
