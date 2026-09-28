@@ -276,7 +276,10 @@
                 const userDoc = dbRef.doc(dbRef.db, "users", userId);
                 // 🔐 Добавляем ownerUID для проверки Firestore Rules
                 DB._ownerUID = window._firebaseUID || null;
+                // 🛡️ Служебные поля: на сервер не отдаём (держим локально)
+                const _lastBackupAt = DB.user._lastBackupAt; delete DB.user._lastBackupAt;
                 await dbRef.setDoc(userDoc, DB);
+                if (_lastBackupAt !== undefined) DB.user._lastBackupAt = _lastBackupAt;
 
                 // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard
                 // Здесь НЕТ журнала сессий и истории, поэтому это будет летать!
@@ -294,20 +297,21 @@
                     isKing: !!DB.user.isKing,
                     isTitan: !!DB.user.isTitan,
                     _ownerUID: window._firebaseUID || null,
-                    lastActive: Date.now(),
-                    fcmToken: DB.user.fcmToken || null
+                    lastActive: Date.now()
+                    // 🛡️ fcmToken в визитку больше не пишется (утечка пуш-токенов);
+                    // функции берут токены из users/{uid}.user.fcmToken
                 });
 
-                if (DB.user.rescueCode) {
-                                const rescueDoc = dbRef.doc(dbRef.db, "transfers", DB.user.rescueCode);
-                                await dbRef.setDoc(rescueDoc, {
-                                    userId: userId,
-                                    data: DB,
-                                    isPermanent: true,
-                                    createdAt: new Date().toISOString(),
-                                    updatedAt: new Date().toISOString()
-                                }, { merge: true }); // merge: true — не перезаписывает, а обновляет
-                            }
+                // 🛡️ РЕЗЕРВНАЯ КОПИЯ: uploads/{userId} — закрытая коллекция (read/write = false).
+                // Пишет её только Cloud Function transferGet (action=reserve).
+                // transfers напрямую клиент больше не пишет (read/list = false).
+                if (DB.user.rescueCode && typeof Transfer !== 'undefined' && Transfer.reserveTransfer) {
+                    const nowMs = Date.now();
+                    if (!DB.user._lastBackupAt || nowMs - DB.user._lastBackupAt > 5 * 60 * 1000) {
+                        DB.user._lastBackupAt = nowMs;
+                        Transfer.reserveTransfer(DB.user.rescueCode, true).catch(e => console.warn('backup transfer:', e.message));
+                    }
+                }
 
                 console.log("☁️ Синхронизация (Профиль + Топ) выполнена");
             } catch (e) { 

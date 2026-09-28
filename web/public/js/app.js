@@ -492,17 +492,8 @@ if (DB && DB.user) {
                     Data.save();
                 }
 
-                // 2. ВСЕГДА пересохраняем код в Firebase (если был удалён)
-                if (window.DB_Online && DB.user.rescueCode) {
-                    const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
-                    window.DB_Online.setDoc(docRef, {
-                        userId: Auth.currentUser.id,
-                        data: DB,
-                        isPermanent: true,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true }).catch(e => console.warn('rescueCode save:', e));
-                }
+                // 2. 🛡️ Бэкап кода в облако делается в Data.save() (троттлинг 1 раз в 5 мин).
+                // Прямая запись transfers отсюда убрана: клиент не пишет transfers.
 
                 // 3. Показываем код на экране
                 rescueEl.innerText = DB.user.rescueCode;
@@ -808,25 +799,18 @@ if (DB && DB.user) {
                 prompt("Скопируй этот код и сохрани:", code);
             });
             
-            // Принудительно обновляем резервную копию в облаке прямо сейчас
-            if(window.DB_Online) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                window.DB_Online.setDoc(docRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    isPermanent: true,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+            // 🛡️ Бэкап обновится в ближайшем Data.save() (клиент не пишет transfers)
+            if (typeof Transfer !== 'undefined' && Transfer.reserveTransfer) {
+                Transfer.reserveTransfer(code, true).catch(e => console.warn('rescue backup:', e));
             }
         },
 
         regenerateRescueCode() {
             if (!confirm("Создать НОВЫЙ код?\n\nСтарый код перестанет работать.\nУбедись, что родитель получил новый код.")) return;
             
-            // 1. Удаляем старый код из Firebase
-            if (window.DB_Online && DB.user.rescueCode) {
-                const oldRef = window.DB_Online.doc(window.DB_Online.db, "transfers", DB.user.rescueCode);
-                window.DB_Online.deleteDoc(oldRef).catch(() => {});
+            // 1. 🛡️ Удаляем старый код через Cloud Function (клиент не пишет transfers)
+            if (DB.user.rescueCode && typeof Transfer !== 'undefined' && Transfer.deleteTransfer) {
+                Transfer.deleteTransfer(DB.user.rescueCode);
             }
             
             // 2. Создаём новый код
@@ -836,15 +820,9 @@ if (DB && DB.user) {
             DB.user.rescueCode = newCode;
             Data.save();
             
-            // 3. Сохраняем в Firebase
-            if (window.DB_Online) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", newCode);
-                window.DB_Online.setDoc(docRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    isPermanent: true,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+            // 3. 🛡️ Резервируем новый код через Cloud Function
+            if (typeof Transfer !== 'undefined' && Transfer.reserveTransfer) {
+                Transfer.reserveTransfer(newCode, true).catch(e => console.warn('regen rescue:', e));
             }
             
             // 4. Обновляем экран
@@ -1612,6 +1590,42 @@ renderCharts(weekSec) {
     };
 
     const Transfer = {
+        // 🛡️ БЕЗОПАСНОСТЬ: клиент больше НЕ читает/не пишет transfers напрямую.
+        // Профиль хранится на сервере; клиенту он выдаётся только по точному коду
+        // через Cloud Function transferGet (list/get правилами запрещены).
+        FN_TRANSFER: 'https://us-central1-mathbooster-pro.cloudfunctions.net/transferGet',
+
+        async reserveTransfer(code, isPermanent) {
+            const res = await fetch(this.FN_TRANSFER, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reserve', code: code, isPermanent: !!isPermanent, data: DB })
+            });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok || !j.ok) throw new Error(j.error || ('reserve failed ' + res.status));
+        },
+
+        async fetchTransfer(code) {
+            const res = await fetch(this.FN_TRANSFER, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get', code: code })
+            });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok || !j.ok) throw new Error(j.error || ('get failed ' + res.status));
+            return j.transfer;
+        },
+
+        async deleteTransfer(code) {
+            try {
+                await fetch(this.FN_TRANSFER, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', code: code })
+                });
+            } catch (e) { console.warn('deleteTransfer:', e); }
+        },
+
         async generateTransferID() {
             if (!Auth.currentUser) return App.toast("Сначала войдите в аккаунт");
             
@@ -1632,17 +1646,9 @@ renderCharts(weekSec) {
                 let id = '';
                 for (let i = 0; i < 8; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
 
-                // 2. Попытка записи в Firebase
+                // 2. 🛡️ Резервируем код через Cloud Function (клиент не пишет transfers)
                 // Если квота кончилась, ошибка вылетит ЗДЕСЬ
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", id);
-                
-                await window.DB_Online.setDoc(docRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    createdAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString(),
-                    isPermanent: true
-                });
+                await this.reserveTransfer(id, true);
 
                 // Успех
                 const modal = document.getElementById('transfer-modal');
@@ -1659,7 +1665,7 @@ renderCharts(weekSec) {
                 console.error("Firebase Error:", e);
                 
                 // 🔥 ЛОВИМ ОШИБКУ ЛИМИТА
-                if (e.code === 'resource-exhausted' || e.message.includes('Quota')) {
+                if (e.code === 'resource-exhausted' || /quota|429/i.test(e.message || '')) {
                     alert("🛑 ОШИБКА СЕРВЕРА\n\nБесплатный лимит базы данных на сегодня исчерпан.\nФункция заработает завтра после 13:00.");
                 } else {
                     alert("❌ Ошибка соединения:\n" + e.message);
@@ -1677,11 +1683,8 @@ renderCharts(weekSec) {
 
             App.toast("⏳ Поиск данных...");
 
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
-
-            window.DB_Online.getDoc(docRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    const transferData = docSnap.data();
+            // 🛡️ Данные кода получаем с сервера (клиенту transfers недоступен)
+            this.fetchTransfer(cleanID).then(transferData => {
                     
                     // 🔥 ПРОВЕРКА СРОКА ГОДНОСТИ
                     // Если код НЕ вечный И у него истек срок
@@ -1725,8 +1728,9 @@ renderCharts(weekSec) {
                     localStorage.setItem(Data.currentKey, JSON.stringify(DB));
 
                     // Если код был временный — удаляем его, чтобы никто не украл
+                    const cleanID2 = typeof cleanID !== 'undefined' ? cleanID : undefined;
                     if (shouldDelete) {
-                        window.DB_Online.deleteDoc(docRef).catch(() => {});
+                        this.deleteTransfer(cleanID2 || transferData.code);
                     } else {
                         console.log("✅ Вечный код восстановления использован. Не удаляем.");
                     }
@@ -1734,12 +1738,9 @@ renderCharts(weekSec) {
                     alert(`✅ УСПЕШНО!\nПрофиль "${DB.user.name}" восстановлен.`);
                     setTimeout(() => location.reload(), 500);
 
-                } else {
-                    alert("❌ Код не найден.\nПроверьте правильность ввода.");
-                }
             }).catch(e => {
-                console.error(e);
-                alert("❌ Ошибка соединения.");
+                console.warn('transferGet error:', e);
+                alert(/not_found/i.test(e && e.message) ? "❌ Код не найден.\nПроверьте правильность ввода." : "❌ Код не найден или ошибка соединения.");
             });
         },
 
@@ -1747,11 +1748,8 @@ renderCharts(weekSec) {
         transferByIDCode(cleanID) {
             App.toast("⏳ Поиск данных...");
 
-            const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", cleanID);
-
-            window.DB_Online.getDoc(docRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    const transferData = docSnap.data();
+            // 🛡️ Данные кода получаем с сервера (клиенту transfers недоступен)
+            this.fetchTransfer(cleanID).then(transferData => {
                     
                     if (!transferData.isPermanent && transferData.expiresAt) {
                         if (new Date() > new Date(transferData.expiresAt)) {
@@ -1785,19 +1783,17 @@ renderCharts(weekSec) {
                     Data.currentKey = 'MathData_' + DB.user.id; 
                     localStorage.setItem(Data.currentKey, JSON.stringify(DB));
 
+                    const cleanID2 = typeof cleanID !== 'undefined' ? cleanID : undefined;
                     if (shouldDelete) {
-                        window.DB_Online.deleteDoc(docRef).catch(() => {});
+                        this.deleteTransfer(cleanID2 || transferData.code);
                     }
 
                     App.toast("✅ Успешно! Профиль восстановлен.");
                     setTimeout(() => location.reload(), 800);
 
-                } else {
-                    App.toast("❌ Код не найден.");
-                }
             }).catch(e => {
-                console.error(e);
-                App.toast("❌ Ошибка соединения.");
+                console.warn('transferGet error:', e);
+                App.toast(/not_found/i.test(e && e.message) ? "❌ Код не найден." : "❌ Код не найден или ошибка соединения.");
             });
         }
     };
@@ -1834,13 +1830,8 @@ renderCharts(weekSec) {
             App.toast("⏳ Подготовка к установке...");
 
             if(window.DB_Online) {
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                window.DB_Online.setDoc(docRef, {
-                    userId: Auth.currentUser.id,
-                    data: DB,
-                    createdAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 24*60*60*1000).toISOString()
-                }).then(() => {
+                // 🛡️ Резервируем код через Cloud Function (клиент не пишет transfers)
+                this.reserveTransfer(code, false).then(() => {
                     navigator.clipboard.writeText(code).then(() => {
                         this.showInstruction();
                     }).catch(() => {
@@ -1848,7 +1839,7 @@ renderCharts(weekSec) {
                         this.showInstruction();
                     });
                 }).catch(e => {
-                    console.error(e);
+                    console.warn('manualTransfer reserve error:', e);
                     App.toast("Ошибка сети. Попробуйте позже.");
                 });
             } else {

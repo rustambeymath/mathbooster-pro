@@ -577,11 +577,16 @@ var ParentUI = {
                     App.toast("❌ Сервер недоступен");
                     return;
                 }
-                const docRef = window.DB_Online.doc(window.DB_Online.db, "transfers", code);
-                const docSnap = await window.DB_Online.getDoc(docRef);
-                if (docSnap.exists()) {
+                // 🛡️ Код ребёнка проверяет сервер: клиент не читает transfers напрямую
+                const res = await fetch('https://us-central1-mathbooster-pro.cloudfunctions.net/transferGet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get', code })
+                });
+                const j = await res.json().catch(() => ({}));
+                if (res.ok && j.ok && j.transfer) {
                     isParentMode = true;
-                    DB = docSnap.data().data;
+                    DB = j.transfer.data;
                     Auth.currentUser = { 
                         id: DB.user.id, 
                         name: DB.user.name, 

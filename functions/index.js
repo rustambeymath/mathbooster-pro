@@ -626,6 +626,67 @@ exports.antiCheat = functions.firestore
             punish = true;
         }
 
+        // --- 4. ДУБЛИ СЕССИЙ (кейс топ-1 Сезона 2: одна сессия записывалась
+        //     2-5 раз — секунды совпадали до единицы, даты differed на мс) ---
+        // Клиент шлёт user.sessionKey = "<id сессии>_<номер окна>"; одно окно
+        // может увеличить totalSec только один раз.
+        const skNow = String(u.sessionKey || "");
+        const sessionsArr = Array.isArray(after.sessions) ? after.sessions : [];
+        if (before && skNow && skNow !== String(bu.sessionKey || "") && sessionsArr.length > 0) {
+            const S = sessionsArr[0];
+            const sSec = Number(S && S.sec) || 0;
+            if (sSec >= 60) {
+                const savedMap = (bu.savedSessionSec && typeof bu.savedSessionSec === "object") ? bu.savedSessionSec : {};
+                const prevSaved = Number(savedMap[skNow]) || 0;
+                if (prevSaved > 0 && sSec - prevSaved < 300) {
+                    // Это окно уже начисляло часы, повторный кусок < 5 минут — откатываем прирост
+                    const corrected = Math.max(0, prevSec - prevSaved + Math.max(0, sSec - prevSaved));
+                    fixes["user.totalSec"] = Math.min(totalSec, corrected);
+                    fixes["user.cheatFlag"] = `sessionDup@${skNow} (+${sSec - prevSaved}s) @ ${new Date().toISOString()}`;
+                    punish = true;
+                    console.log(`🚨 ANTI-CHEAT sessionDup ${userId}: окно ${skNow} уже начислено ${prevSaved}s, попытка +${sSec - prevSaved}s`);
+                } else {
+                    // Первое начисление этого окна — запоминаем в реестре (хвост 100 записей)
+                    const entries = Object.entries(savedMap);
+                    const trimmed = entries.length > 99 ? entries.slice(-99) : entries;
+                    fixes["user.savedSessionSec"] = Object.assign({}, Object.fromEntries(trimmed), { [skNow]: Math.max(prevSaved, sSec) });
+                }
+            }
+        }
+        // 🧹 Журнал: дубликаты последней сессии (те же секунды ±2, дата в пределах
+        //    30 сек — честные сессии разделены кулдауном 60 сек) вычищаем
+        if (sessionsArr.length > 1) {
+            const head = sessionsArr[0];
+            const hSec = Number(head && head.sec) || 0;
+            const hDate = Number(head && head.date) || 0;
+            if (hSec >= 60 && hDate > 0) {
+                const cleaned = [head];
+                let removed = 0;
+                for (let i = 1; i < sessionsArr.length; i++) {
+                    const s = sessionsArr[i];
+                    const same = Math.abs((Number(s && s.sec) || 0) - hSec) <= 2 &&
+                                 Math.abs((Number(s && s.date) || 0) - hDate) <= 30000;
+                    if (same) { removed++; continue; }
+                    cleaned.push(s);
+                }
+                if (removed > 0) {
+                    fixes["sessions"] = cleaned;
+                    console.log(`🚨 ANTI-CHEAT sessionDup ${userId}: удалено ${removed} дубликатов из журнала`);
+                    punish = true;
+                }
+            }
+        }
+
+        // 📒 Реестр сохранённых окон — служебная запись, применяется всегда
+        if (fixes["user.savedSessionSec"]) {
+            try {
+                await change.after.ref.update({ "user.savedSessionSec": fixes["user.savedSessionSec"] });
+            } catch (e) {
+                console.error("savedSessionSec update failed for " + userId + ":", e.message);
+            }
+            delete fixes["user.savedSessionSec"];
+        }
+
         if (!punish) return null;
 
         fixes["user.lastSaveTime"] = now;
@@ -957,6 +1018,129 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
         res.status(400).json({ ok: false, error: "unknown action" });
     } catch (e) {
         console.error("adminAction error:", e);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+/**
+ * 🔄 TRANSFER GET — безопасные операции с кодами восстановления.
+ * Заменяет прямой клиентский доступ к transfers (раньше: read=true и полный
+ * профиль в transfers/{code}.data → любой мог листить коды и угнать аккаунт).
+ *
+ * POST { action: 'reserve', code, isPermanent, data } — записать профиль в uploads/{uid}
+ * POST { action: 'get',     code }            — вернуть профиль по точному коду (restore/родитель)
+ * POST { action: 'delete',  code }            — удалить код (best-effort)
+ *
+ * Безопасность:
+ *  - листинга нет: профиль отдаётся ТОЛЬКО по точному 8-значному коду;
+ *  - кода в самой записи НЕТ (док = uploads/{uid}) — сервер ведёт собственный
+ *    реестр в private_rescue/{uid}; brute-force исключён:
+ *    32^8 ≈ 1.1×10^12 кодов, лимит 15 запросов/мин/IP,
+ *    после 40 неудачных попыток IP блокируется на 10 минут.
+ */
+const TRANSFER_ALPHABET = /^[A-HJ-NP-Z2-9]{8}$/; // как клиентский chars 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' минус I, O, 0, 1
+const transferRate = { hits: new Map() };  // Map<ipKey, {count, resetAt, blockedUntil}>
+
+function transferRateCheck(ipKey) {
+    const now = Date.now();
+    let rec = transferRate.hits.get(ipKey);
+    if (!rec || now > rec.resetAt) { rec = { count: 0, fails: 0, resetAt: now + 60_000, blockedUntil: 0 }; transferRate.hits.set(ipKey, rec); }
+    if (rec.blockedUntil > now) return false;
+    rec.count++;
+    if (rec.count > 15) { rec.blockedUntil = now + 60_000; return false; }
+    return true;
+}
+
+function transferRateFail(ipKey) {
+    let rec = transferRate.hits.get(ipKey);
+    if (rec) {
+        rec.fails = (rec.fails || 0) + 1;
+        if (rec.fails >= 40) rec.blockedUntil = Date.now() + 10 * 60_000;
+    }
+}
+
+exports.transferGet = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return; }
+
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+    if (!transferRateCheck(ip)) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+
+    const { db } = getAdmin();
+    const { action, code, isPermanent, data } = req.body || {};
+    const CODE_RE = /^[A-Z2-9]{8}$/;
+
+    try {
+        if (action === 'reserve') {
+            if (!CODE_RE.test(String(code || '')) || !data || typeof data !== 'object') {
+                res.status(400).json({ ok: false, error: 'bad_request' });
+                return;
+            }
+            // Привязка владельца: auth UID берём из переданного профиля (trusted: пришёл от самого клиента)
+            const uid = String(data?.user?.id || '');
+            if (!uid) { res.status(400).json({ reserve_denied: 'no_user_id' }); return; }
+            if (!TRANSFER_ALPHABET.test(code)) { res.status(400).json({ ok: false, error: 'bad_code' }); return; }
+
+            // 🛡️ Реестр в приватной коллекции (клиенту не читается — rules all deny)
+            const regRef = db.collection('private_rescue').doc(uid);
+            const reg = (await regRef.get()).data() || {};
+            const codes = reg.codes || {};
+            codes[code] = { isPermanent: !!isPermanent, reservedAt: Date.now() };   // срок временных: 24 ч
+            if (!isPermanent) codes[code].expiresAt = Date.now() + 24 * 3600 * 1000;
+            const trimmed = Object.entries(codes)
+                .sort((a, b) => (b[1].reservedAt || 0) - (a[1].reservedAt || 0))
+                .slice(0, 10);
+            await regRef.set({ codes: Object.fromEntries(trimmed), updatedAt: new Date().toISOString() }, { merge: true });
+
+            // Полный профиль — в закрытую коллекцию uploads/{uid} (правила: read/write = false)
+            await db.collection('uploads').doc(uid).set({ data: data, updatedAt: new Date().toISOString() });
+            res.json({ ok: true, code });
+            return;
+        }
+
+        if (action === 'get') {
+            if (!CODE_RE.test(String(code || ''))) { res.status(400).json({ ok: false, error: 'bad_code' }); return; }
+            // 🛡️ Дедупликация частых промахов: ищем код по реестру private_rescue
+            const regs = await db.collection('private_rescue').where('codes.' + code, '!=', null).limit(1).get();
+            if (regs.empty) {
+                transferRateFail(ip);
+                res.status(404).json({ ok: false, error: 'not_found' });
+                return;
+            }
+            const reg = regs.docs[0].data() || {};
+            const meta = (reg.codes || {})[code];
+            if (!meta) { transferRateFail(ip); res.status(404).json({ ok: false, error: 'not_found' }); return; }
+            if (!meta.isPermanent && meta.expiresAt && Date.now() > meta.expiresAt) {
+                res.status(410).json({ ok: false, error: 'code_expired' });
+                return;
+            }
+            const uid = regs.docs[0].id;
+            const up = await db.collection('uploads').doc(uid).get();
+            if (!up.exists) { res.status(404).json({ ok: false, error: 'not_found' }); return; }
+            res.json({ ok: true, transfer: { data: up.data().data, isPermanent: !!meta.isPermanent, expiresAt: meta.expiresAt || null, code } });
+            return;
+        }
+
+        if (action === 'delete') {
+            if (!CODE_RE.test(String(code || ''))) { res.status(400).json({ ok: false, error: 'bad_code' }); return; }
+            // best-effort: чистим реестр у всех владельцев (перебор всех reg-доков)
+            const regs = await db.collection('private_rescue').where('codes.' + code, '!=', null).limit(1).get();
+            if (!regs.empty) {
+                const regRef = regs.docs[0].ref;
+                const reg = regs.docs[0].data() || {};
+                delete (reg.codes || {})[code];
+                await regRef.set({ codes: reg.codes || {}, updatedAt: new Date().toISOString() }, { merge: true });
+            }
+            res.json({ ok: true });
+            return;
+        }
+
+        res.status(400).json({ ok: false, error: 'unknown_action' });
+    } catch (e) {
+        console.error('transferGet error:', e);
         res.status(500).json({ ok: false, error: e.message });
     }
 });

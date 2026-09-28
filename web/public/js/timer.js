@@ -20,6 +20,9 @@ const Timer = {
     hardcoreTimeout: null, 
     hardcoreListenerAdded: false, // Флаг, чтобы не дублировать слушателя
     _pageWasHidden: false,        // страница была скрыта (сон телефона) — «прыжок» времени при возврате честный
+    _savingSession: false,        // 🛡️ мьютекс saveSession: защита от параллельного двойного сохранения
+    sessionKey: 0,                // 🛡️ ID текущей сессии (мс старта) — сервер дедуплицирует по нему
+    _savedSessionKeys: null,      // 🛡️ реестр уже сохранённых окон сессии — одно окно нельзя записать дважды
 
     CHECK_AFTER_SECONDS: 3600,
     CHECK_TIMEOUT: 60,
@@ -122,6 +125,8 @@ const Timer = {
             this.realSec = elapsed;
             this.visualSec = elapsed;
             this._offlineToastShown = false;
+            this.sessionKey = start;          // 🛡️ восстанавливаем ID сессии для дедупликации
+            this._savedSessionKeys = {};
 
             // Восстанавливаем UI как при обычном запуске
             this.requestWakeLock();
@@ -166,6 +171,10 @@ const Timer = {
     // наработанное до паузы время и чистим якорь — без показа таймера.
     async closeInterrupted(sessionStart, pausedAt) {
         try {
+            // 🛡️ Реестр окон ведём по якорю ЗАКРЫВАЕМОЙ сессии (не по устаревшему
+            // sessionKey прошлой сессии из памяти)
+            this.sessionKey = Number(sessionStart) || Date.now();
+            this._savedSessionKeys = {};
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
             const snap = await window.DB_Online.getDoc(docRef);
             const u = (snap.data() || {}).user || {};
@@ -178,12 +187,21 @@ const Timer = {
             const unbanked = Math.max(0, studiedSec - banked);
 
             if (unbanked >= 60) {
-                const savedRealSec = this.realSec, savedStart = this.sessionStartTime;
-                this.realSec = unbanked;
-                this.sessionStartTime = Number(pausedAt); // дата в журнале = момент паузы
-                await this.saveSession();
-                this.realSec = savedRealSec;
-                this.sessionStartTime = savedStart;
+                const windowKey = `${sessionStart}_${pausedAt}`;
+                if (this._isSessionSaved(windowKey)) {
+                    console.warn('🛡️ closeInterrupted: окно сессии уже сохранено — пропускаем повторную запись');
+                } else {
+                    // 🛡️ Гасим якорь ДО записи: нельзя дважды спасти одну сессию,
+                    // даже если параллельный контекст тоже увидит непогашенный якорь
+                    await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null }).catch(() => {});
+                    const savedRealSec = this.realSec, savedStart = this.sessionStartTime;
+                    this.realSec = unbanked;
+                    this.sessionStartTime = Number(pausedAt); // дата в журнале = момент паузы
+                    await this.saveSession();
+                    this._markSessionSaved(windowKey);
+                    this.realSec = savedRealSec;
+                    this.sessionStartTime = savedStart;
+                }
             }
 
             if (DB && DB.user) { DB.user.activeSessionStart = null; DB.user.lastPing = null; DB.user.pausedAt = null; }
@@ -250,6 +268,9 @@ const Timer = {
 
         if (this.isPaused) {
             // На паузе время не идёт — просто чиним UI
+            // 🔔 Пауза была АВТОМАТИЧЕСКОЙ (проверка живости, телефон уснул) —
+            // пользователь мог не увидеть модалку: напоминаем звуком и вибрацией
+            if (this._autoPaused) this._playAfkAlert();
             this.syncTimerButtons();
             this.updateDisplay();
             return;
@@ -410,6 +431,37 @@ const Timer = {
             // 3. Vibration на телефоне
             if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
         } catch(e) { console.warn('Push check notification error:', e); }
+    },
+
+    // === 🔔 СИГНАЛ АВТО-ПАУЗЫ (проверка живости) ===
+    // Заметный настойчивый колокольчик + длинная вибрация. Отличается от
+    // обычных звуков, чтобы игрок понял: таймер СТОПАНУЛ САМ, нужен «Продолжить».
+    _playAfkAlert() {
+        try {
+            const now = Date.now();
+            if (this._lastAfkAlert && now - this._lastAfkAlert < 4000) return; // антиспам
+            this._lastAfkAlert = now;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') ctx.resume();
+                const notes = [660, 880, 660, 880, 1100]; // настойчивый «тревожный» звоночек
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const t0 = ctx.currentTime + i * 0.18;
+                    gain.gain.setValueAtTime(0.35, t0);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(t0);
+                    osc.stop(t0 + 0.4);
+                });
+            } catch(e) {}
+            // 3. Длинная вибрация — заметно в кармане
+            if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 500]);
+        } catch(e) {}
     },
 
     // === Восстановление таймера из фонового режима ===
@@ -575,6 +627,8 @@ const Timer = {
         this.isPaused = false;
         this.sessionStartTime = Number(this.getTrueTime());
         this.startTime = this.sessionStartTime;
+        this.sessionKey = Date.now();            // 🛡️ уникальный ID этой сессии
+        this._savedSessionKeys = {};             // 🛡️ новый сеанс — новый реестр сохранённых окон
         this.totalPausedDuration = 0;
         this.sessionCoins = 0;
         this.lastPaidBlock = 0;
@@ -592,10 +646,19 @@ const Timer = {
                 DB.user.lastPing = Number(this.startTime);
             }
             const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
-            await window.DB_Online.updateDoc(docRef, {
-                "user.activeSessionStart": Number(this.startTime),
-                "user.lastPing": Number(this.startTime)
-            });
+            // ⚠️ Облако НЕ должно блокировать старт таймера: якорь нужен для
+            // восстановления/родительского дашборда, но если запись не прошла
+            // (оффлайн, правила) — сессия всё равно живёт в памяти и локальном
+            // сейве. Ошибку увидим в консоли.
+            try {
+                await window.DB_Online.updateDoc(docRef, {
+                    "user.activeSessionStart": Number(this.startTime),
+                    "user.lastPing": Number(this.startTime),
+                    "user.sessionKey": Number(this.sessionKey)   // 🛡️ сервер дедуплицирует по нему
+                });
+            } catch (anchorErr) {
+                console.warn('⚠️ Якорь сессии не записан (таймер всё равно стартует):', anchorErr?.code || anchorErr?.message);
+            }
             // Записываем таймер AFK-проверки в Firebase (для push-уведомления)
             const checkAt = Number(this.startTime) + this.CHECK_AFTER_SECONDS * 1000;
             const fcmToken = localStorage.getItem('fcm_token') || '';
@@ -768,9 +831,9 @@ const Timer = {
     },
 
     async showMathCheck() {
+        this._autoPaused = true; // пауза АВТОМАТИЧЕСКАЯ — по возвращении в приложение напомним сигналом
         this.pause(true);
-        SoundSys.play('error');
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        this._playAfkAlert();
 
         const a = Math.floor(Math.random() * 9) + 2;
         const b = Math.floor(Math.random() * 9) + 2;
@@ -795,6 +858,7 @@ const Timer = {
             timeLeft--;
             const timerEl = document.getElementById('check-timer');
             if (timerEl) timerEl.innerHTML = `Осталось: <b>${timeLeft}</b> сек`;
+            if (timeLeft === 30) this._playAfkAlert(); // 🔔 напоминание, если пропустил первый сигнал
             if (timeLeft <= 0) { clearInterval(countdown); this.failCheck(modal); }
         }, 1000);
         modal.dataset.countdown = countdown;
@@ -828,16 +892,24 @@ const Timer = {
             const unbanked = Math.max(0, this.realSec - (this.bankedSec || 0));
             const totalSnapshot = this.realSec;
             if (unbanked > 0) {
-                this.realSec = unbanked;
-                this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
-                await this.saveSession();
-                this.realSec = totalSnapshot;
-                this.bankedSec = totalSnapshot;
-                // 💾 Запоминаем границу записанных часов — по ней автовосстановление
-                // после перезагрузки страницы поймёт, что повторно начислять нельзя
-                if (DB && DB.user) {
-                    DB.user.lastCheckpointSec = this.bankedSec;
-                    Data.save();
+                // 🛡️ Дедупликация: этот отрезок (от bankedSec до текущего часа) уже
+                // мог быть записан параллельным контекстом — не начисляем повторно
+                const windowKey = `${this.sessionKey || this.startTime}_${this.bankedSec || 0}`;
+                if (this._isSessionSaved(windowKey)) {
+                    console.warn('🛡️ checkpointSave: отрезок уже сохранён — пропускаем');
+                } else {
+                    this.realSec = unbanked;
+                    this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
+                    await this.saveSession();
+                    this._markSessionSaved(windowKey);
+                    this.realSec = totalSnapshot;
+                    this.bankedSec = totalSnapshot;
+                    // 💾 Запоминаем границу записанных часов — по ней автовосстановление
+                    // после перезагрузки страницы поймёт, что повторно начислять нельзя
+                    if (DB && DB.user) {
+                        DB.user.lastCheckpointSec = this.bankedSec;
+                        Data.save();
+                    }
                 }
             }
 
@@ -852,6 +924,7 @@ const Timer = {
             }
             this.isPaused = false;
             this.isRunning = true;
+            this._autoPaused = false;
             if (DB && DB.user) {
                 DB.user.pausedAt = null;
                 DB.user.lastPing = Number(now);
@@ -911,6 +984,7 @@ const Timer = {
         this.isPaused = true;
         this.isRunning = false;
         this.pausedTime = this.getTrueTime();
+        if (!isCheckPause) this._autoPaused = false; // ручная пауза — сигнал не нужен
         
         const btn = document.getElementById('btn-start');
         if (btn && !isCheckPause) {
@@ -929,6 +1003,7 @@ const Timer = {
 
     resume() {
         if (!this.active || !this.isPaused) return;
+        this._autoPaused = false;
 
         // Считаем, сколько времени мы пробыли на паузе
         const pauseDuration = this.getTrueTime() - this.pausedTime;
@@ -992,11 +1067,20 @@ const Timer = {
         // чекпоинтами после пройденных проверок, повторно не начисляются
         const unbanked = Math.max(0, verifiedSec - (this.bankedSec || 0));
         if (saveSession && unbanked >= 60) {
-            const totalSnapshot = this.realSec;
-            this.realSec = unbanked;
-            this.sessionStartTime = Date.now();
-            await this.saveSession();
-            this.realSec = totalSnapshot;
+            // 🛡️ Окно сессии (якорь старта + граница записанных часов) нельзя записать дважды:
+            // параллельная вкладка, перезагрузка или гонка «восстановление vs СТОП»
+            // раньше задваивали часы (см. дубли сессий у топ-1 Сезона 2).
+            const windowKey = `${this.sessionKey || this.startTime}_${Math.floor(unbanked / 60)}`;
+            if (this._isSessionSaved(windowKey)) {
+                console.warn('🛡️ stop: окно сессии уже сохранено — пропускаем повторную запись');
+            } else {
+                const totalSnapshot = this.realSec;
+                this.realSec = unbanked;
+                this.sessionStartTime = Date.now();
+                await this.saveSession();
+                this._markSessionSaved(windowKey);
+                this.realSec = totalSnapshot;
+            }
         } else if ((this.bankedSec || 0) === 0) {
             const cancelPhrases = ["⚠️ Слишком коротко!", "🚫 Фокус потерян.", "📉 Сессия аннулирована."];
             App.toast(cancelPhrases[Math.floor(Math.random() * cancelPhrases.length)]);
@@ -1063,7 +1147,56 @@ const Timer = {
         SoundSys.play('coin');
     },
 
+    // === 🛡️ ДЕДУПЛИКАЦИЯ СЕССИЙ (одно окно нельзя записать дважды) ===
+    // Каждая сессия имеет sessionKey (якорь старта). Реестр _savedSessionKeys
+    // хранит окна (старт + граница уже записанных часов) этого sessionKey.
+    // Реестр сохраняется в DB.user.savedSessionWindows в Firebase — работает
+    // и между перезагрузками, и между параллельными контекстами страницы.
+    _isSessionSaved(windowKey) {
+        if (!windowKey) return false;
+        if (this._savedSessionKeys && this._savedSessionKeys[windowKey]) return true; // локально
+        const cloud = (DB && DB.user && DB.user.savedSessionWindows) || null;
+        const sk = String(this.sessionKey || this.startTime || '');
+        return !!(cloud && sk && cloud[sk] && cloud[sk][windowKey]); // из облака (после перезагрузки)
+    },
+
+    _markSessionSaved(windowKey) {
+        if (!windowKey) return;
+        try {
+            const sk = String(this.sessionKey || this.startTime || '');
+            if (!sk) return;
+            if (!this._savedSessionKeys) this._savedSessionKeys = {};
+            if (!this._savedSessionKeys[sk]) this._savedSessionKeys[sk] = {};
+            this._savedSessionKeys[sk][windowKey] = true;
+            // В облако пишем лениво — через Data.save() в saveSession() (заодно с профилем)
+            if (DB && DB.user) {
+                const cloud = DB.user.savedSessionWindows || {};
+                if (!cloud[sk]) cloud[sk] = {};
+                cloud[sk][windowKey] = true;
+                // 🧹 Реестр компактный: ключи — мс старта сессии, храним последние 40
+                const skeys = Object.keys(cloud).sort((a, b) => Number(a) - Number(b));
+                while (skeys.length > 40) delete cloud[skeys.shift()];
+                DB.user.savedSessionWindows = cloud;
+            }
+        } catch (e) { console.warn('markSessionSaved error:', e); }
+    },
+
     async saveSession() {
+        // 🛡️ Мьютекс: параллельный вызов (двойной тап по СТОП, гонка вкладок)
+        // просто дожидается первого сохранения — время второй раз НЕ начисляется
+        if (this._savingSession) {
+            console.warn('🛡️ saveSession: уже идёт — пропуск параллельного вызова');
+            return;
+        }
+        this._savingSession = true;
+        try {
+            await this._saveSessionInner();
+        } finally {
+            this._savingSession = false;
+        }
+    },
+
+    async _saveSessionInner() {
         const subject = DB.subjects[DB.user.subject];
         const fullIntervals = Math.floor(this.realSec / this.REWARD_INTERVAL);
         const remainingSeconds = this.realSec % this.REWARD_INTERVAL;
@@ -1115,6 +1248,15 @@ const Timer = {
         });
 
         // Сессии хранятся БЕСКОНЕЧНО (показываем только последние 10 в журнале)
+
+        // 🛡️ Идентификатор сессии уезжает в облако: серверный анти-чит
+        // дедуплицирует по sessionKey (одна сессия — один прирост totalSec)
+        if (DB && DB.user) {
+            // 🛡️ ID = сессия + номер окна (bankedSec/3600): каждое окно начисляется
+            // ровно один раз, повторные сохранения того же окна сервер откатывает
+            const sk = this.sessionKey || this.startTime || Date.now();
+            DB.user.sessionKey = `${sk}_${Math.floor((this.bankedSec || 0) / 3600)}`;
+        }
 
         App.addXP(Math.floor(this.realSec / 60) * 10);
         QuestSys.update('studyMin', Math.floor(this.realSec / 60));

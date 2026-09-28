@@ -13,14 +13,18 @@ resp = json.loads(urllib.request.urlopen('https://oauth2.googleapis.com/token', 
 ACCESS = resp['access_token']
 PROJECT = 'mathbooster-pro'
 
+def _req(url):
+    """Запрос с Bearer-токеном (rules требуют вход; IAM-токен их обходит)."""
+    return urllib.request.Request(url, headers={'Authorization': f'Bearer {ACCESS}'})
+
 def run_query(collection, extra=''):
     """Постраничная выборка всей коллекции."""
-    docs, url = {}, f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/{collection}?pageSize=200&key={ACCESS}{extra}"
+    docs, url = {}, f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/{collection}?pageSize=200{extra}"
     while url:
-        r = json.loads(urllib.request.urlopen(url).read())
+        r = json.loads(urllib.request.urlopen(_req(url)).read())
         for d in r.get('documents', []):
             docs[d['name']] = d
-        url = r.get('nextPageToken') and f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/{collection}?pageSize=200&key={ACCESS}&pageToken={r['nextPageToken']}"
+        url = r.get('nextPageToken') and f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/{collection}?pageSize=200&pageToken={r['nextPageToken']}"
     return docs
 
 def fv(field):
@@ -49,7 +53,8 @@ if __name__ == '__main__':
             print(f"{sec/3600:8.1f}h  lvl{lvl:<4} coins:{coins or 0:<8} {nm:<18} doc={did}")
     elif mode == 'user':
         uid = sys.argv[2]
-        url = f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/users/{uid}?key={ACCESS}"
+        url = f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/users/{uid}"
+        d = json.loads(urllib.request.urlopen(_req(url)).read())
         try:
             d = json.loads(urllib.request.urlopen(url).read())
             f = d.get('fields', {})

@@ -27,21 +27,32 @@ service cloud.firestore {
     // владельца. Точную валидацию монет/часов делает Cloud Function onUserWrite.
     // ============================================
     match /users/{userId} {
-      allow read: if true;
+      // 🔒 ПАТЧ УТЕЧКИ: листинг всех профилей запрещён (даже под входом) —
+      // массовый слив базы невозможен. Точечное чтение по точному id — любому
+      // вошедшему: так работают родительский дашборд и восстановление;
+      // перебор 12-значных игровых id (~10^12) нереален. Листинг — только админу
+      // (поиск по имени в админке).
+      allow get: if isSignedIn() && !isBanned();
+      allow list: if isAdmin();
 
-      // Владелец пишет в свой профиль ИЛИ админ (кроме забаненных)
-      allow write: if isSignedIn() && !isBanned() && (
-        request.resource.data._ownerUID == request.auth.uid
-        || isAdmin()
-      )
-      // защита от создания чужих документов под чужим uid
-      && (
-        request.resource.data.get('_ownerUID', '') == request.auth.uid
-        || isAdmin()
-      );
+      // ⚠️ УРОК 26.09: request.resource.data при update — это СЛИТЫЙ документ
+      // (существующие поля + оверлей), поэтому проверка по нему позволяла УГОН
+      // профиля: атакующий присылает полный setDoc со СВОИМ _ownerUID, слитый
+      // документ проходит проверку, и владелец подменяется. Смотрим владельца
+      // СУЩЕСТВУЮЩЕГО документа (resource.data) и запрещаем его смену.
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.get('_ownerUID', '') == request.auth.uid;
 
-      allow create: if isSignedIn() && !isBanned() && (
-        request.resource.data._ownerUID == request.auth.uid
+      allow update: if isSignedIn() && !isBanned() && (
+        (resource.data.get('_ownerUID', '') == request.auth.uid
+          && request.resource.data.get('_ownerUID', '') == resource.data.get('_ownerUID', ''))
+        // 🩹 Самоклейма легаси-профиля без _ownerUID (~70 старых игроков, для них
+        // новый старт таймера падал с 403). Документ адресуется по игровому id,
+        // полный setDoc клиента несёт auth UID владельца: чужой док «клеймить»
+        // незачем и незачем нельзя без перезаписи чужих данных, накрутка отсечена
+        // античитом. Осознанный остаточный риск, альтернатива — скрипт-клейм.
+        || (!('_ownerUID' in resource.data)
+            && request.resource.data.get('_ownerUID', '') == request.auth.uid)
         || isAdmin()
       );
 
@@ -55,7 +66,9 @@ service cloud.firestore {
     // от склеенных сейвов); скорость прироста проверяет сервер (antiCheatLeaderboard).
     // ============================================
     match /leaderboard/{userId} {
-      allow read: if true;
+      // 🔒 ПАТЧ УТЕЧКИ: чтение только под входом (в старых карточках мог остаться
+      // fcmToken); сам топ в приложении всегда открывается авторизованным.
+      allow read: if isSignedIn() && !isBanned();
 
       allow create: if isSignedIn() && !isBanned() && (
         request.resource.data._ownerUID == request.auth.uid
@@ -66,32 +79,61 @@ service cloud.firestore {
         || (
           request.resource.data.totalSec is int
           && request.resource.data.totalSec >= 0
-          && request.resource.data.totalSec <= 60 * 60 * 13
+          // 🩹 исключение: точное значение уже проверенного античитом профиля
+          // (восстановление по коду, оффлайн-догон) — иначе карточка нового
+          // устройства замерзает навсегда (дельта > 13ч)
+          && (request.resource.data.totalSec <= 60 * 60 * 13
+              || request.resource.data.totalSec == get(/databases/$(database)/documents/users/$(userId)).data.user.totalSec)
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 20
           && request.resource.data.level is int
           && request.resource.data.level >= 0
           && request.resource.data.level <= 100
+          // 🔒 ПЕРЕХОДНО: старый клиент (кэш PWA) пишет fcmToken в каждый setDoc —
+          // жёсткий запрет ломал ВЕСЬ Data.save() и часы в Топе. Новый клиент токен
+          // не пишет. ПОСЛЕ пуша нового клиента вернуть:
+          // && !(request.resource.data.get('fcmToken', null) is string)
         )
       );
 
+      // ⚠️ ВАЖНО (урок регрессии 25.09): updateDoc() с маской приходит в правила
+      // как overlay — request.resource.data содержит ТОЛЬКО обновляемые поля.
+      // Валидация по наличию: каждое поле проверяется, только если оно реально
+      // пришло в записи. Иначе точечные updateDoc({lastActive}) получают 403 и
+      // Топ «замерзает».
       allow update: if isSignedIn() && !isBanned() && (
-        resource.data._ownerUID == request.auth.uid
+        // штатный владелец: существующий owner == я, запись не меняет owner
+        (resource.data.get('_ownerUID', '') == request.auth.uid
+          && request.resource.data.get('_ownerUID', '') == resource.data.get('_ownerUID', ''))
+        // 🩹 САМОЛЕЧЕНИЕ (замершие карточки): карточка осиротела или владелец
+        // сменился (переустановка PWA, восстановление по коду → новый auth UID).
+        // Возвращаем карточку тому, чей профиль users/{userId} жив и принадлежит
+        // ему. Профиль защищён угон-фиксом, так что подделать доказательство нельзя.
+        || (request.resource.data.get('_ownerUID', '') == request.auth.uid
+            && get(/databases/$(database)/documents/users/$(userId)).data._ownerUID == request.auth.uid)
         || isAdmin()
       )
       && (
         isAdmin()
         || (
-          request.resource.data.totalSec is int
-          && request.resource.data.totalSec >= 0
-          && request.resource.data.totalSec - resource.data.totalSec <= 60 * 60 * 13
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 20
-          && request.resource.data.level is int
-          && request.resource.data.level >= 0
-          && request.resource.data.level <= 100
+          (!('totalSec' in request.resource.data)
+            || (request.resource.data.totalSec is int
+                && request.resource.data.totalSec >= 0
+                // 🩹 синхронизация с проверенным профилем снимает 13ч-дельту:
+                // админ-коррекции и оффлайн-догон больше не замораживают карточку
+                && (request.resource.data.totalSec - resource.data.totalSec <= 60 * 60 * 13
+                    || request.resource.data.totalSec == get(/databases/$(database)/documents/users/$(userId)).data.user.totalSec)))
+          && (!('name' in request.resource.data)
+            || (request.resource.data.name is string
+                && request.resource.data.name.size() > 0
+                && request.resource.data.name.size() <= 20))
+          && (!('level' in request.resource.data)
+            || (request.resource.data.level is int
+                && request.resource.data.level >= 0
+                && request.resource.data.level <= 100))
+          // 🔒 ПОСЛЕ пуша нового клиента (он не пишет fcmToken) вернуть запрет:
+          // && (!('fcmToken' in request.resource.data) || request.resource.data.fcmToken == null)
         )
       );
 
@@ -136,17 +178,33 @@ service cloud.firestore {
     }
 
     // ============================================
-    // 🔄 КОДЫ ВОССТАНОВЛЕНИЯ (transfers)
+    // 🔄 КОДЫ ВОССТАНОВЛЕНИЯ (transfers) — 🔒 ПАТЧ УГНАНА
+    // Раньше: read = true + в data лежал ПОЛНЫЙ профиль → любой
+    // перебирал/листил коды и восстанавливал чужой аккаунт.
+    // Теперь: профиль в облако пишет только Cloud Function reserveRescueCode,
+    // клиент хранит РЕЕСТР кодов у себя (localStorage), а восстановление
+    // и родительский режим получают данные через transferGet (сервер
+    // возвращает профиль только по точному коду; листинга нет).
     // ============================================
     match /transfers/{code} {
-      allow read: if true;
+      // 🔒 ПЕРЕХОДНЫЙ ПЕРИОД: точечный get по точному 8-значному коду разрешён
+      // вошедшим — так ещё неделю работают PWA со старым кэшем (перебор кодов
+      // 10^12 нереален, list закрыт). Через неделю заменить на: allow get, list: if false;
+      allow get: if isSignedIn() && !isBanned();
+      allow list: if false;
 
-      allow create: if isSignedIn() && !isBanned() && request.resource.data.keys().hasAll(['userId', 'data', 'createdAt']);
+      // 🔒 ПЕРЕХОДНЫЙ ПЕРИОД: старый клиент (кэш PWA) ещё создаёт коды напрямую.
+      // Лист закрыт → слить базу нельзя; точечный get по коду ≤1 шанс из 10^12.
+      // После пуша нового клиента заменить на: allow create: if false;
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.get('userId', '') is string;
 
-      allow update: if isSignedIn() && !isBanned() && (
-        resource.data.userId == request.auth.uid
-        || isAdmin()
-      );
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+
+      allow update: if isSignedIn() && !isBanned()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'updatedAt'])
+        && resource.data.userId == request.auth.uid;
 
       allow delete: if isAdmin();
     }
@@ -167,7 +225,10 @@ service cloud.firestore {
 
       allow create: if isSignedIn() && !isBanned() && request.resource.data.keys().hasAll(['p1', 'p1_id', 'status']);
 
-      // Любой авторизованный может обновлять (для PVP дуэлей)
+      // ⚠️ ОСТАВЛЕНО пермиссивным осознанно: id в комнатах — игровые (у легаси
+      // не равны auth UID), серверной авторитетности дуэлей пока нет.
+      // Известный остаточный риск (низкий): подписанный юзер может портить состояния
+      // комнат — лечится будущим переводом дуэлей на Cloud Functions.
       allow update: if isSignedIn() && !isBanned();
 
       // Удалять может создатель ИЛИ админ
@@ -183,8 +244,10 @@ service cloud.firestore {
     match /pendingChallenges/{challengeId} {
       allow read: if isSignedIn() && !isBanned();
       allow create: if isSignedIn() && !isBanned();
-      allow update: if isSignedIn() && !isBanned();
-      allow delete: if isSignedIn() && !isBanned();
+      // ⚠️ ОСТАВЛЕНО пермиссивным осознанно: документы-вызовы эфемерны (≤35 сек,
+      // сами чистятся) и адресованы игровому id, который у легаси ≠ auth UID.
+      // Окно для злоупотреблений — секунды, влияние минимально.
+      allow update, delete: if isSignedIn() && !isBanned();
     }
 
     // ============================================
