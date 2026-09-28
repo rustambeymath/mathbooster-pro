@@ -107,14 +107,13 @@
                 const leaderDoc = dbRef.doc(dbRef.db, "leaderboard", id);
                 dbRef.deleteDoc(leaderDoc).catch(err => console.error("leaderboard:", err));
                 
-                // 3. Удаляем резервную копию (если есть код)
+                // 3. 🛡️ Удаляем резервную копию через Cloud Function (клиент не пишет transfers)
                 try {
                     const localData = localStorage.getItem('MathData_' + id);
                     if (localData) {
                         const parsed = JSON.parse(localData);
-                        if (parsed.user && parsed.user.rescueCode) {
-                            const rescueDoc = dbRef.doc(dbRef.db, "transfers", parsed.user.rescueCode);
-                            dbRef.deleteDoc(rescueDoc).catch(err => console.error("transfers:", err));
+                        if (parsed.user && parsed.user.rescueCode && typeof Transfer !== 'undefined' && Transfer.deleteTransfer) {
+                            Transfer.deleteTransfer(parsed.user.rescueCode);
                         }
                     }
                 } catch(e) {}
