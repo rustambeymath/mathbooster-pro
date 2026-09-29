@@ -772,6 +772,53 @@ exports.antiCheat = functions.firestore
             }
         }
 
+        // --- 5. МОНЕТЫ ЗА СЕССИИ: сервер сам считает награду по формуле ---
+        // Формула клиента: блок i даёт 5+min(i-1,15) монет (хардкор ×1.5),
+        // хвост >= prorated. Реестр тот же, что у часов (savedSessionSec),
+        // поэтому удвоить окно нельзя и в монетах. Шум вокруг сессионной
+        // награды (квесты, дейли, PVP, промо) покрывает надбавка ±50%.
+        if (before && sessionsArr.length > 0) {
+            const headCoin = sessionsArr[0];
+            const jSec = Number(headCoin && headCoin.sec) || 0;
+            const jDate = Number(headCoin && headCoin.date) || 0;
+            if (jSec >= 60 && jDate > 0) {
+                const entry = (bu.savedSessionSec && typeof bu.savedSessionSec === "object") ? bu.savedSessionSec : {};
+                const skNow2 = String(u.sessionKey || "");
+                const regKey = skNow2 || (jDate + "_head");
+                const prevPaidSec = Number(entry[regKey]) || 0;
+                const newSec = Math.max(0, jSec - prevPaidSec);
+                // Жёсткий кап: >10ч в окне не бывает (инвариант 4a уже режет, это страховка)
+                const cappedNew = Math.min(newSec, 10 * 3600);
+                const hard = !!u.activeStrict;
+                const formula = (s) => {
+                    const blocks = Math.floor(s / 600);
+                    const rem = s % 600;
+                    let r = 0;
+                    for (let i = 1; i <= blocks; i++) r += 5 + Math.min(i - 1, 15);
+                    if (rem > 0) {
+                        const nextR = 5 + Math.min(blocks, 15);
+                        r += Math.floor((rem / 600) * nextR);
+                    }
+                    return hard ? Math.floor(r * 1.5) : r;
+                };
+                const serverReward = formula(cappedNew);
+                const clientClaimed = Math.max(0, coins - prevCoins);
+                const ALLOWED = Math.ceil(serverReward * 1.5) + 1500;
+                if (clientClaimed > ALLOWED) {
+                    fixes["user.coins"] = prevCoins + serverReward;
+                    fixes["user.cheatFlag"] = `coinFraud: заявил +${clientClaimed}, сервер дал ${serverReward} @ ${new Date().toISOString()}`;
+                    punish = true;
+                    console.log(`🚨 ANTI-CHEAT coinFraud ${userId}: +${clientClaimed} заявлено, серверная награда ${serverReward} (окно +${cappedNew}с)`);
+                }
+                // 📒 Реестр: помечаем оплаченные секунды окна (общий с часами механизм)
+                if (newSec > 0 && !fixes["user.savedSessionSec"]) {
+                    const entries2 = Object.entries(entry);
+                    const trimmed2 = entries2.length > 99 ? entries2.slice(-99) : entries2;
+                    fixes["user.savedSessionSec"] = Object.assign({}, Object.fromEntries(trimmed2), { [regKey]: Math.max(prevPaidSec, jSec) });
+                }
+            }
+        }
+
         // 📒 Реестр сохранённых окон — служебная запись, применяется всегда
         if (fixes["user.savedSessionSec"]) {
             try {

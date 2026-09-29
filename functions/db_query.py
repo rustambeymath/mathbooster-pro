@@ -35,7 +35,7 @@ def fv(field):
     if 'integerValue' in field: return int(field['integerValue'])
     if 'booleanValue' in field: return field['booleanValue']
     if 'nullValue' in field: return None
-    if 'mapValue' in field: return {k: fv(v) for k, v in field['mapValue']['fields'].items()}
+    if 'mapValue' in field: return {k: fv(v) for k, v in (field['mapValue'].get('fields') or {}).items()}
     if 'arrayValue' in field: return [fv(v) for v in field['arrayValue'].get('values', [])]
     return None
 
