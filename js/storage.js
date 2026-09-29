@@ -206,7 +206,12 @@
         if (docSnap.exists()) {
             const cloud = docSnap.data();
             
-            // Если мы что-то меняли в последние 10 секунд — не слушаем облако (защита от отката)
+            // 🛡️ ДВОЙНАЯ защита от отката локальных данных (покупки, начисления):
+            // 1) пока идёт наша запись в облако — промежуточные снапшоты игнорируем;
+            // 2) 10 сек после последнего сохранения облако не применяем.
+            // Раньше lastSaveTime не обновлялся и защита не работала: снапшот
+            // эха heartbeat откатывал свежие покупки (вещь есть — монеты целы).
+            if (this._savingCloud) return;
             const timeSinceLastSave = Date.now() - (DB.user.lastSaveTime || 0);
             if (timeSinceLastSave < 10000) return; 
 
@@ -267,11 +272,19 @@
         // 1. Сохраняем полный профиль локально
         localStorage.setItem(this.currentKey, JSON.stringify(DB));
 
+        // 🛡️ Метка времени СВЕЖЕГО сохранения: она же — ключ защиты слушателя
+        // облака от отката (10 сек). Раньше lastSaveTime не обновлялся никогда,
+        // защита была мертва, и снапшот облака откатывал покупки/начисления.
+        DB.user.lastSaveTime = Date.now();
+
         if (window.DB_Online) {
             const dbRef = window.DB_Online;
             const userId = Auth.currentUser.id;
 
             try {
+                // 🛡️ Флаг «запись в полёте»: слушатель облака не должен откатывать
+                // локальные данные промежуточным снапшотом, пока идёт сохранение
+                this._savingCloud = true;
                 // 2. Отправляем ПОЛНЫЙ профиль в папку users
                 const userDoc = dbRef.doc(dbRef.db, "users", userId);
                 // 🔐 Добавляем ownerUID для проверки Firestore Rules
@@ -315,7 +328,7 @@
 
                 console.log("☁️ Синхронизация (Профиль + Топ) выполнена");
             } catch (e) { 
-                console.error("Ошибка сохранения:", e); 
+                console.error("Ошибка сохранения:", e);
                 // Понятное сообщение пользователю вместо тихой ошибки в консоли
                 const msg = (e && e.code === 'permission-denied')
                     ? "⚠️ Нет доступа к облаку. Проверь интернет и перезайди"
@@ -327,6 +340,8 @@
                     App.toast(msg);
                     setTimeout(() => { this._lastSaveErrToast = false; }, 30000); // не чаще 1 раза в 30 сек
                 }
+            } finally {
+                this._savingCloud = false;
             }
         }
     },

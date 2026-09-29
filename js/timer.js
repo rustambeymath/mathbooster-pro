@@ -194,11 +194,11 @@ const Timer = {
                     // 🛡️ Гасим якорь ДО записи: нельзя дважды спасти одну сессию,
                     // даже если параллельный контекст тоже увидит непогашенный якорь
                     await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null }).catch(() => {});
+                    this._markSessionSaved(windowKey); // метка ДО await — см. комментарий в stop()
                     const savedRealSec = this.realSec, savedStart = this.sessionStartTime;
                     this.realSec = unbanked;
                     this.sessionStartTime = Number(pausedAt); // дата в журнале = момент паузы
                     await this.saveSession();
-                    this._markSessionSaved(windowKey);
                     this.realSec = savedRealSec;
                     this.sessionStartTime = savedStart;
                 }
@@ -894,14 +894,14 @@ const Timer = {
             if (unbanked > 0) {
                 // 🛡️ Дедупликация: этот отрезок (от bankedSec до текущего часа) уже
                 // мог быть записан параллельным контекстом — не начисляем повторно
-                const windowKey = `${this.sessionKey || this.startTime}_${this.bankedSec || 0}`;
+                const windowKey = `${this.sessionKey || this.startTime}_w${Math.floor((this.bankedSec || 0) / 3600)}`;
                 if (this._isSessionSaved(windowKey)) {
                     console.warn('🛡️ checkpointSave: отрезок уже сохранён — пропускаем');
                 } else {
+                    this._markSessionSaved(windowKey); // метка ДО await — см. комментарий в stop()
                     this.realSec = unbanked;
                     this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
                     await this.saveSession();
-                    this._markSessionSaved(windowKey);
                     this.realSec = totalSnapshot;
                     this.bankedSec = totalSnapshot;
                     // 💾 Запоминаем границу записанных часов — по ней автовосстановление
@@ -1067,18 +1067,20 @@ const Timer = {
         // чекпоинтами после пройденных проверок, повторно не начисляются
         const unbanked = Math.max(0, verifiedSec - (this.bankedSec || 0));
         if (saveSession && unbanked >= 60) {
-            // 🛡️ Окно сессии (якорь старта + граница записанных часов) нельзя записать дважды:
-            // параллельная вкладка, перезагрузка или гонка «восстановление vs СТОП»
-            // раньше задваивали часы (см. дубли сессий у топ-1 Сезона 2).
-            const windowKey = `${this.sessionKey || this.startTime}_${Math.floor(unbanked / 60)}`;
+            // 🛡️ Окно сессии нельзя записать дважды. Ключ = сессия + НОМЕР ЧАСОВОГО
+            // ОКНА (та же схема, что у чекпоинтов — иначе чекпоинт и СТОП имели
+            // разные ключи и одно окно начислялось дважды). Метку «уже сохранено»
+            // ставим ДО await: в окне между await и меткой второй вызов успевал
+            // пройти проверку и задвоить время (жалоба: спам СТОП → часы ×2-3).
+            const windowKey = `${this.sessionKey || this.startTime}_w${Math.floor((this.bankedSec || 0) / 3600)}`;
             if (this._isSessionSaved(windowKey)) {
                 console.warn('🛡️ stop: окно сессии уже сохранено — пропускаем повторную запись');
             } else {
+                this._markSessionSaved(windowKey);
                 const totalSnapshot = this.realSec;
                 this.realSec = unbanked;
                 this.sessionStartTime = Date.now();
                 await this.saveSession();
-                this._markSessionSaved(windowKey);
                 this.realSec = totalSnapshot;
             }
         } else if ((this.bankedSec || 0) === 0) {
@@ -1201,8 +1203,12 @@ const Timer = {
         const fullIntervals = Math.floor(this.realSec / this.REWARD_INTERVAL);
         const remainingSeconds = this.realSec % this.REWARD_INTERVAL;
         
+        // 🛡️ Монеты за полные блоки уже выданы по ходу сессии (giveReward каждые
+        // 10 мин). Здесь платим только НЕВЫПЛАЧЕННЫЙ хвост, иначе каждый блок
+        // шёл в кошелёк дважды: во время сессии и ещё раз при СТОП.
+        const startBlock = Math.min(this.lastPaidBlock || 0, fullIntervals);
         let earnedCoins = 0;
-        for (let i = 1; i <= fullIntervals; i++) {
+        for (let i = startBlock + 1; i <= fullIntervals; i++) {
             let r = 5 + Math.min(i - 1, 15);
             if (this.isStrict) r = Math.floor(r * 1.5);
             earnedCoins += r;
@@ -1213,6 +1219,7 @@ const Timer = {
             if (this.isStrict) nextR = Math.floor(nextR * 1.5);
             earnedCoins += Math.floor((remainingSeconds / this.REWARD_INTERVAL) * nextR);
         }
+        this.lastPaidBlock = Math.max(this.lastPaidBlock || 0, fullIntervals);
 
         DB.user.coins += earnedCoins;
         DB.user.totalSec += this.realSec;
