@@ -217,6 +217,16 @@
 
             // В остальное время — синхронизируем
             if (JSON.stringify(cloud) !== JSON.stringify(DB)) {
+                // 🛡️ Серверные санитизации (cheatFlag/forceUpdate) НЕ должны откатывать
+                // локальный прогресс: анти-чит чинит значение в облаке, а клиент
+                // продолжает со своего. Монотонные поля берём по максимуму.
+                if (cloud.user && DB.user) {
+                    ['totalSec', 'coins', 'xp', 'lifetimeXP'].forEach(k => {
+                        const srv = Number(cloud.user[k]) || 0;
+                        const loc = Number(DB.user[k]) || 0;
+                        if (srv > loc) DB.user[k] = srv;
+                    });
+                }
                 DB = cloud;
                 
                 // 🔥 ВОТ ЭТОТ БЛОК УДАЛИТ ПРИЗРАКОВ:

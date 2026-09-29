@@ -211,6 +211,23 @@
                 return Math.max(0, (Number(ov.sec) || 0) + extra);
             }
             const start = this.currentSeasonStart();
+            // 📒 БАЗА СЕЗОНА: сервер ведёт user.sessionJournalBase (сумма сессий,
+            // оставленных админ-правкой setSessions) и user.lastJournalSec (дата
+            // последней записи той правки). Всё, что в журнале свежее базовой
+            // записи, прибавляется СВЕРХУ базы — иначе новые сессии съедали бы
+            // базу (журнал = 100 записей, база выпадала бы через неделю учёбы).
+            const jb = Number(DB.user.sessionJournalBase) || 0;
+            if (jb > 0) {
+                const lj = Number(DB.user.lastJournalSec) || 0;
+                let extra = 0;
+                (DB.sessions || []).forEach(s => {
+                    let t = Number(s.date);
+                    if (!t) { const p = Date.parse(s.date); t = isNaN(p) ? 0 : p; }
+                    if (t > lj) extra += (Number(s.sec) || 0);
+                });
+                return Math.max(0, jb + extra);
+            }
+            // Обычный путь: сумма сессий, начавшихся после старта сезона
             let sum = 0;
             (DB.sessions || []).forEach(s => {
                 let t = Number(s.date);
