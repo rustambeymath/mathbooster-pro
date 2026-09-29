@@ -227,6 +227,11 @@
                         if (srv > loc) DB.user[k] = srv;
                     });
                 }
+                // 🔒 Облако больше не хранит rescueCode — не даём снапшоту стереть
+                // локальный код (иначе бэкапы по нему перестанут обновляться)
+                if (DB.user && DB.user.rescueCode && cloud.user && !cloud.user.rescueCode) {
+                    cloud.user.rescueCode = DB.user.rescueCode;
+                }
                 DB = cloud;
                 
                 // 🔥 ВОТ ЭТОТ БЛОК УДАЛИТ ПРИЗРАКОВ:
@@ -301,7 +306,13 @@
                 DB._ownerUID = window._firebaseUID || null;
                 // 🛡️ Служебные поля: на сервер не отдаём (держим локально)
                 const _lastBackupAt = DB.user._lastBackupAt; delete DB.user._lastBackupAt;
+                // 🔒 RESCUE CODE не уезжает в облако: users/{id} могут читать другие
+                // вошедшие (родительский дашборд, восстановление), а по коду
+                // transferGet отдаёт ВЕСЬ профиль. Код живёт только локально
+                // + в серверном private_rescue (недоступном клиентам).
+                const _rescue = DB.user.rescueCode; delete DB.user.rescueCode;
                 await dbRef.setDoc(userDoc, DB);
+                if (_rescue !== undefined) DB.user.rescueCode = _rescue;
                 if (_lastBackupAt !== undefined) DB.user._lastBackupAt = _lastBackupAt;
 
                 // 3. Отправляем ЛЕГКУЮ визитку в папку leaderboard

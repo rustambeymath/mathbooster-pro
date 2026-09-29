@@ -439,7 +439,10 @@ if (DB && DB.user) {
                     
                     try {
                         // Перезаписываем основной профиль
+                        // 🔒 rescueCode остаётся локальным — в облако не уезжает
+                        const _rescue = DB.user.rescueCode; delete DB.user.rescueCode;
                         await dbRef.setDoc(dbRef.doc(dbRef.db, "users", userId), DB);
+                        if (_rescue !== undefined) DB.user.rescueCode = _rescue;
                         
                         // Обнуляем визитку в Топе
                         await dbRef.setDoc(dbRef.doc(dbRef.db, "leaderboard", userId), {
