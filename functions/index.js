@@ -617,6 +617,27 @@ exports.antiCheat = functions.firestore
         }
         if (totalSec < 0) fixes["user.totalSec"] = 0;
 
+        // --- 2b. ЧАСЫ: МОНОТОННЫЙ ПОТОЛОК по серверно-контролируемому времени ---
+        // Клиент теперь обязан обновлять lastSaveTime при каждом Data.save()
+        // (см. фикс отката монет). Значит разница now - prevTs — это ЧИСТОЕ
+        // время, прошедшее между двумя облачными сейвами, и totalSec физически
+        // не может вырасти быстрее: даже при идеальном ноун-стопе прирост
+        // ≤ dt + запас 2 минуты (на сетевые задержки/склейку окон).
+        // Клиентское время в формуле НЕ участвует — накрутить dt нельзя.
+        if (before && prevTs > 0) {
+            const wallMs = Math.max(0, now - prevTs);           // чистое время между сейвами
+            const capSec = Math.floor(wallMs / 1000) + 120;     // +2 мин запаса
+            const gained = totalSec - prevSec;
+            if (gained > capSec && gained > 3 * 3600) {
+                // +3ч за один сейв честно не набрать (чекпоинты пишут каждый час,
+                // порог ниже старых 13ч) — а выше потолка по живому lastSaveTime
+                // не подняться даже технически
+                fixes["user.totalSec"] = prevSec;
+                fixes["user.cheatFlag"] = `hoursWallCap+${Math.round(gained / 360) / 10}h за ${Math.round(wallMs / 60000)}мин @ ${new Date().toISOString()}`;
+                punish = true;
+            }
+        }
+
         // --- 3. XP: скорость ---
         const xp = Number(u.xp) || 0;
         const prevXp = Number(bu.xp) || 0;
@@ -624,14 +645,75 @@ exports.antiCheat = functions.firestore
             fixes["user.xp"] = prevXp;
             fixes["user.cheatFlag"] = `xpJump+${xp - prevXp} @ ${new Date().toISOString()}`;
             punish = true;
-        }
-
-        // --- 4. ДУБЛИ СЕССИЙ (кейс топ-1 Сезона 2: одна сессия записывалась
+        }        // --- 4. ДУБЛИ СЕССИЙ ---
+        // (кейс топ-1 Сезона 2: одна сессия записывалась
         //     2-5 раз — секунды совпадали до единицы, даты differed на мс) ---
         // Клиент шлёт user.sessionKey = "<id сессии>_<номер окна>"; одно окно
         // может увеличить totalSec только один раз.
         const skNow = String(u.sessionKey || "");
         const sessionsArr = Array.isArray(after.sessions) ? after.sessions : [];
+
+        // 4a. ИНВАРИАНТЫ ЖУРНАЛА — только для профилей после админ-правки
+        //     setSessions (user.sessionJournalBase > 0): сессия ≤ 10ч, ≥ 60 сек,
+        //     дата ∈ [2 суток назад, +5 минут вперёд]. Легаси-профили (сотни
+        //     старых записей) пропускаем по старым правилам, иначе вычистим им
+        //     всю историю. Журнал с недействительными записями вычищаем сразу.
+        const hasJournalBase = Number(u.sessionJournalBase) > 0;
+        if (before && hasJournalBase && sessionsArr.length > 0) {
+            const nowMs = now;
+            let badSec = 0, badCount = 0;
+            const clean = [];
+            for (const s of sessionsArr) {
+                const sec = Number(s && s.sec) || 0;
+                const date = Number(s && s.date) || 0;
+                const tooLong = sec > 10 * 3600;
+                const tooShort = sec < 60 || sec <= 0;
+                const tooFuture = date > nowMs + 5 * 60 * 1000;
+                const tooOld = date < nowMs - 2 * 86400000;
+                if (tooLong || tooShort || tooFuture || tooOld) { badSec += sec; badCount++; continue; }
+                clean.push(s);
+            }
+            if (badCount > 0) {
+                // Вычитаем накрученные секунды И вычищаем записи из журнала сразу —
+                // иначе каждая следующая запись снова триггерила бы вычитание
+                fixes["user.totalSec"] = Math.max(0, totalSec - badSec);
+                fixes["sessions"] = clean;
+                fixes["user.cheatFlag"] = `sessionInvariant(${badCount} записей, -${badSec}с) @ ${new Date().toISOString()}`;
+                punish = true;
+                console.log(`🚨 ANTI-CHEAT sessionInvariant ${userId}: ${badCount} подозрительных записей на ${badSec}с`);
+                // Дальше 4b/4c/4d не выполняем: журнал уже приведён к инвариантам,
+                // а реестр savedSessionSec может уйти вразнос — фиксируем и выходим
+                await change.after.ref.update(fixes);
+                console.log(`🚨 ANTI-CHEAT ${userId}:`, JSON.stringify(fixes));
+                return null;
+            }
+        }
+
+        // 4d. ПРОТЕЧКА ЖУРНАЛА. Чит: фейковая запись в журнал БЕЗ правки totalSec —
+        //     потолок (2b) и дедуп (4b) её не видят, а сумма сезона (клиент) — посчитает.
+        //     Инвариант: на каждом сейве прирост суммы журнала ≈ приросту totalSec
+        //     (все честные пути начисляют их одинаково). Если журнал вырос заметно
+        //     больше totalSec — фейковые записи вырезаем, прирост totalSec аннулируем.
+        if (before && sessionsArr.length > 0) {
+            const prevSessions = Array.isArray(before.sessions) ? before.sessions : [];
+            const sumArr = (arr) => arr.reduce((acc, s) => {
+                const sec = Number(s && s.sec) || 0;
+                const date = Number(s && s.date) || 0;
+                // легаси-хвост (старые даты при наличии journalBase) не считаем
+                if (hasJournalBase && date && date < now - 2 * 86400000) return acc;
+                return acc + sec;
+            }, 0);
+            const journalGain = sumArr(sessionsArr) - sumArr(prevSessions);
+            const secGain = totalSec - prevSec;
+            if (journalGain > 120 && journalGain > secGain + 300) {
+                fixes["sessions"] = prevSessions;
+                fixes["user.totalSec"] = Math.max(0, prevSec);
+                fixes["user.cheatFlag"] = `journalLeak+${journalGain}c (totalSec+${secGain}) @ ${new Date().toISOString()}`;
+                punish = true;
+                console.log(`🚨 ANTI-CHEAT journalLeak ${userId}: журнал +${journalGain}с, totalSec +${secGain}с — вырезаю прирост`);
+            }
+        }
+
         if (before && skNow && skNow !== String(bu.sessionKey || "") && sessionsArr.length > 0) {
             const S = sessionsArr[0];
             const sSec = Number(S && S.sec) || 0;
@@ -670,8 +752,20 @@ exports.antiCheat = functions.firestore
                     cleaned.push(s);
                 }
                 if (removed > 0) {
+                    // 🛡️ При чистке журнала вычитаем выброшенные секунды из totalSec,
+                    // иначе сумма сезона (top hours) останется накрученной
                     fixes["sessions"] = cleaned;
-                    console.log(`🚨 ANTI-CHEAT sessionDup ${userId}: удалено ${removed} дубликатов из журнала`);
+                    let removedSec = 0;
+                    for (let i = 1; i < sessionsArr.length; i++) {
+                        const s = sessionsArr[i];
+                        const same = Math.abs((Number(s && s.sec) || 0) - hSec) <= 2 &&
+                                     Math.abs((Number(s && s.date) || 0) - hDate) <= 30000;
+                        if (same) removedSec += (Number(s && s.sec) || 0);
+                    }
+                    const currentFix = fixes["user.totalSec"];
+                    const base = (typeof currentFix === "number") ? currentFix : totalSec;
+                    fixes["user.totalSec"] = Math.max(0, base - removedSec);
+                    console.log(`🚨 ANTI-CHEAT sessionDup ${userId}: удалено ${removed} дубликатов из журнала (-${removedSec}с)`);
                     punish = true;
                 }
             }
@@ -936,6 +1030,36 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
 
             console.log(`🏆 STATUS ${gameId}: pro=${pro} vip=${vip} king=${king} titan=${titan} title=${title}`);
             res.json({ ok: true, action: "status", gameId, title });
+            return;
+        }
+
+        // ================= 📒 SET SESSIONS (правка журнала легаси) =================
+        // Легаси-профили накопили сотни старых сессий; клиент теперь хранит
+        // журнал целиком, и серверные инварианты (≥60с, ≤10ч, дата не старше
+        // 2 суток) сразу же вычистили бы их историю. Админ один раз переносит
+        // канонический журнал в профиль, после чего инварианты работают как надо.
+        if (action === "setSessions") {
+            if (!gameId) { res.status(400).json({ ok: false, error: "pass gameId" }); return; }
+            const profRef = db.collection("users").doc(gameId);
+            const prof = await profRef.get().catch(() => null);
+            if (!prof || !prof.exists) { res.status(404).json({ ok: false, error: "no profile" }); return; }
+            const cur = prof.data().user || {};
+            const curSessions = Array.isArray(prof.data().sessions) ? prof.data().sessions : [];
+            // keep = N самых свежих сессий текущего журнала (клиент берёт столько же)
+            const keep = Math.max(1, Math.min(3650, parseInt(req.query.keep || "200", 10) || 200));
+            const canon = curSessions.slice(0, keep);
+            const canonSec = canon.reduce((a, s) => a + (Number(s && s.sec) || 0), 0);
+            const canonLast = canon.length ? (Number(canon[0] && canon[0].date) || 0) : 0;
+            await profRef.set({
+                sessions: canon,
+                "user.savedSessionSec": {},
+                "user.sessionJournalBase": canonSec,
+                "user.lastJournalSec": canonLast,
+                "user.totalSec": canonSec,
+                "user.forceUpdate": true
+            }, { merge: true });
+            console.log(`📒 SET SESSIONS ${gameId}: ${canon.length} записей, base=${canonSec}с, lastJournal=${canonLast}`);
+            res.json({ ok: true, action: "setSessions", gameId, kept: canon.length, journalBase: canonSec, lastJournalSec: canonLast });
             return;
         }
 

@@ -1098,6 +1098,24 @@ const Timer = {
         this.resetTimerUI();
     },
 
+    // 📒 Канонический журнал для админ-правки (action=setSessions): последние
+    // 100 записей, валидные по серверным инвариантам (≥60с, ≤10ч, свежие даты)
+    getCanonicalSessions() {
+        const VALID_MAX_SEC = 10 * 3600;
+        const VALID_MIN_SEC = 60;
+        const VALID_WINDOW = 2 * 86400000;
+        const now = Date.now();
+        return (DB.sessions || [])
+            .filter(s => {
+                const sec = Number(s && s.sec) || 0;
+                const date = Number(s && s.date) || 0;
+                if (sec < VALID_MIN_SEC || sec > VALID_MAX_SEC) return false;
+                if (!date || date > now + 5 * 60 * 1000 || date < now - VALID_WINDOW) return false;
+                return true;
+            })
+            .slice(0, 100);
+    },
+
     resetTimerUI() {
         this.realSec = 0;
         this.visualSec = 0;
@@ -1254,7 +1272,11 @@ const Timer = {
             date: this.sessionStartTime 
         });
 
-        // Сессии хранятся БЕСКОНЕЧНО (показываем только последние 10 в журнале)
+        // 🛡️ Лимит журнала = 100 записей, синхронизирован с серверным анти-читом.
+        // Раньше журнал рос бесконечно: у легаси-профилей он разрастался до сотен
+        // записей, и серверный инвариант «дата не старше 2 суток» вычистил бы их
+        // историю. Держим 100 — этого достаточно и для журнала, и для суммы сезона.
+        if (DB.sessions.length > 100) DB.sessions.length = 100;
 
         // 🛡️ Идентификатор сессии уезжает в облако: серверный анти-чит
         // дедуплицирует по sessionKey (одна сессия — один прирост totalSec)
@@ -1263,6 +1285,14 @@ const Timer = {
             // ровно один раз, повторные сохранения того же окна сервер откатывает
             const sk = this.sessionKey || this.startTime || Date.now();
             DB.user.sessionKey = `${sk}_${Math.floor((this.bankedSec || 0) / 3600)}`;
+            // 📒 Метаданные журнала для сервера: база сезона (сессии до правки
+            // админа) и дата последней записи. Сервер не даст записать журнал,
+            // который протекает мимо totalSec, и срежет лимит 100 записей.
+            DB.user.sessionJournalBase = Math.max(0, (Number(DB.user.sessionJournalBase) || 0));
+            const allSessions = DB.sessions || [];
+            const lastD = allSessions.length ? Number(allSessions[0].date) || 0 : 0;
+            const prevD = Number(DB.user.lastJournalSec) || 0;
+            DB.user.lastJournalSec = Math.max(prevD, lastD);
         }
 
         App.addXP(Math.floor(this.realSec / 60) * 10);
