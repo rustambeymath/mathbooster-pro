@@ -110,6 +110,8 @@
             DB.user.totalSec = 0;
             DB.user.currentSeason = CURRENT_SEASON;
             delete DB.user.seasonHoursOverride; // 🔧 админ-правка часов не должна жить в новом сезоне
+            delete DB.user.sessionJournalBase;  // 📒 база журнала — признак сезона: в новом нужна заново
+            delete DB.user.lastJournalSec;      // 📒 и дата-якорь журнала тоже
             
             // Предметы НЕ сбрасываем: их статистика по дисциплинам
             // копится всегда и стоит отдельно от сезонов

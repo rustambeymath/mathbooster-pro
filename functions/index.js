@@ -19,7 +19,7 @@ const functions = require("firebase-functions/v1"); // v7 SDK: старый API 
 const admin = require("firebase-admin");
 // firebase-admin v14+: top-level admin.firestore()/admin.messaging() УДАЛЕНЫ —
 // доступ только через deep-импорты
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldPath, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getAuth } = require("firebase-admin/auth");
 
@@ -655,9 +655,11 @@ exports.antiCheat = functions.firestore
 
         // 4a. ИНВАРИАНТЫ ЖУРНАЛА — только для профилей после админ-правки
         //     setSessions (user.sessionJournalBase > 0): сессия ≤ 10ч, ≥ 60 сек,
-        //     дата ∈ [2 суток назад, +5 минут вперёд]. Легаси-профили (сотни
-        //     старых записей) пропускаем по старым правилам, иначе вычистим им
-        //     всю историю. Журнал с недействительными записями вычищаем сразу.
+        //     дата не из будущего. Легаси-профили (сотни старых записей) пропускаем
+        //     по старым правилам. Правило «дата не старше N дней» СОЗНАТЕЛЬНО
+        //     отсутствует: каноничные старые записи (миграция setSessions) должны
+        //     выживать, а накрутку старыми фейками ловит 4d (протечка журнала) —
+        //     там прирост суммы без прироста totalSec откатывается.
         const hasJournalBase = Number(u.sessionJournalBase) > 0;
         if (before && hasJournalBase && sessionsArr.length > 0) {
             const nowMs = now;
@@ -669,8 +671,7 @@ exports.antiCheat = functions.firestore
                 const tooLong = sec > 10 * 3600;
                 const tooShort = sec < 60 || sec <= 0;
                 const tooFuture = date > nowMs + 5 * 60 * 1000;
-                const tooOld = date < nowMs - 2 * 86400000;
-                if (tooLong || tooShort || tooFuture || tooOld) { badSec += sec; badCount++; continue; }
+                if (tooLong || tooShort || tooFuture) { badSec += sec; badCount++; continue; }
                 clean.push(s);
             }
             if (badCount > 0) {
@@ -1034,10 +1035,11 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
         }
 
         // ================= 📒 SET SESSIONS (правка журнала легаси) =================
-        // Легаси-профили накопили сотни старых сессий; клиент теперь хранит
-        // журнал целиком, и серверные инварианты (≥60с, ≤10ч, дата не старше
-        // 2 суток) сразу же вычистили бы их историю. Админ один раз переносит
-        // канонический журнал в профиль, после чего инварианты работают как надо.
+        // Легаси-профили накопили дубли и короткие записи от старого бага СТОП.
+        // Канонизируем журнал: убираем дубли (±5с в пределах 10 мин), записи <60с,
+        // >10ч и из будущего; переносим строковые даты в timestamp; оставляем до
+        // 100 свежих валидных записей. totalSec НЕ трогаем — часы не пересматриваем,
+        // JournalBase нужна только чтобы сервер отличал канон от налёта фейков.
         if (action === "setSessions") {
             if (!gameId) { res.status(400).json({ ok: false, error: "pass gameId" }); return; }
             const profRef = db.collection("users").doc(gameId);
@@ -1045,21 +1047,42 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
             if (!prof || !prof.exists) { res.status(404).json({ ok: false, error: "no profile" }); return; }
             const cur = prof.data().user || {};
             const curSessions = Array.isArray(prof.data().sessions) ? prof.data().sessions : [];
-            // keep = N самых свежих сессий текущего журнала (клиент берёт столько же)
-            const keep = Math.max(1, Math.min(3650, parseInt(req.query.keep || "200", 10) || 200));
-            const canon = curSessions.slice(0, keep);
-            const canonSec = canon.reduce((a, s) => a + (Number(s && s.sec) || 0), 0);
-            const canonLast = canon.length ? (Number(canon[0] && canon[0].date) || 0) : 0;
-            await profRef.set({
+            const nowMs = Date.now();
+            const norm = [];   // валидированные записи
+            let badDup = 0, badShort = 0, badBig = 0, badDate = 0;
+            for (const raw of curSessions) {
+                const sec = Math.floor(Number(raw && raw.sec) || 0);
+                let date = Number(raw && raw.date) || 0;
+                if (!date && raw && raw.date) { const p = Date.parse(raw.date); date = isNaN(p) ? 0 : p; }
+                if (sec <= 0 || sec < 60) { badShort++; continue; }
+                if (sec > 10 * 3600) { badBig++; continue; }
+                if (!date || date > nowMs + 5 * 60 * 1000) { badDate++; continue; }
+                const dup = norm.find(v => Math.abs(v.sec - sec) <= 5 && Math.abs(v.date - date) <= 10 * 60 * 1000);
+                if (dup) { badDup++; continue; }
+                norm.push({ subject: String(raw && raw.subject || "Учёба").slice(0, 30), sec, coins: Number(raw && raw.coins) || 0, date });
+            }
+            norm.sort((a, b) => b.date - a.date);
+            const canon = norm.slice(0, 100);
+            const canonSec = canon.reduce((a, s) => a + s.sec, 0);
+            const canonLast = canon.length ? canon[0].date : 0;
+            // ⚠️ ВАЖНО: admin SDK v14 в set({merge}) трактует ключи с точками как
+            // ЛИТЕРАЛЬНЫЕ имена полей (создаёт top-level "user.sessionJournalBase"),
+            // а не вложенные пути. Поэтому: (1) чистим возможный мусор от прежних
+            // set() через FieldPath-литерал, (2) пишем через update() — там ключи
+            // с точками честно разворачиваются во вложенную карту user.
+            const FP = FieldPath;
+            for (const g of ["user.savedSessionSec", "user.sessionJournalBase", "user.lastJournalSec", "user.forceUpdate"]) {
+                try { await profRef.update(new FP(g), FieldValue.delete()); } catch (e) { /* поля могло не быть */ }
+            }
+            await profRef.update({
                 sessions: canon,
                 "user.savedSessionSec": {},
                 "user.sessionJournalBase": canonSec,
                 "user.lastJournalSec": canonLast,
-                "user.totalSec": canonSec,
                 "user.forceUpdate": true
-            }, { merge: true });
-            console.log(`📒 SET SESSIONS ${gameId}: ${canon.length} записей, base=${canonSec}с, lastJournal=${canonLast}`);
-            res.json({ ok: true, action: "setSessions", gameId, kept: canon.length, journalBase: canonSec, lastJournalSec: canonLast });
+            });
+            console.log(`📒 SET SESSIONS ${gameId}: канон ${canon.length} (${canonSec}с); выкинуто: дублей=${badDup}, коротких=${badShort}, больших=${badBig}, дат=${badDate}`);
+            res.json({ ok: true, action: "setSessions", gameId, kept: canon.length, journalBase: canonSec, lastJournalSec: canonLast, dropped: { dup: badDup, short: badShort, big: badBig, date: badDate } });
             return;
         }
 
