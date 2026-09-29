@@ -819,6 +819,19 @@ exports.antiCheat = functions.firestore
             }
         }
 
+        // 🔒 RESCUE SCRUB: код восстановления не должен жить в читаемом профиле.
+        // users/{id} могут читать другие вошедшие (родительский дашборд), а по коду
+        // transferGet отдаёт ВЕСЬ профиль → кража аккаунта. Клиент больше не шлёт
+        // код, старые закэшированные PWA — шлют: срезаем при каждой записи.
+        if (u.rescueCode !== undefined) {
+            try {
+                await change.after.ref.update({ "user.rescueCode": FieldValue.delete() });
+                console.log(`🔒 RESCUE SCRUB ${userId}: удалён user.rescueCode из профиля`);
+            } catch (e) {
+                console.error("rescue scrub failed for " + userId + ":", e.message);
+            }
+        }
+
         // 📒 Реестр сохранённых окон — служебная запись, применяется всегда
         if (fixes["user.savedSessionSec"]) {
             try {
@@ -1206,6 +1219,39 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
 
             console.log(`💀 FULL DELETE: удалено ${deleted.length}:`, deleted.join(", "));
             res.json({ ok: true, action: "fullDelete", deleted });
+            return;
+        }
+
+        // ================= 🔒 SCRUB RESCUE (разовая чистка кодов из профилей) =================
+        // user.rescueCode в читаемом другими профиле = кража аккаунта (код → transferGet
+        // → полный профиль). Клиент больше не шлёт код; разово вычищаем базу, дальше
+        // за этим следит RESCUE SCRUB в antiCheat на каждой записи.
+        if (action === "scrubRescue") {
+            let cleaned = 0, scanned = 0;
+            let snap = await db.collection("users").get();
+            const batch = db.batch();
+            snap.forEach(d => {
+                scanned++;
+                const u = d.data().user || {};
+                if (u.rescueCode !== undefined) {
+                    batch.update(d.ref, { "user.rescueCode": FieldValue.delete() });
+                    cleaned++;
+                }
+            });
+            if (cleaned > 0) await batch.commit();
+            // Заодно срезаем fcmToken из карточек топа (переходная утечка из правил)
+            let lbCleaned = 0;
+            const lbSnap = await db.collection("leaderboard").get();
+            const lbBatch = db.batch();
+            lbSnap.forEach(d => {
+                if (d.data().fcmToken !== undefined) {
+                    lbBatch.update(d.ref, { fcmToken: FieldValue.delete() });
+                    lbCleaned++;
+                }
+            });
+            if (lbCleaned > 0) await lbBatch.commit();
+            console.log(`🔒 SCRUB RESCUE: профилей=${scanned}, вычищено кодов=${cleaned}, fcmToken в топе=${lbCleaned}`);
+            res.json({ ok: true, action: "scrubRescue", scanned, cleaned, lbCleaned });
             return;
         }
 
