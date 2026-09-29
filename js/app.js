@@ -282,6 +282,37 @@ if (DB && DB.user) {
         console.log("✅ Часы сезона синхронизированы: " + seasonSec + " сек. (было: " + current + ")");
     }
 }
+            // --- 🛡️ РЕКОНЦИЛИАЦИЯ DB.history С ЖУРНАЛОМ ---
+            // «За неделю/месяц» и теплокарта считаются из DB.history — отдельного
+            // дневного счётчика. Старые баги (дубли СТОП, откаты облака) завышали
+            // дневные суммы относительно журнала. Журнал — истина: пересобираем
+            // дневную историю ПОЛНОСТЬЮ из него (лишнее срезается, фантомные дни
+            // без сессий удаляются, потерянное — восстанавливается).
+            if (DB && DB.sessions) {
+                const byDay = {};
+                (DB.sessions || []).forEach(s => {
+                    let t = Number(s.date);
+                    if (!t) { const p = Date.parse(s.date); t = isNaN(p) ? 0 : p; }
+                    if (!t) return; // сессии без даты в дневную историю не попадают
+                    const dayKey = getUZDate(new Date(t));
+                    byDay[dayKey] = (byDay[dayKey] || 0) + (Number(s.sec) || 0);
+                });
+                let inflated = 0, missing = 0;
+                Object.keys(DB.history || {}).forEach(dayKey => {
+                    const histSec = Number(DB.history[dayKey]) || 0;
+                    const journalSec = byDay[dayKey] || 0;
+                    if (histSec > journalSec) inflated += histSec - journalSec;
+                });
+                Object.keys(byDay).forEach(dayKey => {
+                    const histSec = Number((DB.history || {})[dayKey]) || 0;
+                    if (histSec < byDay[dayKey]) missing += byDay[dayKey] - histSec;
+                });
+                if (inflated > 0 || missing > 0) {
+                    DB.history = Object.assign({}, byDay);
+                    Data.save();
+                    console.log(`🛠️ Дневная история пересобрана из журнала: −${inflated} сек лишних, +${missing} сек потерянных`);
+                }
+            }
             setTimeout(() => {
                 this.renderSubjects();
                 SubjectSys.render();
@@ -321,6 +352,16 @@ if (DB && DB.user) {
             WeeklyReportSys.check();
 
             },
+
+        // 🛡️ ЕДИНЫЙ ИСТОЧНИК ПРАВДЫ: пожизненное время = журнал сессий + архивы
+        // прошлых сезонов. totalSec больше нигде не показываем напрямую: он
+        // перезаписывается синхронизацией часов сезона и обнуляется при смене сезона,
+        // из-за чего «Все время» расходилось с журналом занятий.
+        getLifetimeSec() {
+            const sessionSum = (DB.sessions || []).reduce((sum, s) => sum + (Number(s.sec) || 0), 0);
+            const archiveSum = (DB.seasonHistory || []).reduce((sum, a) => sum + (Number(a.totalSec) || 0), 0);
+            return sessionSum + archiveSum;
+        },
 
         copyId() {
             if (Auth.currentUser && Auth.currentUser.id) {
@@ -597,12 +638,11 @@ if (DB && DB.user) {
             // Статистика
         
             // 👇 ВОЗВРАЩАЕМ ПЕРЕМЕННУЮ 'h', ЧТОБЫ НЕ БЫЛО ОШИБКИ 👇
-            const h = (DB.user.totalSec / 3600).toFixed(1);
+            const h = (this.getLifetimeSec() / 3600).toFixed(1);
             
             // Обновляем текст на экране
             this.setText('stat-total-time', h + 'ч');
             this.setText('timer', new Date((Timer.visualSec || 0) * 1000).toISOString().substr(11, 8))
-            this.setText('stat-total-time', h + 'ч');
             this.setText('prof-lvl', DB.user.level);
             this.setText('prof-xp', DB.user.xp);
             this.setText('prof-coins', DB.user.coins);
@@ -1252,7 +1292,7 @@ if (DB && DB.user) {
         
         // Берем "Все время" напрямую из базы
         const totalXP = DB.user.lifetimeXP || DB.user.xp || 0; 
-        this.setText('stat-total-time', fmtTime(DB.user.totalSec)); 
+        this.setText('stat-total-time', fmtTime(this.getLifetimeSec()));
         this.setText('stat-total-xp', `${totalXP.toLocaleString()} XP`);
 
         // 2.5 ИСТОРИЯ СЕЗОНОВ
