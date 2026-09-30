@@ -1316,9 +1316,13 @@ async function requireAuthUid(req) {
     const h = String(req.headers.authorization || '');
     if (!h.startsWith('Bearer ')) return null;
     try {
+        getAdmin(); // 🔧 initializeApp ДО getAuth() — иначе app/no-app и verifyIdToken падает
         const dec = await getAuth().verifyIdToken(h.slice(7).trim());
         return dec.uid || null;
-    } catch (e) { return null; }
+    } catch (e) {
+        console.error('AUTH DEBUG verifyIdToken failed:', e.code || '', e.message);
+        return null;
+    }
 }
 
 // 🛡️ Санитизация профиля перед выдачей/хранением резервной копии:
@@ -1338,7 +1342,8 @@ function sanitizeTransferData(src) {
 
 exports.transferGet = functions.https.onRequest(async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    // Authorization обязателен: клиент шлёт Firebase ID-токен для привязки uid резерва
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return; }
@@ -1542,10 +1547,18 @@ exports.parentGet = functions.https.onRequest(async (req, res) => {
             res.status(410).json({ ok: false, error: 'code_expired' });
             return;
         }
-        const childId = regDoc.id; // игровой id ребёнка = док uploads/{uid}
-        const up = await db.collection('uploads').doc(childId).get();
-        if (!up.exists) { res.status(404).json({ ok: false, error: 'not_found' }); return; }
-        const raw = up.data().data || {};
+        const childId = regDoc.id; // игровой id ребёнка = док users/{uid}
+        // 📡 ЖИВОЙ профиль: активный статус/пинг живут в users/{uid}; uploads —
+        // резервная копия (обновляется раз в 5 мин), годится только как fallback.
+        let raw = null;
+        const live = await db.collection('users').doc(childId).get();
+        if (live.exists) {
+            raw = live.data() || {};
+        } else {
+            const up = await db.collection('uploads').doc(childId).get();
+            if (!up.exists) { res.status(404).json({ ok: false, error: 'not_found' }); return; }
+            raw = up.data().data || {};
+        }
         const u = raw.user || {};
         const lb = await db.collection('leaderboard').doc(childId).get();
         const lbData = lb.exists ? (lb.data() || {}) : {};
