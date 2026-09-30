@@ -303,7 +303,8 @@
                 // 2. Отправляем ПОЛНЫЙ профиль в папку users
                 const userDoc = dbRef.doc(dbRef.db, "users", userId);
                 // 🔐 Добавляем ownerUID для проверки Firestore Rules
-                DB._ownerUID = window._firebaseUID || null;
+                if (DB._ownerUID === undefined || DB._ownerUID === null) DB._ownerUID = window._firebaseUID || null;
+                DB._ownerUID = window._firebaseUID || DB._ownerUID;
                 // 🛡️ Служебные поля: на сервер не отдаём (держим локально)
                 const _lastBackupAt = DB.user._lastBackupAt; delete DB.user._lastBackupAt;
                 // 🔒 RESCUE CODE не уезжает в облако: users/{id} могут читать другие

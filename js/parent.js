@@ -349,17 +349,63 @@ var ParentApp = {
                 }
             });
         }
+    },    // 📡 CF parentGet: сервер сам проверяет код доступа и отдаёт безопасный
+    // снапшот. Чтений users/leaderboard из дашборда больше нет (rules закрыты).
+    FN_PARENT: 'https://us-central1-mathbooster-pro.cloudfunctions.net/parentGet',
+
+    // 🔐 Firebase ID-токен (анонимный вход) — Bearer для вызова CF
+    async getAuthToken() {
+        try {
+            let attempts = 0;
+            while (!window.DB_Online && attempts < 10) {
+                await new Promise(r => setTimeout(r, 500));
+                attempts++;
+            }
+            let fbAuth = window.DB_Online && window.DB_Online.auth;
+            if (!fbAuth) {
+                // Fallback: auth-модуль прямо из CDN (default app уже инициализирован)
+                const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                fbAuth = m.getAuth();
+            }
+            const cu = fbAuth && fbAuth.currentUser;
+            if (!cu) return null;
+            return await cu.getIdToken();
+        } catch (e) {
+            console.warn('getAuthToken failed:', e);
+            return null;
+        }
     },
+
+    async pollChildSnapshot() {
+        if (!isParentMode || !ParentApp.parentCode) return null;
+        try {
+            const token = await this.getAuthToken();
+            if (!token) return null;
+            const res = await fetch(this.FN_PARENT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ code: ParentApp.parentCode })
+            });
+            if (!res.ok) { console.warn('parentGet:', res.status); return null; }
+            const j = await res.json().catch(() => null);
+            return (j && j.ok && j.child) ? j.child : null;
+        } catch (e) {
+            console.warn('parentGet poll failed:', e);
+            return null;
+        }
+    },
+
     startParentMonitoring() {
-        if (!isParentMode || !DB.user.id || !window.DB_Online) return;
-        const dbRef = window.DB_Online;
-        const docRef = dbRef.doc(dbRef.db, 'users', DB.user.id);
-        const leaderRef = dbRef.doc(dbRef.db, 'leaderboard', DB.user.id);
+        if (!isParentMode || !DB || !DB.user) return;
         const childName = DB.user.name || 'Ребёнок';
         // Флаг для отслеживания первого снимка (чтобы не слать уведомление при подключении)
         let firstSnapshot = true;
         // Предыдущий статус: 'idle' | 'studying' | 'paused'
         this._parentLastStatus = 'idle';
+
         // === ЗВУК (Web Audio API — без внешних файлов) ===
         const playDing = () => {
             try {
@@ -379,34 +425,25 @@ var ParentApp = {
                 });
             } catch(e) {}
         };
+
         // === УВЕДОМЛЕНИЕ (тост + звук) ===
-        // ⚠️ БЕЗ new Notification()! Системное уведомление присылает FCM-пуш
-        // (Cloud Function notifyParentOnStatusChange → Service Worker).
-        // Локальное создание дублировало пуш: страница показывает своё,
-        // SW — пушное = 2 уведомления за раз.
         const notifyParent = (icon, title, body) => {
-            // 1. Звук "ding"
             playDing();
-            // 2. Toast в приложении (виден когда дашборд открыт)
             App.toast(icon + ' ' + title);
         };
-        // Слушаем изменения данных пользователя
-        this.parentUnsub1 = dbRef.onSnapshot(docRef, (snap) => {
-            if (!snap.exists()) return;
-            const u = snap.data().user || {};
+
+        // === Отрисовка одного снапшота из CF parentGet ===
+        const applySnapshot = (c) => {
+            if (c) this._lastChildSnap = c;
+            if (!c) return; // сервер недоступен — ждём следующего опроса
+            const u = c;
             const iconEl = document.getElementById('parent-status-icon');
             const textEl = document.getElementById('parent-status-text');
             const subEl = document.getElementById('parent-status-sub');
             const timerEl = document.getElementById('parent-timer-display');
-            if (this.parentTimerInterval) clearInterval(this.parentTimerInterval);
-            const isPaused = !!u.pausedAt;
-            const isOnline = u.activeSessionStart && (TimeGuard.getTrueTime() - Number(u.lastPing || 0)) < 45000;
-            const isActive = isOnline && !isPaused;
-            // Определяем текущий статус
-            let currentStatus = 'idle';
-            if (isActive) currentStatus = 'studying';
-            else if (isPaused) currentStatus = 'paused';
-            // === Оповещаем родителя при смене статуса (пропускаем первый снимок) ===
+            if (this.parentTimerInterval) { clearInterval(this.parentTimerInterval); this.parentTimerInterval = null; }
+            const currentStatus = u.status || 'idle';
+            // === Оповещаем родителя при смене статуса (пропускаем первый снапшот) ===
             if (!firstSnapshot && currentStatus !== this._parentLastStatus) {
                 if (currentStatus === 'studying') {
                     notifyParent('✍️', childName + ' начал(а) заниматься!', 'Таймер запущен — ребёнок учится.');
@@ -418,63 +455,74 @@ var ParentApp = {
             }
             this._parentLastStatus = currentStatus;
             firstSnapshot = false;
+
             // === UI обновление ===
-            if (isActive) {
-                iconEl.innerText = '✍️';
-                textEl.innerText = 'УЧИТСЯ';
-                textEl.style.color = '#2ECC71';
-                subEl.innerText = 'Таймер запущен';
-                timerEl.style.display = 'block';
-                this.parentTimerInterval = setInterval(() => {
-                    const now = TimeGuard.getTrueTime();
-                    if (now - Number(u.lastPing || 0) > 45000 || u.pausedAt) {
-                        iconEl.innerText = u.pausedAt ? '⏸️' : '😴';
-                        textEl.innerText = u.pausedAt ? 'НА ПАУЗЕ' : 'ОТДЫХАЕТ';
-                        textEl.style.color = u.pausedAt ? '#F39C12' : 'var(--text-light)';
-                        subEl.innerText = u.pausedAt ? 'Ребёнок поставил паузу' : 'Таймер неактивен';
-                        timerEl.style.display = 'none'; clearInterval(this.parentTimerInterval); return;
-                    }
-                    const elapsed = Math.floor((now - Number(u.activeSessionStart)) / 1000);
+            const now = TimeGuard.getTrueTime();
+            if (currentStatus === 'studying') {
+                if (iconEl) iconEl.innerText = '✍️';
+                if (textEl) { textEl.innerText = 'УЧИТСЯ'; textEl.style.color = '#2ECC71'; }
+                if (subEl) subEl.innerText = 'Таймер запущен';
+                if (timerEl) {
+                    timerEl.style.display = 'block';
+                    // Мгновенный расчёт от последнего снапшота; далее секундный тик
+                    // делает внешний _parentTickTimer (без обновления снапшота)
+                    const s = this._lastChildSnap || {};
+                    const elapsed = Math.floor((TimeGuard.getTrueTime() - Number(s.activeSessionStart || 0)) / 1000);
                     timerEl.innerText = new Date(Math.max(0, elapsed) * 1000).toISOString().substr(11, 8);
-                }, 1000);
-            } else if (isPaused) {
-                iconEl.innerText = '⏸️';
-                textEl.innerText = 'НА ПАУЗЕ';
-                textEl.style.color = '#F39C12';
-                subEl.innerText = 'Ребёнок поставил паузу';
-                timerEl.style.display = 'none';
+                }
+            } else if (currentStatus === 'paused') {
+                if (iconEl) iconEl.innerText = '⏸️';
+                if (textEl) { textEl.innerText = 'НА ПАУЗЕ'; textEl.style.color = '#F39C12'; }
+                if (subEl) subEl.innerText = 'Ребёнок поставил паузу';
+                if (timerEl) timerEl.style.display = 'none';
             } else {
-                iconEl.innerText = '😴';
-                textEl.innerText = 'ОТДЫХАЕТ';
-                textEl.style.color = 'var(--text-light)';
-                subEl.innerText = 'Таймер неактивен';
-                timerEl.style.display = 'none';
+                if (iconEl) iconEl.innerText = '😴';
+                if (textEl) { textEl.innerText = 'ОТДЫХАЕТ'; textEl.style.color = 'var(--text-light)'; }
+                if (subEl) subEl.innerText = 'Таймер неактивен';
+                if (timerEl) timerEl.style.display = 'none';
             }
             // Обновляем мини-карточки
-            if (u.level) document.getElementById('parent-level').innerText = u.level;
-            if (u.coins !== undefined) document.getElementById('parent-coins').innerText = u.coins;
-            if (u.streak !== undefined) document.getElementById('parent-streak').innerText = u.streak;
-        });
-        // Слушаем онлайн-статус
-        this.parentUnsub2 = dbRef.onSnapshot(leaderRef, (snap) => {
-            if (!snap.exists()) return;
-            const la = snap.data().lastActive || 0;
-            const isOn = la !== 0 && (TimeGuard.getTrueTime() - la) < 90000;
+            if (u.level) { const el = document.getElementById('parent-level'); if (el) el.innerText = u.level; }
+            if (u.coins !== undefined) { const el = document.getElementById('parent-coins'); if (el) el.innerText = u.coins; }
+            if (u.streak !== undefined) { const el = document.getElementById('parent-streak'); if (el) el.innerText = u.streak; }
+            // Онлайн-бейдж (lastActive приходит из визитки топа на сервере)
+            const la = Number(u.lastActive || 0);
+            const isOn = la !== 0 && (now - la) < 90000;
             const badge = document.getElementById('parent-online-badge');
             const dot = document.getElementById('parent-online-dot');
             const txt = document.getElementById('parent-online-text');
             if (badge) {
                 badge.className = 'parent-online-badge ' + (isOn ? 'online' : 'offline');
-                dot.innerText = isOn ? '🟢' : '🔴';
-                txt.innerText = isOn ? 'В СЕТИ' : 'ВНЕ СЕТИ';
+                if (dot) dot.innerText = isOn ? '🟢' : '🔴';
+                if (txt) txt.innerText = isOn ? 'В СЕТИ' : 'ВНЕ СЕТИ';
             }
-        });
+        };
+
+        // === Поллинг каждые 30 секунд (был onSnapshot users/leaderboard) ===
+        const poll = async () => {
+            const c = await this.pollChildSnapshot();
+            if (c) applySnapshot(c);
+        };
+        poll();
+        this._parentPollTimer = setInterval(poll, 30000);
+
+        // === Живой секундный тикер таймера по данным последнего снапшота ===
+        // (в сеть не ходит — только пересчитывает elapsed от activeSessionStart;
+        // статус перепроверяется только очередным поллингом)
+        this._parentTickTimer = setInterval(() => {
+            const s = this._lastChildSnap;
+            if (!s || (s.status !== 'studying')) return;
+            const timerEl = document.getElementById('parent-timer-display');
+            if (!timerEl) return;
+            const elapsed = Math.floor((TimeGuard.getTrueTime() - Number(s.activeSessionStart || 0)) / 1000);
+            timerEl.innerText = new Date(Math.max(0, elapsed) * 1000).toISOString().substr(11, 8);
+        }, 1000);
     },
+
     exitParentMode() {
-        // Отписываемся от Firebase
-        if (this.parentUnsub1) { this.parentUnsub1(); this.parentUnsub1 = null; }
-        if (this.parentUnsub2) { this.parentUnsub2(); this.parentUnsub2 = null; }
-        if (this.parentTimerInterval) { clearInterval(this.parentTimerInterval); this.parentTimerInterval = null; }
+        // Останавливаем поллинг CF parentGet
+        if (this._parentPollTimer) { clearInterval(this._parentPollTimer); this._parentPollTimer = null; }
+        if (this._parentTickTimer) { clearInterval(this._parentTickTimer); this._parentTickTimer = null; }
         isParentMode = false;
         DB = null;
         Auth.currentUser = null;
@@ -587,6 +635,18 @@ var ParentUI = {
                 if (res.ok && j.ok && j.transfer) {
                     isParentMode = true;
                     DB = j.transfer.data;
+                    // 🔒 Копия приходит БЕЗ rescueCode/fcmToken/sessions —
+                    // дашборду это не нужно, а код доступа должен остаться только у родителя
+                    if (DB.user) {
+                        delete DB.user.rescueCode;
+                        delete DB.user.fcmToken;
+                    }
+                    // 🔑 Код ребёнка — единственный ключ доступа к его снапшоту через
+                    // CF parentGet. Восстановление при перезагрузке дашборда —
+                    // session-only (без localStorage): код не остаётся в браузере.
+                    ParentApp.parentCode = code;
+                    ParentApp._fcmCode = code;
+                    ParentApp._fcmName = DB.user.name || 'Ребёнок';
                     Auth.currentUser = { 
                         id: DB.user.id, 
                         name: DB.user.name, 
@@ -617,12 +677,11 @@ var ParentUI = {
         // Храним по коду ребёнка: parentTokens/{childCode}/tokens/{fcmToken}
         async _saveParentFcmToken(childUserId, childName) {
             try {
-                let attempts = 0;
-                while (!window.DB_Online && attempts < 10) {
-                    await new Promise(r => setTimeout(r, 500));
-                    attempts++;
-                }
-                if (!window.DB_Online) return;
+                // 🔑 Код и имя ребёнка передаём в явном виде из loginAsParent
+                // (больше не ищем по имени из-за потери fcmToken/parentName)
+                const childCode = ParentApp._fcmCode || '';
+                const cName = childName || ParentApp._fcmName || '';
+                if (!childCode) { console.warn('Нет кода ребёнка для сохранения FCM-токена'); return; }
 
                 // Получаем FCM-токен родителя
                 let token = localStorage.getItem('fcm_token');
@@ -637,22 +696,13 @@ var ParentUI = {
                 }
                 if (!token) return;
 
-                // Определяем код ребёнка из parentLinks
-                let childCode = '';
-                try {
-                    const parentLinks = JSON.parse(localStorage.getItem('ParentLinks') || '[]');
-                    const link = parentLinks.find(l => l.name?.includes(childName) || true);
-                    if (link) childCode = link.code;
-                } catch(e) {}
-                if (!childCode) { console.warn('Нет кода ребёнка для сохранения FCM-токена'); return; }
-
                 // Сохраняем в parentTokens/{childCode}/tokens/{fcmToken}
                 const { doc, setDoc, db } = window.DB_Online;
                 const tokenDoc = doc(db, 'parentTokens', childCode, 'tokens', token);
                 await setDoc(tokenDoc, {
                     token: token,
-                    parentName: (() => { try { return JSON.parse(localStorage.getItem('MathUsers') || '[]').find(u => u.id === Auth.currentUser?.id)?.name || 'Родитель'; } catch(e) { return 'Родитель'; } })(),
-                    childName: childName || 'Ребёнок',
+                    parentName: 'Родитель',
+                    childName: cName || 'Ребёнок',
                     childUserId: childUserId || '',
                     createdAt: Date.now(),
                     lastSeen: Date.now(),

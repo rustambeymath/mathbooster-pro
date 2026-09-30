@@ -439,9 +439,13 @@ if (DB && DB.user) {
                     
                     try {
                         // Перезаписываем основной профиль
-                        // 🔒 rescueCode остаётся локальным — в облако не уезжает
+                        // 🔒 rescueCode остаётся локальным — в облако не уезжает;
+                        // 🔐 _ownerUID — ключ владения в rules, терять его нельзя
+                        // (иначе документ перестанет принадлежать игроку)
                         const _rescue = DB.user.rescueCode; delete DB.user.rescueCode;
+                        DB._ownerUID = window._firebaseUID || null;
                         await dbRef.setDoc(dbRef.doc(dbRef.db, "users", userId), DB);
+                        if (_rescue !== undefined) DB.user.rescueCode = _rescue;
                         if (_rescue !== undefined) DB.user.rescueCode = _rescue;
                         
                         // Обнуляем визитку в Топе

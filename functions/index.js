@@ -842,6 +842,11 @@ exports.antiCheat = functions.firestore
             delete fixes["user.savedSessionSec"];
         }
 
+        // 👨‍👩‍👧 Родительские пуши о смене статуса (источник — users/{uid}:
+        // transfers новый клиент больше не пишет). await — функция не должна
+        // завершиться раньше отправки.
+        await notifyParentStatusForUser(before, after, userId);
+
         if (!punish) return null;
 
         fixes["user.lastSaveTime"] = now;
@@ -1299,6 +1304,38 @@ function transferRateFail(ipKey) {
     }
 }
 
+// ============================================================================
+// 🔒 ОБЩИЕ ХЕЛПЕРЫ БЕЗОПАСНОСТИ (transferGet + parentGet)
+// ============================================================================
+
+// 🛡️ Firebase Auth UID запросчика из Bearer ID-токена (verifyIdToken).
+// Возвращает null, если токена нет/невалиден (анонимные старые клиенты без входа).
+// Теперь uid резервной копии привязывается к реальному auth-токену,
+// а не к произвольному data.user.id из тела запроса.
+async function requireAuthUid(req) {
+    const h = String(req.headers.authorization || '');
+    if (!h.startsWith('Bearer ')) return null;
+    try {
+        const dec = await getAuth().verifyIdToken(h.slice(7).trim());
+        return dec.uid || null;
+    } catch (e) { return null; }
+}
+
+// 🛡️ Санитизация профиля перед выдачей/хранением резервной копии:
+//  - rescueCode — код в копии = угон аккаунта (код → get → полный профиль);
+//  - fcmToken — пуш-токен устройства ребёнка (спам/перехват пушей);
+//  - sessions[] — журнал сессий (гигабайты личного расписания, дашборду не нужен).
+function sanitizeTransferData(src) {
+    let d;
+    try { d = JSON.parse(JSON.stringify(src)); } catch (e) { return src; }
+    if (d && d.user) {
+        delete d.user.rescueCode;
+        delete d.user.fcmToken;
+        d.user.sessions = [];
+    }
+    return d;
+}
+
 exports.transferGet = functions.https.onRequest(async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -1319,9 +1356,18 @@ exports.transferGet = functions.https.onRequest(async (req, res) => {
                 res.status(400).json({ ok: false, error: 'bad_request' });
                 return;
             }
-            // Привязка владельца: auth UID берём из переданного профиля (trusted: пришёл от самого клиента)
+            // Привязка владельца: auth UID берём из Firebase ID-токена (Bearer).
+            // Старые клиенты шлют токен без входа — им даём прежнее поведение
+            // (uid из переданного профиля); вошедшие обязаны резервировать СВОЙ uid.
+            const authUid = await requireAuthUid(req);
             const uid = String(data?.user?.id || '');
             if (!uid) { res.status(400).json({ reserve_denied: 'no_user_id' }); return; }
+            if (authUid && uid !== authUid) {
+                // Чужой профиль резервировать нельзя — фикс прошлогоднего «trusted: пришёл от клиента»
+                transferRateFail(ip);
+                res.status(403).json({ ok: false, error: 'uid_mismatch' });
+                return;
+            }
             if (!TRANSFER_ALPHABET.test(code)) { res.status(400).json({ ok: false, error: 'bad_code' }); return; }
 
             // 🛡️ Реестр в приватной коллекции (клиенту не читается — rules all deny)
@@ -1335,8 +1381,10 @@ exports.transferGet = functions.https.onRequest(async (req, res) => {
                 .slice(0, 10);
             await regRef.set({ codes: Object.fromEntries(trimmed), updatedAt: new Date().toISOString() }, { merge: true });
 
-            // Полный профиль — в закрытую коллекцию uploads/{uid} (правила: read/write = false)
-            await db.collection('uploads').doc(uid).set({ data: data, updatedAt: new Date().toISOString() });
+            // Полный профиль — в закрытую коллекцию uploads/{uid} (правила: read/write = false).
+            // 🛡️ Копия хранится БЕЗ rescueCode/fcmToken/sessions — даже слив uploads
+            // (или выдача по коду) не даёт ни кода, ни пуш-токена, ни журнала сессий.
+            await db.collection('uploads').doc(uid).set({ data: sanitizeTransferData(data), updatedAt: new Date().toISOString() });
             res.json({ ok: true, code });
             return;
         }
@@ -1360,7 +1408,9 @@ exports.transferGet = functions.https.onRequest(async (req, res) => {
             const uid = regs.docs[0].id;
             const up = await db.collection('uploads').doc(uid).get();
             if (!up.exists) { res.status(404).json({ ok: false, error: 'not_found' }); return; }
-            res.json({ ok: true, transfer: { data: up.data().data, isPermanent: !!meta.isPermanent, expiresAt: meta.expiresAt || null, code } });
+            // 🛡️ Выдаём копию без rescueCode/fcmToken/sessions (страховка от старых
+            // записей uploads, сохранённых до санитизации)
+            res.json({ ok: true, transfer: { data: sanitizeTransferData(up.data().data), isPermanent: !!meta.isPermanent, expiresAt: meta.expiresAt || null, code } });
             return;
         }
 
@@ -1381,6 +1431,164 @@ exports.transferGet = functions.https.onRequest(async (req, res) => {
         res.status(400).json({ ok: false, error: 'unknown_action' });
     } catch (e) {
         console.error('transferGet error:', e);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+/**
+ * 👨‍👩‍👧 РОДИТЕЛЬСКИЕ ПУШИ О СМЕНЕ СТАТУСА — перенос с transfers/{code} на users/{uid}.
+ * Старый триггер notifyParentOnStatusChange слушает transfers, которые новый клиент
+ * больше не пишет — рассылаем пуши из античита-триггера на users/{uid}.
+ * Токены родителей ищем по ВСЕМ действующим кодам ребёнка (private_rescue/{uid}.codes
+ * → parentTokens/{code}/tokens/*).
+ */
+async function notifyParentStatusForUser(beforeData, afterData, childId) {
+    try {
+        const { db, messaging } = getAdmin();
+        const bu = (beforeData && beforeData.user) || {};
+        const au = (afterData && afterData.user) || {};
+        const wasActive = !!bu.activeSessionStart && !bu.pausedAt;
+        const wasPaused = !!bu.pausedAt;
+        const isActive = !!au.activeSessionStart && !au.pausedAt;
+        const isPaused = !!au.pausedAt;
+        // Если статус НЕ изменился — не отправляем push
+        if ((wasActive === isActive) && (wasPaused === isPaused)) return;
+
+        const childName = au.name || 'Ребёнок';
+        const reg = await db.collection('private_rescue').doc(childId).get();
+        if (!reg.exists) return;
+        const codes = Object.keys((reg.data() || {}).codes || {});
+        if (!codes.length) return;
+
+        const tokens = [];
+        const staleRefs = [];
+        const seen = new Set();
+        for (const code of codes) {
+            const t = await db.collection('parentTokens').doc(code).collection('tokens').get();
+            t.forEach(d => {
+                const x = d.data() || {};
+                if (x.lastSeen && Date.now() - x.lastSeen > 7 * 24 * 3600 * 1000) staleRefs.push(d.ref);
+                else if (x.token && !seen.has(x.token)) { seen.add(x.token); tokens.push(x.token); }
+            });
+        }
+        for (const r of staleRefs) { try { await r.delete(); } catch (e) {} }
+        if (!tokens.length) return;
+
+        let statusEmoji, statusText, statusBody;
+        if (isActive) { statusEmoji = '✍️'; statusText = `${childName} начал(а) заниматься!`; statusBody = 'Таймер запущен — ребёнок учится.'; }
+        else if (isPaused) { statusEmoji = '⏸️'; statusText = `${childName} поставил(а) паузу`; statusBody = 'Ребёнок приостановил занятие.'; }
+        else { statusEmoji = '😴'; statusText = `${childName} закончил(а) занятие`; statusBody = 'Таймер остановлен.'; }
+
+        // DATA-ONLY: как в notifyParentOnStatusChange — иначе двойной показ (SW + onMessage)
+        await messaging.sendEachForMulticast({
+            data: {
+                type: 'parent_status',
+                status: isActive ? 'studying' : (isPaused ? 'paused' : 'idle'),
+                childName: childName,
+                title: `${statusEmoji} ${statusText}`,
+                body: statusBody,
+                timestamp: String(Date.now())
+            },
+            tokens
+        });
+        console.log(`✅ Parent status push (${isActive ? 'studying' : (isPaused ? 'paused' : 'idle')}): ${childName} (${childId}), токенов: ${tokens.length}`);
+    } catch (e) {
+        console.warn('notifyParentStatusForUser failed for ' + childId + ':', e.message);
+    }
+}
+
+/**
+ * 👨‍👩‍👧 PARENT GET — безопасный снапшот ребёнка для родительского дашборда.
+ * Заменяет клиентские onSnapshot-чтения users/{childGameId} и leaderboard/{childGameId}
+ * (раньше это была причина, по которой users.get был открыт всем вошедшим → любой
+ * мог читать чужой профиль: history, subjects, служебные поля).
+ *
+ * POST { code } — 8-значный код восстановления ребёнка (единовременный ключ доступа).
+ * Валидация: Firebase ID-токен родителя обязателен (Bearer), формат кода,
+ * код существует в private_rescue и НЕ истёк (временные живут 24 ч).
+ * Пулл каждые 30-60 с из дашборда; для статусов-пушей остаётся FCM-цепочка
+ * (notifyParentOnStatusChange срабатывает на записи proфиля ребёнка — не меняется).
+ * Безопасность: в ответе только белый список полей — никакого rescueCode,
+ * fcmToken, history-журнала сессий, subjects-структуры и т.п.
+ */
+exports.parentGet = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return; }
+
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+    if (!transferRateCheck(ip)) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+
+    const authUid = await requireAuthUid(req);
+    if (!authUid) {
+        transferRateFail(ip);
+        res.status(401).json({ ok: false, error: 'unauthorized' });
+        return;
+    }
+
+    const { db } = getAdmin();
+    const code = String((req.body || {}).code || '').toUpperCase().trim();
+    if (!/^[A-Z2-9]{8}$/.test(code)) { res.status(400).json({ ok: false, error: 'bad_code' }); return; }
+
+    try {
+        const regs = await db.collection('private_rescue').where('codes.' + code, '!=', null).limit(1).get();
+        if (regs.empty) { transferRateFail(ip); res.status(404).json({ ok: false, error: 'not_found' }); return; }
+        const regDoc = regs.docs[0];
+        const meta = (regDoc.data().codes || {})[code];
+        if (!meta) { transferRateFail(ip); res.status(404).json({ ok: false, error: 'not_found' }); return; }
+        if (!meta.isPermanent && meta.expiresAt && Date.now() > meta.expiresAt) {
+            res.status(410).json({ ok: false, error: 'code_expired' });
+            return;
+        }
+        const childId = regDoc.id; // игровой id ребёнка = док uploads/{uid}
+        const up = await db.collection('uploads').doc(childId).get();
+        if (!up.exists) { res.status(404).json({ ok: false, error: 'not_found' }); return; }
+        const raw = up.data().data || {};
+        const u = raw.user || {};
+        const lb = await db.collection('leaderboard').doc(childId).get();
+        const lbData = lb.exists ? (lb.data() || {}) : {};
+        const today = new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
+        let todaySec = 0;
+        (raw.subjects ? Object.values(raw.subjects) : []).forEach(s => {
+            if (s && s.daily && s.daily[today]) todaySec += Number(s.daily[today]) || 0;
+        });
+        const weekSec = [];
+        for (let i = 6; i >= 0; i--) {
+            const key = new Date(Date.now() + 5 * 3600 * 1000 - i * 86400000).toISOString().slice(0, 10);
+            let s = 0;
+            (raw.subjects ? Object.values(raw.subjects) : []).forEach(su => {
+                if (su && su.daily && su.daily[key]) s += Number(su.daily[key]) || 0;
+            });
+            weekSec.push(s);
+        }
+        const now = Date.now();
+        const lastPing = Number(u.lastPing || 0);
+        const isOnline = !!u.activeSessionStart && (now - lastPing) < 45000;
+        const isPaused = !!u.pausedAt;
+        res.json({
+            ok: true,
+            child: {
+                id: childId,
+                name: String(u.name || ''),
+                avatar: String(u.avatar || '😎'),
+                theme: u.theme,
+                darkMode: !!u.darkMode,
+                level: Number(u.level || 1),
+                coins: Number(u.coins || 0),
+                streak: Number(u.streak || 0),
+                todaySec,
+                weekSec,
+                status: isOnline && !isPaused ? 'studying' : (isPaused ? 'paused' : 'idle'),
+                lastPing,
+                pausedAt: Number(u.pausedAt || 0),
+                activeSessionStart: Number(u.activeSessionStart || 0),
+                lastActive: Number(lbData.lastActive || 0)
+            }
+        });
+    } catch (e) {
+        console.error('parentGet error:', e);
         res.status(500).json({ ok: false, error: e.message });
     }
 });
