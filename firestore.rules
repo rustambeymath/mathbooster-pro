@@ -33,7 +33,14 @@ service cloud.firestore {
     // ============================================
     match /users/{userId} {
       allow get: if isAdmin()
-        || resource.data.get('_ownerUID', '') == request.auth.uid;
+        || resource.data.get('_ownerUID', '') == request.auth.uid
+        // 🩹 ЛЕГАСИ-ПЕРЕХОД: старые профили без _ownerUID (~70 доков) читаются
+        // любым вошедшим ДО первого сейва — иначе их владелец не может войти
+        // (вход = чтение своего профиля, а самоклеймить чтением нельзя).
+        // Первый же Data.save ставит _ownerUID (storage.js) — документ
+        // само-мигрирует и закрывается владельцем. Перебор id нереален (лист закрыт),
+        // rescueCode из всех профилей уже вычищен (scrubRescue).
+        || !('_ownerUID' in resource.data);
       allow list: if isAdmin();
 
       // ⚠️ УРОК 26.09: request.resource.data при update — это СЛИТЫЙ документ
