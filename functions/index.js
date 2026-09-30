@@ -967,6 +967,8 @@ exports.purgeUser = functions.https.onRequest(async (req, res) => {
 // 🔑 Секрет берётся из functions/.env (ADMIN_KEY=...) — задаётся при деплое,
 // в коде и в git НЕ хранится. Пустая строка = запретить все вызовы (fail-closed).
 const ADMIN_SECRET = process.env.ADMIN_KEY || "";
+// 👑 UID админа: ему рассылаются push-алерты о нарушениях правил
+const ADMIN_ALERT_UID = "9RapHM80aPWOfspjOR5uvhVHriF2";
 
 exports.adminAction = functions.https.onRequest(async (req, res) => {
     // CORS — панель открывается с file:// и с github.io
@@ -1257,6 +1259,32 @@ exports.adminAction = functions.https.onRequest(async (req, res) => {
             if (lbCleaned > 0) await lbBatch.commit();
             console.log(`🔒 SCRUB RESCUE: профилей=${scanned}, вычищено кодов=${cleaned}, fcmToken в топе=${lbCleaned}`);
             res.json({ ok: true, action: "scrubRescue", scanned, cleaned, lbCleaned });
+            return;
+        }
+
+        // ================= 🛡️ DENIED REPORTS (лента нарушений для админки) =================
+        if (action === "deniedReports") {
+            const limit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
+            const since = Date.now() - (parseInt(req.query.hours, 10) || 24) * 3600 * 1000;
+            let q = db.collection("denied_reports").where("ts", ">", since).orderBy("ts", "desc").limit(limit);
+            if (req.query.uid) q = q.where("authUid", "==", String(req.query.uid).slice(0, 128));
+            const snap = await q.get();
+            const reports = [];
+            snap.forEach(d => {
+                const r = d.data() || {};
+                reports.push({
+                    id: d.id,
+                    ts: r.ts || 0,
+                    authUid: r.authUid || "",
+                    code: r.code || "",
+                    op: r.op || "",
+                    path: r.path || "",
+                    msg: r.msg || "",
+                    ua: r.ua || "",
+                    ip: r.ip || ""
+                });
+            });
+            res.json({ ok: true, action: "deniedReports", count: reports.length, reports });
             return;
         }
 
@@ -1602,6 +1630,102 @@ exports.parentGet = functions.https.onRequest(async (req, res) => {
         });
     } catch (e) {
         console.error('parentGet error:', e);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+/**
+ * 🛡️ REPORT DENIED — клиентский приёмник нарушений правил Firestore.
+ * Клиент ловит permission-denied (консоль/onSnapshot/catch Data.save) и отправляет
+ * сюда: POST { code, msg, path, op } + Bearer Firebase ID-токен.
+ *
+ * Зачем отдельная функция: ADMIN_KEY в клиент класть НЕЛЬЗЯ, а adminAction требует
+ * ключ. Здесь проверка через verifyIdToken (анонимный вход тоже ок — нужен auth UID
+ * для расследования) + rate-limit + приватная коллекция denied_reports (rules: false).
+ * Каждое уникальное нарушение (uid+path+code в течение часа) → push-алерт админу;
+ * повторные тихо копятся, чтобы злоумышленник не поднял шум палёными пушами.
+ */
+exports.reportDenied = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return; }
+
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+    if (!transferRateCheck(ip)) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+
+    const authUid = await requireAuthUid(req);
+    if (!authUid) {
+        transferRateFail(ip);
+        res.status(401).json({ ok: false, error: 'unauthorized' });
+        return;
+    }
+
+    const { db, messaging } = getAdmin();
+    const b = req.body || {};
+    // 🛡️ Санитизация: только известные поля, жёсткие лимиты длины — без JSON-свалок.
+    const code = String(b.code || 'unknown').slice(0, 40);
+    const op = String(b.op || 'unknown').slice(0, 20);
+    const path = String(b.path || '').replace(/[^\w\-\/] \[\].]/g, '').slice(0, 120);
+    const msg = String(b.msg || '').slice(0, 300);
+    const ua = String(req.headers['user-agent'] || '').slice(0, 150);
+
+    try {
+        const now = Date.now();
+        const docRef = db.collection('denied_reports').doc(now + '_' + Math.random().toString(36).slice(2, 8));
+        await docRef.set({
+            authUid,
+            code, op, path, msg, ua,
+            ip,
+            ts: now,
+            createdAt: new Date().toISOString()
+        });
+
+        // 🔕 Дедуп алертов: то же нарушение от того же uid за последний час уже алерто —
+        // не пушим повторно (запись в базу всё равно ложится).
+        const since = now - 3600 * 1000;
+        const dup = await db.collection('denied_reports')
+            .where('authUid', '==', authUid)
+            .where('code', '==', code)
+            .where('path', '==', path)
+            .where('ts', '>', since)
+            .limit(2)
+            .get();
+        if (dup.size > 1) {
+            console.log(`reportDenied: дубликат (${authUid}, ${code}, ${path}) — алерт не шлём`);
+            res.json({ ok: true, dedup: true });
+            return;
+        }
+
+        // 🔔 Push-алерт админу (data-only, SW покажет когда приложение закрыто)
+        try {
+            const adminDoc = await db.collection('users').doc(ADMIN_ALERT_UID).get();
+            const token = adminDoc.exists ? (adminDoc.data().user || {}).fcmToken : null;
+            if (token) {
+                await messaging.send({
+                    token,
+                    data: {
+                        type: 'admin_alert',
+                        title: '🛡️ Нарушение правил',
+                        body: `permission-denied: ${path || '—'} (${authUid.slice(0, 6)}…)`,
+                        path: path,
+                        code: code,
+                        uid: authUid,
+                        timestamp: String(now)
+                    }
+                });
+                console.log(`🛡️ reportDenied: алерт админу отправлен (${authUid}, ${code}, ${path})`);
+            } else {
+                console.log(`🛡️ reportDenied: у админа нет fcmToken — алерт не отправлен (${authUid}, ${code}, ${path})`);
+            }
+        } catch (pe) {
+            console.warn('reportDenied: push админу не удался:', pe.message);
+        }
+
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('reportDenied error:', e);
         res.status(500).json({ ok: false, error: e.message });
     }
 });

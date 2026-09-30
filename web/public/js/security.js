@@ -216,3 +216,152 @@
             App.toast("💰 Пасхалка найдена! +100 монет за веру в себя!");
         }
     };
+
+    // ============================================================================
+    // 🛡️ RULES GUARD — индикатор нарушений правил для админ-панели.
+    // Ловит ошибки permission-denied из консоли, необработанных промисов и catch
+    // Data.save, ведёт счётчик для админки (window.RulesGuard.stats / .recent)
+    // и отправляет отчёты в Cloud Function reportDenied (push-алерт админу).
+    // Зачем CF: ADMIN_KEY в клиент класть нельзя — reportDenied сам проверяет
+    // Firebase ID-токен, режет rate-limit и пишет в закрытую коллекцию denied_reports.
+    // ============================================================================
+    const RulesGuard = {
+        FN_REPORT: 'https://us-central1-mathbooster-pro.cloudfunctions.net/reportDenied',
+
+        // Показатели для админки (живут в сессии; статистика отправок — в localStorage)
+        stats: { total: 0, sent: 0, lastTs: 0 },
+        recent: [],              // последние нарушения {ts, code, op, path, msg}
+        _lastByKey: {},          // дедуп: code|path → ts (не чаще 1 отчёта / 10 мин)
+        _minTs: [],              // троттлинг всплесков: не чаще 5 отчётов / мин
+        _sending: false,         // защита от самозацикливания: свои ошибки не репортим
+
+        // Распознаёт permission-denied в чём угодно (FirebaseError, Error, строка, событие)
+        extract(x) {
+            try {
+                if (!x) return null;
+                if (typeof x === 'string') {
+                    return /permission[- ]denied|Missing or insufficient permissions/i.test(x)
+                        ? { code: 'permission-denied', msg: x.slice(0, 300) } : null;
+                }
+                if (typeof x !== 'object') return null;
+                const msg = String(x.message || '');
+                if (x.code === 'permission-denied' || /permission[- ]denied|Missing or insufficient permissions/i.test(msg)) {
+                    return { code: String(x.code || 'permission-denied'), msg: msg.slice(0, 300) };
+                }
+            } catch (e) {}
+            return null;
+        },
+
+        // Точка входа: info { code, op, path, msg } или распознанный объект
+        handle(info, source) {
+            if (!info || this._sending) return;
+            if (info.msg && /reportDenied|RulesGuard/.test(info.msg)) return; // не репортим самих себя
+            const now = Date.now();
+            const key = info.code + '|' + (info.path || '');
+            if (this._lastByKey[key] && now - this._lastByKey[key] < 10 * 60 * 1000) {
+                this.stats.total++;  // дубликат в сессии: только счётчик
+                return;
+            }
+            this._lastByKey[key] = now;
+            this.stats.total++;
+            this.stats.lastTs = now;
+            const rec = { ts: now, code: info.code, op: info.op || source || 'unknown', path: info.path || '', msg: info.msg || '' };
+            this.recent.unshift(rec);
+            if (this.recent.length > 20) this.recent.length = 20;
+            this.dispatch(rec);
+        },
+
+        // Универсальный проводник: удобно звать из catch-блоков — handle(this.extract(e), 'где')
+        // уже обёрнут в try/catch вызывающим кодом.
+
+        // Троттлинг и отправка на сервер
+        dispatch(rec) {
+            try {
+                const now = Date.now();
+                this._minTs = (this._minTs || []).filter(t => now - t < 60 * 1000);
+                // Лимиты: 5/мин и 20/час — чтобы читер не поднял шум палёными отчётами
+                if (this._minTs.length >= 5) return;
+                let hour = [];
+                try { hour = JSON.parse(localStorage.getItem('mb_denied_reports_ts') || '[]'); } catch (e) {}
+                hour = hour.filter(t => now - t < 3600 * 1000);
+                if (hour.length >= 20) return;
+                hour.push(now);
+                try { localStorage.setItem('mb_denied_reports_ts', JSON.stringify(hour)); } catch (e) {}
+                this._minTs.push(now);
+                this.sendReport({ code: rec.code, op: rec.op, path: rec.path, msg: rec.msg });
+            } catch (e) {}
+        },
+
+        async sendReport(payload) {
+            if (this._sending) return;
+            this._sending = true;
+            try {
+                const token = await this.getAuthToken();
+                if (!token) { console.warn('RulesGuard: нет auth-токена — отчёт не отправлен'); return; }
+                const res = await fetch(this.FN_REPORT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) this.stats.sent++;
+                else console.warn('RulesGuard: reportDenied ответил ' + res.status);
+            } catch (e) {
+                console.warn('RulesGuard: отправка отчёта не удалась', e && e.message);
+            } finally {
+                this._sending = false;
+            }
+        },
+
+        // Firebase ID-токен (как в parent.js): anon-вход из DB_Online, fallback — CDN
+        async getAuthToken() {
+            try {
+                let attempts = 0;
+                while (!window.DB_Online && attempts < 10) {
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
+                let fbAuth = window.DB_Online && window.DB_Online.auth;
+                if (!fbAuth) {
+                    const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                    fbAuth = m.getAuth();
+                }
+                const cu = fbAuth && fbAuth.currentUser;
+                if (!cu) return null;
+                return await cu.getIdToken();
+            } catch (e) {
+                return null;
+            }
+        },
+
+        // Установка глобальных ловушек — вызывается один раз при загрузке security.js
+        init() {
+            if (this._inited) return;
+            this._inited = true;
+            // 1. console.error — основной канал ошибок Firestore (onSnapshot, getDocs…)
+            const origError = console.error.bind(console);
+            console.error = function (...args) {
+                try {
+                    for (const a of args) {
+                        const info = RulesGuard.extract(a);
+                        if (info) { RulesGuard.handle(info, 'console'); break; }
+                    }
+                } catch (e) {}
+                origError(...args);
+            };
+            // 2. Необработанные промисы (getDoc без catch, onSnapshot без error-cb)
+            window.addEventListener('unhandledrejection', (ev) => {
+                try {
+                    const info = this.extract(ev && ev.reason);
+                    if (info) this.handle(info, 'promise');
+                } catch (e) {}
+            });
+            // 3. Синхронные ошибки окна
+            window.addEventListener('error', (ev) => {
+                try {
+                    const info = this.extract(ev && ev.error);
+                    if (info) this.handle(info, 'window');
+                } catch (e) {}
+            });
+        }
+    };
+    RulesGuard.init();

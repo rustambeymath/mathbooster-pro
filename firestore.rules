@@ -290,5 +290,15 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isAdmin();
     }
+
+    // ============================================
+    // 🛡️ ОТЧЁТЫ О НАРУШЕНИЯХ ПРАВИЛ (denied_reports)
+    // Пишет только Cloud Function reportDenied (Admin SDK игнорирует правила).
+    // Клиенту читать нельзя — внутри authUid/IP/UA нарушителей; лист отчётов
+    // админ-панель получает через adminAction (action=deniedReports, key=ADMIN_KEY).
+    // ============================================
+    match /denied_reports/{reportId} {
+      allow read, write: if false;
+    }
   }
 }
