@@ -259,9 +259,18 @@
 
             const dbRef = window.DB_Online; 
             const docRef = dbRef.doc(dbRef.db, "users", id);
-            const docSnap = await dbRef.getDoc(docRef);
+            // 🔒 Чтение своего профиля разрешено rules только при совпадении _ownerUID.
+            // У НОВОГО профиля документа ещё нет — get несуществующего дока правилами
+            // отклоняется (resource == null), поэтому отказ чтения трактуем как
+            // "облако пустое": создаём профиль через create (разрешён со своим uid).
+            let docSnap = null;
+            try {
+                docSnap = await dbRef.getDoc(docRef);
+            } catch (e) {
+                console.warn("Cloud read denied — treating as new profile:", e.code || e.message);
+            }
 
-            if (docSnap.exists()) {
+            if (docSnap && docSnap.exists()) {
                 // Если в облаке есть данные - берем их
                 DB = docSnap.data();
             } else {
