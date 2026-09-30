@@ -10,6 +10,7 @@
         window.Whiteboard = Whiteboard;
         window.Calc = Calc;
         window.SecretSys = SecretSys;
+        window.RulesGuard = RulesGuard;
         window.WeeklyReportSys = WeeklyReportSys;
         window.AchievementSys = AchievementSys;
 

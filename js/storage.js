@@ -351,6 +351,13 @@
                 console.log("☁️ Синхронизация (Профиль + Топ) выполнена");
             } catch (e) { 
                 console.error("Ошибка сохранения:", e);
+                // 🛡️ RULES GUARD: нарушение правил (permission-denied) — в отчёт админу
+                try {
+                    if (window.RulesGuard && e && e.code === 'permission-denied') {
+                        const p = (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.id) ? 'users/' + Auth.currentUser.id : '';
+                        RulesGuard.handle(RulesGuard.extract(e) || { code: e.code, msg: String(e.message || '') }, 'save' + (p ? ' ' + p : ''));
+                    }
+                } catch (rg) {}
                 // Понятное сообщение пользователю вместо тихой ошибки в консоли
                 const msg = (e && e.code === 'permission-denied')
                     ? "⚠️ Нет доступа к облаку. Проверь интернет и перезайди"
