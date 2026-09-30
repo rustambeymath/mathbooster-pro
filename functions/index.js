@@ -1477,7 +1477,7 @@ async function notifyParentStatusForUser(beforeData, afterData, childId) {
             });
         }
         for (const r of staleRefs) { try { await r.delete(); } catch (e) {} }
-        if (!tokens.length) return;
+        if (!tokens.length) { console.log(`Parent push ${childId}: нет активных родительских токенов`); return; }
 
         let statusEmoji, statusText, statusBody;
         if (isActive) { statusEmoji = '✍️'; statusText = `${childName} начал(а) заниматься!`; statusBody = 'Таймер запущен — ребёнок учится.'; }
