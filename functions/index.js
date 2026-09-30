@@ -22,6 +22,7 @@ const admin = require("firebase-admin");
 const { getFirestore, FieldPath, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getAuth } = require("firebase-admin/auth");
+const crypto = require("crypto");
 
 // ⚡ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ — критично для деплоя!
 // admin.initializeApp() при загрузке модуля вешает проверку кода CLI
@@ -1642,8 +1643,9 @@ exports.parentGet = functions.https.onRequest(async (req, res) => {
  * Зачем отдельная функция: ADMIN_KEY в клиент класть НЕЛЬЗЯ, а adminAction требует
  * ключ. Здесь проверка через verifyIdToken (анонимный вход тоже ок — нужен auth UID
  * для расследования) + rate-limit + приватная коллекция denied_reports (rules: false).
- * Каждое уникальное нарушение (uid+path+code в течение часа) → push-алерт админу;
- * повторные тихо копятся, чтобы злоумышленник не поднял шум палёными пушами.
+ * Дедуп алертов БЕЗ композитного индекса: один док на (uid+code+path+час) —
+ * id = md5 ключа; повторная запись за тот же час ловится через create() →
+ * ALREADY_EXISTS и просто инкрементит hits, пуш не спамится.
  */
 exports.reportDenied = functions.https.onRequest(async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
@@ -1673,29 +1675,28 @@ exports.reportDenied = functions.https.onRequest(async (req, res) => {
 
     try {
         const now = Date.now();
-        const docRef = db.collection('denied_reports').doc(now + '_' + Math.random().toString(36).slice(2, 8));
-        await docRef.set({
-            authUid,
-            code, op, path, msg, ua,
-            ip,
-            ts: now,
-            createdAt: new Date().toISOString()
-        });
-
-        // 🔕 Дедуп алертов: то же нарушение от того же uid за последний час уже алерто —
-        // не пушим повторно (запись в базу всё равно ложится).
-        const since = now - 3600 * 1000;
-        const dup = await db.collection('denied_reports')
-            .where('authUid', '==', authUid)
-            .where('code', '==', code)
-            .where('path', '==', path)
-            .where('ts', '>', since)
-            .limit(2)
-            .get();
-        if (dup.size > 1) {
-            console.log(`reportDenied: дубликат (${authUid}, ${code}, ${path}) — алерт не шлём`);
-            res.json({ ok: true, dedup: true });
-            return;
+        // 🛡️ Дедуп без индекса: док = md5(uid|code|path|час). Первый отчёт за час
+        // создаёт док (и шлёт алерт), повторные ловятся ALREADY_EXISTS и копят hits.
+        const hourBucket = Math.floor(now / 3600000);
+        const docId = crypto.createHash('md5').update(`${authUid}|${code}|${path}|${hourBucket}`).digest('hex');
+        const docRef = db.collection('denied_reports').doc(docId);
+        try {
+            await docRef.create({
+                authUid,
+                code, op, path, msg, ua,
+                ip,
+                ts: now,
+                hits: 1,
+                createdAt: new Date().toISOString()
+            });
+        } catch (dupErr) {
+            if (dupErr && (dupErr.code === 6 || String(dupErr.code).includes('ALREADY_EXISTS') || /ALREADY_EXISTS/i.test(dupErr.message || ''))) {
+                await docRef.update({ hits: FieldValue.increment(1), lastTs: now }).catch(() => {});
+                console.log(`reportDenied: дубликат (${authUid}, ${code}, ${path}) — алерт не шлём`);
+                res.json({ ok: true, dedup: true });
+                return;
+            }
+            throw dupErr;
         }
 
         // 🔔 Push-алерт админу (data-only, SW покажет когда приложение закрыто)
