@@ -128,6 +128,20 @@ const Timer = {
             this.sessionKey = start;          // 🛡️ восстанавливаем ID сессии для дедупликации
             this._savedSessionKeys = {};
 
+            // 🛡️ SA: если сессия была серверной (флаг _saSession в облаке) —
+            // переподписываемся: сервер банкует устаревший документ (banked
+            // зеркалим локально), дальше снова пинги → bank/end. Легаси-начисление
+            // НЕ делаем — иначе двойной счёт с серверным банкованием.
+            this._sa = false; this._lastPingRealSec = this.realSec; this._saAppliedSec = 0;
+            if (DB && DB.user && DB.user._saSession && window.DB_Online && Auth.currentUser && navigator.onLine) {
+                this._saOpenSession(start).then(ok => {
+                    if (ok) {
+                        this._lastPingRealSec = this.realSec;
+                        console.log('🛡️ SA: серверная сессия переподписана после перезагрузки');
+                    }
+                }).catch(() => {});
+            }
+
             // Восстанавливаем UI как при обычном запуске
             this.requestWakeLock();
             const timerEl = document.getElementById('timer');
@@ -186,7 +200,16 @@ const Timer = {
             const banked = Number(u.lastCheckpointSec || 0);
             const unbanked = Math.max(0, studiedSec - banked);
 
-            if (unbanked >= 60) {
+            if (u._saSession) {
+                // 🛡️ SA-сессия: время уже накоплено СЕРВЕРОМ по пингам — легаси-начисление
+                // НЕ делаем (двойной счёт с серверным банкованием), просто закрываем
+                // серверную сессию (end банкует накопленное). Если end не удался —
+                // документ sa_sessions останется открытым и забанкуется при следующем
+                // start — время не потеряется.
+                await window.DB_Online.updateDoc(docRef, { "user.activeSessionStart": null }).catch(() => {});
+                const r = await this._saCall('end', { tailSec: 0 });
+                if (r && r.ok && DB && DB.user) DB.user._saSession = null;
+            } else if (unbanked >= 60) {
                 const windowKey = `${sessionStart}_${pausedAt}`;
                 if (this._isSessionSaved(windowKey)) {
                     console.warn('🛡️ closeInterrupted: окно сессии уже сохранено — пропускаем повторную запись');
@@ -672,6 +695,17 @@ const Timer = {
             }).catch(e => console.warn('timerCheck save error:', e));
         }
 
+        // 🛡️ СЕРВЕРНАЯ СЕССИЯ: просим сервер открыть учёт по СВОИМ часам.
+        // Если сервер принял — время/монеты/XP начисляет сервер (пинги → bank/end).
+        // Если нет (офлайн/ошибка) — _sa=false и работает легаси-путь без изменений.
+        this._sa = false; this._saAppliedSec = 0; this._lastPingRealSec = 0;
+        try {
+            if (window.DB_Online && Auth.currentUser && navigator.onLine) {
+                await this._saOpenSession();
+                if (this._sa) console.log('🛡️ SA: серверная сессия открыта — время считает сервер');
+            }
+        } catch (saErr) { console.warn('SA start failed (legacy fallback):', saErr); }
+
         // --- ЛОГИКА ЦВЕТА И АНИМАЦИИ ---
         const timerEl = document.getElementById('timer');
         if (timerEl) {
@@ -794,6 +828,11 @@ const Timer = {
                     const docRef = window.DB_Online.doc(window.DB_Online.db, "users", Auth.currentUser.id);
                     window.DB_Online.updateDoc(docRef, { "user.lastPing": ping });
                 } catch(e) { console.warn('Heartbeat ping failed:', e); }
+                // 🛡️ SA: серверный пинг — секунды копятся на сервере по его часам
+                if (this._sa) {
+                    this._lastPingRealSec = this.realSec;
+                    this._saCall('ping').catch(() => {});
+                }
             }
 
             // 🛡️ ПЕРЕСИНХРОНИЗАЦИЯ TimeGuard каждые 5 минут (защита от дрифта)
@@ -899,16 +938,37 @@ const Timer = {
                     console.warn('🛡️ checkpointSave: отрезок уже сохранён — пропускаем');
                 } else {
                     this._markSessionSaved(windowKey); // метка ДО await — см. комментарий в stop()
-                    this.realSec = unbanked;
-                    this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
-                    await this.saveSession();
-                    this.realSec = totalSnapshot;
-                    this.bankedSec = totalSnapshot;
-                    // 💾 Запоминаем границу записанных часов — по ней автовосстановление
-                    // после перезагрузки страницы поймёт, что повторно начислять нельзя
-                    if (DB && DB.user) {
-                        DB.user.lastCheckpointSec = this.bankedSec;
-                        Data.save();
+                    if (this._sa) {
+                        // 🛡️ SA: сервер банкирует всё, что накопил по своим пингам.
+                        // tailSec — учёба с последнего пинга (≤2 интервалов), сервер ограничит 120с.
+                        const tailSec = Math.max(0, this.realSec - (this._lastPingRealSec || 0));
+                        const r = await this._saCall('bank', { tailSec });
+                        if (r && r.ok && r.sec > 0) {
+                            this._saApply(r);
+                            App.toast(`🔥 Час записан сервером: +${r.coins} 💰`);
+                        } else {
+                            // Сервер не ответил — время НЕ теряется: оно осталось в
+                            // sa_sessions и зачислится следующим bank/end.
+                            App.toast('📡 Сервер не ответил — час запишется позже');
+                        }
+                        this.realSec = totalSnapshot;
+                        this.bankedSec = totalSnapshot;
+                        if (DB && DB.user) {
+                            DB.user.lastCheckpointSec = this.bankedSec;
+                            Data.save();
+                        }
+                    } else {
+                        this.realSec = unbanked;
+                        this.sessionStartTime = Date.now(); // дата записи в журнале = момент чекпоинта
+                        await this.saveSession();
+                        this.realSec = totalSnapshot;
+                        this.bankedSec = totalSnapshot;
+                        // 💾 Запоминаем границу записанных часов — по ней автовосстановление
+                        // после перезагрузки страницы поймёт, что повторно начислять нельзя
+                        if (DB && DB.user) {
+                            DB.user.lastCheckpointSec = this.bankedSec;
+                            Data.save();
+                        }
                     }
                 }
             }
@@ -1077,11 +1137,38 @@ const Timer = {
                 console.warn('🛡️ stop: окно сессии уже сохранено — пропускаем повторную запись');
             } else {
                 this._markSessionSaved(windowKey);
-                const totalSnapshot = this.realSec;
-                this.realSec = unbanked;
-                this.sessionStartTime = Date.now();
-                await this.saveSession();
-                this.realSec = totalSnapshot;
+                if (this._sa) {
+                    // 🛡️ SA: финальное начисление сервером по своим часам
+                    const tailSec = Math.max(0, this.realSec - (this._lastPingRealSec || 0));
+                    let r = await this._saCall('end', { tailSec });
+                    if (!r || !r.ok) {
+                        await new Promise(z => setTimeout(z, 2500)); // одна повторная попытка
+                        r = await this._saCall('end', { tailSec });
+                    }
+                    this._sa = false;
+                    if (DB && DB.user) DB.user._saSession = null;
+                    if (r && r.ok && r.sec > 0) {
+                        this._saApply(r);
+                        await Data.save();
+                    } else if (!r || !r.ok) {
+                        // 🛡️ Сервер недоступен: легаси-начисление только НЕзачисленного
+                        // сервером (зеркальные bank'и уже в totalSec — без двойного счёта).
+                        const legacySec = Math.max(0, unbanked - (this._saAppliedSec || 0));
+                        if (legacySec >= 60) {
+                            const t = this.realSec;
+                            this.realSec = legacySec;
+                            this.sessionStartTime = Date.now();
+                            await this.saveSession();
+                            this.realSec = t;
+                        }
+                    }
+                } else {
+                    const totalSnapshot = this.realSec;
+                    this.realSec = unbanked;
+                    this.sessionStartTime = Date.now();
+                    await this.saveSession();
+                    this.realSec = totalSnapshot;
+                }
             }
         } else if ((this.bankedSec || 0) === 0) {
             const cancelPhrases = ["⚠️ Слишком коротко!", "🚫 Фокус потерян.", "📉 Сессия аннулирована."];
@@ -1158,9 +1245,100 @@ const Timer = {
         }
     },
 
+    // === 🛡️ СЕРВЕРНОЕ НАЧИСЛЕНИЕ (SA): время/монеты/XP считает СЕРВЕР ===
+    // Сессия открывается CF sessionServer (start), сервер копит секунды по СВОИМ
+    // часам из пингов (ping), чекпоинт/стоп (bank/end) начисляют на профиль.
+    // Если сервер недоступен при старте — _sa=false и работает легаси-путь.
+    FN_SESSION: 'https://us-central1-mathbooster-pro.cloudfunctions.net/sessionServer',
+
+    async _saToken() {
+        try {
+            let attempts = 0;
+            while (!window.DB_Online && attempts < 10) { await new Promise(r => setTimeout(r, 500)); attempts++; }
+            let fbAuth = window.DB_Online && window.DB_Online.auth;
+            if (!fbAuth) {
+                const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                fbAuth = m.getAuth();
+            }
+            const cu = fbAuth && fbAuth.currentUser;
+            if (!cu) return null;
+            return await cu.getIdToken();
+        } catch (e) { return null; }
+    },
+
+    async _saCall(action, payload = {}) {
+        try {
+            const token = await this._saToken();
+            if (!token) return null;
+            const res = await fetch(this.FN_SESSION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(Object.assign({ action }, payload))
+            });
+            if (!res.ok) return null;
+            return await res.json();
+        } catch (e) { return null; }
+    },
+
+    // 🪞 Зеркалим серверный результат в локальную базу (абсолютные значения сервера —
+    // не прибавляем поверх, иначе расхождение с облаком на следующем Data.save)
+    _saApply(r) {
+        try {
+            if (!r || !r.ok || !(r.sec > 0)) return;
+            const u = DB.user;
+            if (typeof r.newTotalSec === 'number') u.totalSec = r.newTotalSec;
+            else u.totalSec = (Number(u.totalSec) || 0) + r.sec;
+            if (typeof r.newCoins === 'number') u.coins = r.newCoins;
+            else u.coins = (Number(u.coins) || 0) + r.coins;
+            if (typeof r.newXP === 'number') u.xp = r.newXP;
+            if (typeof r.newNextXp === 'number') u.nextXp = r.newNextXp;
+            if (typeof r.newLifetimeXP === 'number') u.lifetimeXP = r.newLifetimeXP;
+            if (typeof r.newLevel === 'number' && r.newLevel !== u.level) {
+                u.level = r.newLevel;
+                App.toast(`🏆 Уровень ${r.newLevel}!`); FX.confetti();
+            }
+            const subj = DB.subjects[this._saSubject] || (DB.subjects[this._saSubject] = { name: this._saSubjName || 'Учеба', icon: '📚', sec: 0 });
+            subj.sec = (Number(subj.sec) || 0) + r.sec;
+            const today = getUZDate();
+            DB.history[today] = (Number(DB.history[today]) || 0) + r.sec;
+            const monthPrefix = today.slice(0, 7);
+            if (!u._monthPrefix || u._monthPrefix !== monthPrefix) { u.currentMonthSec = 0; u._monthPrefix = monthPrefix; }
+            u.currentMonthSec = (Number(u.currentMonthSec) || 0) + r.sec;
+            DB.sessions.unshift({ subject: this._saSubjName || 'Учеба', sec: r.sec, coins: r.coins, date: this.sessionStartTime || Date.now() });
+            if (DB.sessions.length > 100) DB.sessions.length = 100;
+            QuestSys.update('studyMin', Math.floor(r.sec / 60));
+            WeeklyQuestSys.update(r.sec);
+            this._saAppliedSec = (this._saAppliedSec || 0) + r.sec;
+        } catch (e) { console.warn('_saApply error:', e); }
+    },
+
+    // 🚀 Открыть серверную сессию (или переподписаться после перезагрузки).
+    // banked — начисление устаревшей сессии, которое сервер уже применил в облако.
+    async _saOpenSession(sessionKeyOverride) {
+        const subjKey = (DB && DB.user && DB.user.subject) || 'algebra';
+        this._saSubject = subjKey;
+        this._saSubjName = String((DB.subjects[subjKey] && DB.subjects[subjKey].name) || subjKey).slice(0, 20);
+        const r = await this._saCall('start', {
+            subject: subjKey,
+            subjName: this._saSubjName,
+            isStrict: !!this.isStrict,
+            sessionKey: Number(sessionKeyOverride || this.sessionKey) || 0
+        });
+        if (r && r.ok) {
+            this._sa = true;
+            this._saAppliedSec = 0;
+            if (DB && DB.user) DB.user._saSession = 1; // флаг для восстановления после перезагрузки
+            if (r.banked && r.banked.ok && r.banked.sec > 0) this._saApply(r.banked);
+            return true;
+        }
+        return false;
+    },
+
     giveReward(intervals) {
         let coinsEarned = 5 + Math.min(intervals - 1, 15);
         if (this.isStrict) coinsEarned = Math.floor(coinsEarned * 1.5);
+        // 🛡️ SA: монеты платит СЕРВЕР (bank/end) — здесь только звук (иначе двойная выплата)
+        if (this._sa) { SoundSys.play('coin'); return; }
         DB.user.coins += coinsEarned;
         Data.save();
         App.updateUI();
