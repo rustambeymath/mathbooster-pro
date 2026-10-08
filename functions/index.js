@@ -1730,3 +1730,266 @@ exports.reportDenied = functions.https.onRequest(async (req, res) => {
         res.status(500).json({ ok: false, error: e.message });
     }
 });
+
+// ============================================================================
+// 🛡️ SESSION SERVER — СЕРВЕРНОЕ НАЧИСЛЕНИЕ ВРЕМЕНИ (server-authoritative)
+// ============================================================================
+// Клиент открывает сессию (start), шлёт пинги (ping), сервер по СВОИМ часам
+// копит accruedSec в закрытой коллекции sa_sessions/{uid} (клиентам:
+// read/write = false по умолчанию — коллекции нет в rules). Чекпоинт (bank)
+// и стоп (end) начисляют на профиль только то, что реально накопил сервер:
+// totalSec, монеты по формуле клиента, XP с бустером/левелапами, журнал,
+// историю. Клиентские часы НЕ участвуют в начислении (кроме clamp-хвоста).
+const SA = {
+    GAP_CAP_SEC: 15 * 60,        // макс. зачёт одного интервала между пингами (пауза/сон > 15 мин — не в зачёт)
+    TAIL_CAP_SEC: 120,           // макс. доверенный «хвост» от клиента (≤2 пинговых интервала)
+    PER_APPLY_CAP_SEC: 3 * 3600, // потолок одного bank/end ( hoursWallCap античита срабатывает строго > 3ч)
+    SESSION_CAP_SEC: 6 * 3600,   // потолок суммы сессии (как resumeInterrupted на клиенте)
+    MIN_BANK_SEC: 60,            // короче минуты — не начисляем (как клиент)
+    SUBJECT_RE: /^[a-z]{2,20}$/, // ключи предметов: algebra, geometry… (config.js)
+    _rl: {}                      // { uid: { starts: [], applies: [], lastPing: 0 } }
+};
+
+// 💰 Формула монет — точная копия клиента (timer.js saveSession/giveReward):
+// блок i (10 мин) даёт 5+min(i-1,15), хвост — прорейтед по ставке следующего
+// блока, хардкор ×1.5.
+function saCoinsFor(sec, isStrict) {
+    const blocks = Math.floor(sec / 600);
+    const rem = sec % 600;
+    let r = 0;
+    for (let i = 1; i <= blocks; i++) r += 5 + Math.min(i - 1, 15);
+    if (rem > 0) {
+        const nextR = 5 + Math.min(blocks, 15);
+        r += Math.floor((rem / 600) * nextR);
+    }
+    return isStrict ? Math.floor(r * 1.5) : r;
+}
+
+// 🚦 Мягкий rate-limit в памяти инстанса (не защита от DDoS — от флуда багов)
+function saRateOk(uid, kind) {
+    const now = Date.now();
+    let rec = SA._rl[uid];
+    if (!rec) rec = SA._rl[uid] = { starts: [], applies: [], lastPing: 0 };
+    if (kind === 'ping') {
+        if (now - rec.lastPing < 10 * 1000) return false; // спам пингами игнорируем
+        rec.lastPing = now;
+        return true;
+    }
+    const arr = kind === 'start' ? rec.starts : rec.applies;
+    while (arr.length && now - arr[0] > 3600 * 1000) arr.shift();
+    const limit = kind === 'start' ? 10 : 40;
+    if (arr.length >= limit) return false;
+    arr.push(now);
+    return true;
+}
+
+// 🧮 Ядро начисления: считает апдейты users/{uid} и результат для клиента.
+// ВАЖНО: journalGain == totalSecGain — инвариант antiCheat 4d не нарушается;
+// gained ≤ 3ч — hoursWallCap (строго > 3ч) не срабатывает.
+function saComputeApply(u, sess, final, now) {
+    const isStrict = !!sess.isStrict;
+    const coinsFor = saCoinsFor(final, isStrict);
+
+    // XP: floor(минуты)*10, бустер ×2 (как App.addXP на клиенте)
+    let xpGain = Math.floor(final / 60) * 10;
+    if (Number(u.boosterExpiry || 0) > now) xpGain *= 2;
+
+    // Левелап-цикл: как на клиенте (nextXp ×1.2, награда 50+level*10)
+    let xp = Number(u.xp) || 0, level = Number(u.level) || 1;
+    let nextXp = Number(u.nextXp) || 500, coinsGain = coinsFor, levelUps = 0;
+    xp += xpGain;
+    while (xp >= nextXp && level < 1000 && levelUps < 200) {
+        xp -= nextXp; level++;
+        nextXp = Math.floor(nextXp * 1.2);
+        coinsGain += 50 + level * 10;
+        levelUps++;
+    }
+
+    // Журнал: новая запись в голову, лимит 100 (как клиент).
+    // 🛡️ Дата = момент применения (как client sessionStartTime=Date.now() при
+    // чекпоинте), НЕ старт сессии: банк и энд одной сессии с одинаковой датой
+    // и секами ±2 античит склеил бы как дубликаты и откатил totalSec.
+    const oldJournal = Array.isArray(u.sessions) ? u.sessions : [];
+    const journal = [
+        { subject: String(sess.subjName || sess.subject || 'Учеба').slice(0, 20), sec: final, coins: coinsFor, date: now },
+        ...oldJournal
+    ].slice(0, 100);
+
+    // today по Ташкенту (как parentGet)
+    const today = new Date(now + 5 * 3600 * 1000).toISOString().slice(0, 10);
+
+    const updates = {
+        "user.totalSec": FieldValue.increment(final),
+        "user.coins": FieldValue.increment(coinsGain),
+        "user.xp": xp,
+        "user.level": level,
+        "user.nextXp": nextXp,
+        "user.lifetimeXP": FieldValue.increment(xpGain),
+        "user.currentMonthSec": FieldValue.increment(final),
+        "user.lastSaveTime": now,
+        "sessions": journal,
+        [`history.${today}`]: FieldValue.increment(final)
+    };
+    const subject = String(sess.subject || '');
+    if (SA.SUBJECT_RE.test(subject)) {
+        updates[`subjects.${subject}.sec`] = FieldValue.increment(final);
+    }
+
+    return {
+        updates,
+        result: {
+            ok: true,
+            sec: final,
+            coins: coinsGain,
+            xp: xpGain,
+            levelUps,
+            newTotalSec: (Number(u.totalSec) || 0) + final,
+            newCoins: (Number(u.coins) || 0) + coinsGain,
+            newXP: xp,
+            newLevel: level,
+            newNextXp: nextXp,
+            newLifetimeXP: (Number(u.lifetimeXP) || 0) + xpGain
+        }
+    };
+}
+
+// 🏦 Применение начисления в ТРАНЗАКЦИИ (users/{uid} + sa_sessions/{uid}):
+// гонки с клиентскими setDoc и параллельными банк/энд не теряют и не задваивают.
+// close=true — сессия закрывается (док удаляется); иначе accruedSec сбрасывается.
+async function saApplyAndClose(db, uid, sessSnap, tailSec, close, now) {
+    const sess = sessSnap.data() || {};
+    const userRef = db.collection("users").doc(uid);
+    const sessRef = db.collection("sa_sessions").doc(uid);
+
+    return db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists) return { ok: false, reason: "no_profile" };
+
+        // Хвост от клиента (учёба с последнего пинга) — жёстко ограничен
+        const tail = Math.max(0, Math.min(Number(tailSec) || 0, SA.TAIL_CAP_SEC));
+        // Серверные пинги + хвост, потолки на одно применение и на сессию
+        let final = Math.floor((Number(sess.accruedSec) || 0) + tail);
+        const wallSec = Math.floor((now - (Number(sess.startTime) || now)) / 1000);
+        final = Math.min(final, SA.PER_APPLY_CAP_SEC, Math.max(0, wallSec));
+        const bankedTotal = (Number(sess.bankedTotal) || 0) + final;
+        final = Math.max(0, Math.min(final, SA.SESSION_CAP_SEC - (bankedTotal - final)));
+        if (final < SA.MIN_BANK_SEC) {
+            if (close) tx.delete(sessRef);
+            else tx.update(sessRef, { accruedSec: 0, lastPingAt: now, bankedTotal });
+            return { ok: true, sec: 0, banked: true, reason: final > 0 ? "below_min" : "empty" };
+        }
+
+        const computed = saComputeApply(userSnap.data() || {}, sess, final, now);
+        tx.update(userRef, computed.updates);
+        if (close) {
+            tx.delete(sessRef);
+        } else {
+            tx.update(sessRef, { accruedSec: 0, lastPingAt: now, bankedTotal });
+        }
+        return computed.result;
+    });
+}
+
+exports.sessionServer = functions.https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return; }
+
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+    if (!transferRateCheck(ip)) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+
+    const authUid = await requireAuthUid(req);
+    if (!authUid) {
+        transferRateFail(ip);
+        res.status(401).json({ ok: false, error: 'unauthorized' });
+        return;
+    }
+
+    const { db } = getAdmin();
+    const b = req.body || {};
+    const action = String(b.action || '');
+    const now = Date.now();
+    const sessRef = db.collection("sa_sessions").doc(authUid);
+
+    try {
+        // ── 🚀 START ────────────────────────────────────────────────
+        if (action === 'start') {
+            if (!saRateOk(authUid, 'start')) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+            const banned = await db.collection("banned_users").doc(authUid).get();
+            if (banned.exists) { res.status(403).json({ ok: false, error: 'banned' }); return; }
+
+            const subject = String(b.subject || '');
+            const subjName = String(b.subjName || subject).slice(0, 20);
+            const newSess = {
+                uid: authUid,
+                subject: SA.SUBJECT_RE.test(subject) ? subject : '',
+                subjName,
+                isStrict: !!b.isStrict,
+                sessionKey: Number(b.sessionKey) || 0,
+                startTime: now,
+                lastPingAt: now,
+                accruedSec: 0,
+                bankedTotal: 0,
+                open: true
+            };
+
+            // Незакрытая прошлая сессия: честно банкуем её накопления, потом перезаписываем.
+            // banked возвращаем клиенту — он зеркально применит то же число локально.
+            let banked = null;
+            const oldSnap = await sessRef.get();
+            if (oldSnap.exists && (oldSnap.data() || {}).open) {
+                banked = await saApplyAndClose(db, authUid, oldSnap, 0, true, now);
+                console.log(`🛡️ sessionServer: устаревшая сессия ${authUid} закрыта при новом старте (+${(banked && banked.sec) || 0}с)`);
+            }
+            await sessRef.set(newSess);
+            res.json({ ok: true, serverNow: now, banked });
+            return;
+        }
+
+        // ── 💓 PING ─────────────────────────────────────────────────
+        if (action === 'ping') {
+            saRateOk(authUid, 'ping'); // мягкий троттлинг 1 раз / 10с
+            const result = await db.runTransaction(async (tx) => {
+                const snap = await tx.get(sessRef);
+                if (!snap.exists || !(snap.data() || {}).open) return { ok: false, reason: 'no_session' };
+                const s = snap.data();
+                const lastPingAt = Number(s.lastPingAt) || now;
+                const delta = Math.floor((now - lastPingAt) / 1000);
+                let accrued = Number(s.accruedSec) || 0;
+                // Засчитываем только живые интервалы: 0 < delta ≤ GAP_CAP.
+                // Пауза/сон/офлайн > 15 мин — время НЕ начисляется.
+                if (delta > 0 && delta <= SA.GAP_CAP_SEC) {
+                    const bankedTotal = Number(s.bankedTotal) || 0;
+                    accrued = Math.min(accrued + delta, SA.SESSION_CAP_SEC - bankedTotal);
+                }
+                tx.update(sessRef, { accruedSec: Math.max(0, accrued), lastPingAt: now });
+                return { ok: true, accruedSec: Math.max(0, accrued) };
+            });
+            res.json(result);
+            return;
+        }
+
+        // ── 🏦 BANK (чекпоинт, сессия продолжается) / END (стоп) ────
+        if (action === 'bank' || action === 'end') {
+            if (!saRateOk(authUid, 'apply')) { res.status(429).json({ ok: false, error: 'rate_limited' }); return; }
+            const sessSnap = await sessRef.get();
+            if (!sessSnap.exists || !(sessSnap.data() || {}).open) {
+                res.json({ ok: false, reason: 'no_session' });
+                return;
+            }
+            const result = await saApplyAndClose(db, authUid, sessSnap, b.tailSec, action === 'end', now);
+            if (result && result.ok) {
+                console.log(`🛡️ sessionServer ${action} ${authUid}: +${result.sec || 0}с (+${result.coins || 0}💰, +${result.xp || 0}XP, lvl+${result.levelUps || 0})`);
+            }
+            res.json(result);
+            return;
+        }
+
+        res.status(400).json({ ok: false, error: 'unknown_action' });
+    } catch (e) {
+        console.error('sessionServer error:', action, e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
