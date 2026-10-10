@@ -112,6 +112,21 @@
             if (!DB.user.ownedSounds) DB.user.ownedSounds = ['standard'];
             if (!DB.user.activeBattles) DB.user.activeBattles = [];
             if (!DB.achievements || DB.achievements.length < 5) DB.achievements = GenAch();
+            // 🏅 ЧИСТКА ПРИЗРАЧНЫХ ДОСТИЖЕНИЙ — как и при загрузке из облака (ниже в
+            // слушателе). Раньше лечило только новые/пустые списки, а старые локальные
+            // профили с устаревшим списком (26/31 запись) жили без новых наград,
+            // пока их не перепишет облако: AchievementSys просто не видел достижений.
+            {
+                const ml = GenAch();
+                if (DB.achievements.length !== ml.length) {
+                    const byTitle = {};
+                    DB.achievements.forEach(o => { byTitle[o.title] = o.unlocked; });
+                    DB.achievements = ml.map(na => {
+                        if (byTitle[na.title]) na.unlocked = true;
+                        return na;
+                    });
+                }
+            }
             if (!DB.user.boosterExpiry) DB.user.boosterExpiry = 0;
             if (!DB.user.lastBoosterPurchase) DB.user.lastBoosterPurchase = "";
             if (!DB.user.ownedRadios) DB.user.ownedRadios = [];
